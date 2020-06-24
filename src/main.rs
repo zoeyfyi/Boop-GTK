@@ -4,11 +4,26 @@ extern crate glib;
 extern crate gtk;
 extern crate sourceview;
 
+extern crate rusty_v8;
+extern crate libc;
+extern crate rust_embed;
+
+mod executor;
+use executor::Executor;
+
+use rusty_v8 as v8;
+
 use gio::prelude::*;
 use gtk::prelude::*;
+use gtk::{Application, ApplicationWindow, Dialog, Label};
 use sourceview::prelude::*;
 
-use gtk::{Application, ApplicationWindow, Dialog, Label};
+use rust_embed::RustEmbed;
+use std::borrow::Cow;
+
+#[derive(RustEmbed)]
+#[folder = "scripts"]
+struct Scripts;
 
 fn create_window(app: &Application) -> ApplicationWindow {
     let window = ApplicationWindow::new(app);
@@ -48,8 +63,24 @@ fn create_command_pallete_dialog(window: &ApplicationWindow) -> Dialog {
 
     return dialog;
 }
+use std::{process, ptr};
 
-fn main() {
+fn main() -> Result<(), ()> {
+    // initalize V8
+    let platform = v8::new_default_platform().unwrap();
+    v8::V8::initialize_platform(platform);
+    v8::V8::initialize();
+
+    for file in Scripts::iter() {
+        let file: Cow<'_, str> = file;
+        let source: Cow<'static, [u8]> = Scripts::get(&file).unwrap();
+        let script_source = String::from_utf8(source.to_vec()).unwrap();
+
+        let text = "foobar";
+        let result = Executor::new(script_source, text.to_owned()).execute();
+        println!("executing {} on {} produced {}", file, text, result);
+    }
+
     let application = Application::new(Some("uk.co.mrbenshef.boop-gtk"), Default::default())
         .expect("failed to initialize GTK application");
 
@@ -72,4 +103,6 @@ fn main() {
     });
 
     application.run(&[]);
+
+    Ok(())
 }
