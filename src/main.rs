@@ -40,7 +40,7 @@ const SEARCH_CONFIG: ScoreConfig = ScoreConfig {
 #[folder = "scripts"]
 struct Scripts;
 
-fn create_window(app: &Application) -> ApplicationWindow {
+fn create_window(app: &Application) -> (ApplicationWindow, sourceview::View) {
     let window = ApplicationWindow::new(app);
     window.set_can_focus(true);
     window.set_title("Boop");
@@ -56,7 +56,7 @@ fn create_window(app: &Application) -> ApplicationWindow {
 
     window.show_all();
 
-    return window;
+    return (window, source_view);
 }
 
 fn main() -> Result<(), ()> {
@@ -86,7 +86,7 @@ fn main() -> Result<(), ()> {
         menu.append(Some("Command Pallete..."), Some("app.command_pallete"));
         app.set_app_menu(Some(&menu));
 
-        let window = create_window(app);
+        let (window, source_view) = create_window(app);
 
         let command_pallete_action = gio::SimpleAction::new("command_pallete", None);
         let scripts = scripts.clone();
@@ -97,9 +97,28 @@ fn main() -> Result<(), ()> {
                 .enumerate()
                 .map(|(i, s)| (i as u64, s))
                 .collect::<Vec<(u64, Script)>>();
-            let dialog = CommandPalleteDialog::new(&window, scripts);
+            let dialog = CommandPalleteDialog::new(&window, scripts.clone());
             dialog.show_all();
-            dialog.run();
+
+            if let gtk::ResponseType::Other(script_id) = dialog.run() {
+                println!(
+                    "executing {}",
+                    scripts[script_id as usize].1.metadata().name
+                );
+
+                let buffer = source_view.get_buffer().unwrap();
+
+                let result = Executor::execute(
+                    scripts[script_id as usize].1.source(),
+                    &buffer
+                        .get_text(&buffer.get_start_iter(), &buffer.get_end_iter(), false)
+                        .unwrap()
+                        .to_string(),
+                );
+
+                buffer.set_text(&result);
+            }
+
             dialog.destroy();
         });
         app.add_action(&command_pallete_action);
