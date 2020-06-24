@@ -33,6 +33,7 @@ impl CommandPalleteDialog {
         dialog.get_content_area().add(&scrolled_window);
 
         let dialog_tree_view = TreeView::new();
+        dialog_tree_view.set_activate_on_single_click(true);
         dialog_tree_view.set_headers_visible(false);
         let renderer = gtk::CellRendererText::new();
         let column = gtk::TreeViewColumn::new();
@@ -88,7 +89,7 @@ impl CommandPalleteDialog {
     fn register_handlers(&self) {
         let lb = self.dialog_list_box.clone();
         let dialog = self.dialog.clone();
-        self.dialog.connect_key_press_event(move |s, k| {
+        self.dialog.connect_key_press_event(move |_, k| {
             CommandPalleteDialog::on_key_press(k, &lb, &dialog)
         });
 
@@ -96,6 +97,10 @@ impl CommandPalleteDialog {
         let scripts = self.scripts.clone();
         self.searchbar
             .connect_changed(move |s| CommandPalleteDialog::on_changed(s, &lb, &scripts));
+
+        let dialog = self.dialog.clone();
+        self.dialog_list_box
+            .connect_row_activated(move |tv, _, _| CommandPalleteDialog::on_click(tv, &dialog));
     }
 
     fn on_key_press(key: &EventKey, dialog_tree_view: &TreeView, dialog: &Dialog) -> Inhibit {
@@ -133,19 +138,25 @@ impl CommandPalleteDialog {
         }
 
         if key == gdk::enums::key::Return {
-            if let (Some(mut path), _) = dialog_tree_view.get_cursor() {
-                let index: i32 = path.get_indices()[0];
-                let value = model.get_value(&model.get_iter(&path).unwrap(), 1);
-
-                let v = value.downcast::<u64>().unwrap().get().unwrap();
-
-                println!("value is {:?}", v);
-
-                dialog.response(gtk::ResponseType::Other(v as u16));
-            }
+            CommandPalleteDialog::on_click(dialog_tree_view, dialog);
         }
 
         Inhibit(false)
+    }
+
+    fn on_click(dialog_tree_view: &TreeView, dialog: &Dialog) {
+        let model: gtk::ListStore = dialog_tree_view.get_model().unwrap().downcast().unwrap();
+
+        if let (Some(mut path), _) = dialog_tree_view.get_cursor() {
+            let index: i32 = path.get_indices()[0];
+            let value = model.get_value(&model.get_iter(&path).unwrap(), 1);
+
+            let v = value.downcast::<u64>().unwrap().get().unwrap();
+
+            println!("value is {:?}", v);
+
+            dialog.response(gtk::ResponseType::Other(v as u16));
+        }
     }
 
     fn on_changed(searchbar: &Entry, dialog_tree_view: &TreeView, scripts: &Vec<(u64, Script)>) {
