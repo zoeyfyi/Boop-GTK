@@ -147,8 +147,7 @@ impl CommandPalleteDialog {
     fn on_click(dialog_tree_view: &TreeView, dialog: &Dialog) {
         let model: gtk::ListStore = dialog_tree_view.get_model().unwrap().downcast().unwrap();
 
-        if let (Some(mut path), _) = dialog_tree_view.get_cursor() {
-            let index: i32 = path.get_indices()[0];
+        if let (Some(path), _) = dialog_tree_view.get_cursor() {
             let value = model.get_value(&model.get_iter(&path).unwrap(), 1);
 
             let v = value.downcast::<u64>().unwrap().get().unwrap();

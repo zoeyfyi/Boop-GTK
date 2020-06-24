@@ -21,7 +21,7 @@ use rusty_v8 as v8;
 
 use gio::prelude::*;
 use gtk::prelude::*;
-use gtk::{Application, ApplicationWindow, Dialog, Label};
+use gtk::{Application, ApplicationWindow};
 use sourceview::prelude::*;
 
 use rust_embed::RustEmbed;

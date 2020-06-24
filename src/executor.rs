@@ -17,7 +17,7 @@ impl Executor {
         // complile and run script
         let code = v8::String::new(scope, source).unwrap();
         let mut compiled_script = v8::Script::compile(scope, context, code, None).unwrap();
-        let result = compiled_script.run(scope, context).unwrap();
+        compiled_script.run(scope, context).unwrap();
 
         // extract main function
         let function_name = v8::String::new(scope, "main").unwrap();
