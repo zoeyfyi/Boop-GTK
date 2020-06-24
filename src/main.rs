@@ -21,7 +21,7 @@ use rusty_v8 as v8;
 
 use gio::prelude::*;
 use gtk::prelude::*;
-use gtk::{Application, ApplicationWindow};
+use gtk::{Application, ApplicationWindow, Button};
 use sourceview::prelude::*;
 
 use rust_embed::RustEmbed;
@@ -36,15 +36,36 @@ const SEARCH_CONFIG: ScoreConfig = ScoreConfig {
     penalty_distance: 4,
 };
 
+const HEADER_BUTTON_GET_STARTED: &str = "Press Ctrl+Shift+P to get started";
+const HEADER_BUTTON_CHOOSE_ACTION: &str = "Select an action";
+
 #[derive(RustEmbed)]
 #[folder = "scripts"]
 struct Scripts;
 
-fn create_window(app: &Application) -> (ApplicationWindow, sourceview::View) {
+#[derive(Clone)]
+struct App {
+    window: ApplicationWindow,
+    header_button: Button,
+    source_view: sourceview::View,
+}
+
+fn create_window(app: &Application, scripts: &Vec<Script>) -> App {
     let window = ApplicationWindow::new(app);
     window.set_can_focus(true);
     window.set_title("Boop");
     window.set_default_size(600, 400);
+
+    let header = gtk::HeaderBar::new();
+    let header_button = Button::new_with_label(HEADER_BUTTON_GET_STARTED);
+
+    header.set_custom_title(Some(&header_button));
+    // header.add(&gtk::Button::new_from_icon_name(
+    //     Some("window-close-symbolic"),
+    //     gtk::IconSize::Menu,
+    // ));
+    header.set_show_close_button(true);
+    window.set_titlebar(Some(&header));
 
     let scroll = gtk::Adjustment::new(0.0, 0.0, 100.0, 1.0, 10.0, 10.0);
     let scrolled_window = gtk::ScrolledWindow::new(gtk::NONE_ADJUSTMENT, Some(&scroll));
@@ -54,9 +75,58 @@ fn create_window(app: &Application) -> (ApplicationWindow, sourceview::View) {
     source_view.set_show_line_numbers(true);
     scrolled_window.add(&source_view);
 
-    window.show_all();
+    let app = App {
+        window,
+        header_button,
+        source_view,
+    };
 
-    return (window, source_view);
+    {
+        let app_ = app.clone();
+        let scripts = scripts.clone();
+        app.header_button
+            .connect_clicked(move |_| open_command_pallete(&app_, &scripts));
+    }
+
+    app.window.show_all();
+
+    return app;
+}
+
+fn open_command_pallete(app: &App, scripts: &Vec<Script>) {
+    let scripts = scripts
+        .iter()
+        .cloned()
+        .enumerate()
+        .map(|(i, s)| (i as u64, s))
+        .collect::<Vec<(u64, Script)>>();
+    let dialog = CommandPalleteDialog::new(&app.window, scripts.clone());
+    dialog.show_all();
+
+    &app.header_button.set_label(HEADER_BUTTON_CHOOSE_ACTION);
+
+    if let gtk::ResponseType::Other(script_id) = dialog.run() {
+        println!(
+            "executing {}",
+            scripts[script_id as usize].1.metadata().name
+        );
+
+        let buffer = &app.source_view.get_buffer().unwrap();
+
+        let result = Executor::execute(
+            scripts[script_id as usize].1.source(),
+            &buffer
+                .get_text(&buffer.get_start_iter(), &buffer.get_end_iter(), false)
+                .unwrap()
+                .to_string(),
+        );
+
+        buffer.set_text(&result);
+    }
+
+    &app.header_button.set_label(HEADER_BUTTON_GET_STARTED);
+
+    dialog.destroy();
 }
 
 fn main() -> Result<(), ()> {
@@ -81,48 +151,22 @@ fn main() -> Result<(), ()> {
     let application = Application::new(Some("uk.co.mrbenshef.boop-gtk"), Default::default())
         .expect("failed to initialize GTK application");
 
-    application.connect_activate(move |app| {
-        let menu = gio::Menu::new();
-        menu.append(Some("Command Pallete..."), Some("app.command_pallete"));
-        app.set_app_menu(Some(&menu));
+    application.connect_activate(move |application| {
+        // let menu = gio::Menu::new();
+        // menu.append(Some("Command Pallete..."), Some("app.command_pallete"));
 
-        let (window, source_view) = create_window(app);
+        let app = create_window(application, &scripts);
 
         let command_pallete_action = gio::SimpleAction::new("command_pallete", None);
-        let scripts = scripts.clone();
-        command_pallete_action.connect_activate(move |_, _| {
-            let scripts = scripts
-                .iter()
-                .cloned()
-                .enumerate()
-                .map(|(i, s)| (i as u64, s))
-                .collect::<Vec<(u64, Script)>>();
-            let dialog = CommandPalleteDialog::new(&window, scripts.clone());
-            dialog.show_all();
 
-            if let gtk::ResponseType::Other(script_id) = dialog.run() {
-                println!(
-                    "executing {}",
-                    scripts[script_id as usize].1.metadata().name
-                );
+        {
+            let scripts = scripts.clone();
+            command_pallete_action
+                .connect_activate(move |_, _| open_command_pallete(&app, &scripts));
+        }
 
-                let buffer = source_view.get_buffer().unwrap();
-
-                let result = Executor::execute(
-                    scripts[script_id as usize].1.source(),
-                    &buffer
-                        .get_text(&buffer.get_start_iter(), &buffer.get_end_iter(), false)
-                        .unwrap()
-                        .to_string(),
-                );
-
-                buffer.set_text(&result);
-            }
-
-            dialog.destroy();
-        });
-        app.add_action(&command_pallete_action);
-        app.set_accels_for_action("app.command_pallete", &["<Primary><Shift>P"]);
+        application.add_action(&command_pallete_action);
+        application.set_accels_for_action("app.command_pallete", &["<Primary><Shift>P"]);
     });
 
     application.run(&[]);
