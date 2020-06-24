@@ -1,7 +1,7 @@
 use gdk::EventKey;
 use gio::prelude::*;
 use gtk::prelude::*;
-use gtk::{Dialog, Entry, Label, ListBox, TreeView, Window};
+use gtk::{Dialog, Entry, TreeView, Window};
 use shrinkwraprs::Shrinkwrap;
 use sublime_fuzzy::FuzzySearch;
 
@@ -14,11 +14,11 @@ pub struct CommandPalleteDialog {
     dialog: Dialog,
     dialog_list_box: TreeView,
     searchbar: Entry,
-    scripts: Vec<Script>,
+    scripts: Vec<(u64, Script)>,
 }
 
 impl CommandPalleteDialog {
-    pub fn new<P: IsA<Window>>(window: &P, scripts: Vec<Script>) -> Self {
+    pub fn new<P: IsA<Window>>(window: &P, scripts: Vec<(u64, Script)>) -> Self {
         let dialog = Dialog::new();
         dialog.set_default_size(300, 300);
         dialog.set_modal(true);
@@ -40,11 +40,11 @@ impl CommandPalleteDialog {
         column.add_attribute(&renderer, "text", 0);
         dialog_tree_view.append_column(&column);
 
-        let store = gtk::ListStore::new(&[glib::Type::String]);
+        let store = gtk::ListStore::new(&[glib::Type::String, glib::Type::U64]);
 
-        for script in &scripts {
-            let values: [&dyn ToValue; 1] = [&script.metadata().name.to_string()];
-            store.set(&store.append(), &[0], &values);
+        for (script_id, script) in &scripts {
+            let values: [&dyn ToValue; 2] = [&script.metadata().name.to_string(), script_id];
+            store.set(&store.append(), &[0, 1], &values);
         }
 
         dialog_tree_view.set_model(Some(&store));
@@ -87,8 +87,10 @@ impl CommandPalleteDialog {
 
     fn register_handlers(&self) {
         let lb = self.dialog_list_box.clone();
-        self.dialog
-            .connect_key_press_event(move |s, k| CommandPalleteDialog::on_key_press(k, &lb));
+        let dialog = self.dialog.clone();
+        self.dialog.connect_key_press_event(move |s, k| {
+            CommandPalleteDialog::on_key_press(k, &lb, &dialog)
+        });
 
         let lb = self.dialog_list_box.clone();
         let scripts = self.scripts.clone();
@@ -96,7 +98,7 @@ impl CommandPalleteDialog {
             .connect_changed(move |s| CommandPalleteDialog::on_changed(s, &lb, &scripts));
     }
 
-    fn on_key_press(key: &EventKey, dialog_tree_view: &TreeView) -> Inhibit {
+    fn on_key_press(key: &EventKey, dialog_tree_view: &TreeView, dialog: &Dialog) -> Inhibit {
         let model: gtk::ListStore = dialog_tree_view.get_model().unwrap().downcast().unwrap();
         let result_count: i32 = model.iter_n_children(None);
 
@@ -130,10 +132,23 @@ impl CommandPalleteDialog {
             return Inhibit(true);
         }
 
+        if key == gdk::enums::key::Return {
+            if let (Some(mut path), _) = dialog_tree_view.get_cursor() {
+                let index: i32 = path.get_indices()[0];
+                let value = model.get_value(&model.get_iter(&path).unwrap(), 1);
+
+                let v = value.downcast::<u64>().unwrap().get().unwrap();
+
+                println!("value is {:?}", v);
+
+                dialog.response(gtk::ResponseType::Other(v as u16));
+            }
+        }
+
         Inhibit(false)
     }
 
-    fn on_changed(searchbar: &Entry, dialog_tree_view: &TreeView, scripts: &Vec<Script>) {
+    fn on_changed(searchbar: &Entry, dialog_tree_view: &TreeView, scripts: &Vec<(u64, Script)>) {
         let model: gtk::ListStore = dialog_tree_view.get_model().unwrap().downcast().unwrap();
         model.clear();
 
@@ -150,32 +165,31 @@ impl CommandPalleteDialog {
             let mut scored_scripts = scripts
                 .clone()
                 .into_iter()
-                .map(|script| {
+                .map(|(script_id, script)| {
                     let mut search =
                         FuzzySearch::new(&searchbar_text, &script.metadata().name, true);
                     search.set_score_config(SEARCH_CONFIG);
 
                     let score = search.best_match().map(|m| m.score()).unwrap_or(0);
-                    (script.clone(), score)
+                    (script_id, script.clone(), score)
                 })
-                .filter(|(_, score)| *score > 0)
-                .collect::<Vec<(Script, isize)>>();
+                .filter(|(_, _, score)| *score > 0)
+                .collect::<Vec<(u64, Script, isize)>>();
 
-            scored_scripts.sort_by_key(|(_, score)| *score);
+            scored_scripts.sort_by_key(|(_, _, score)| *score);
 
             scored_scripts
                 .into_iter()
-                .map(|(script, _)| script)
+                .map(|(script_id, script, _)| (script_id, script))
                 .collect()
         };
 
-        for script in &search_results {
-            let values: [&dyn ToValue; 1] = [&script.metadata().name.to_string()];
-            model.set(&model.append(), &[0], &values);
+        for (script_id, script) in &search_results {
+            let values: [&dyn ToValue; 2] = [&script.metadata().name.to_string(), script_id];
+            model.set(&model.append(), &[0, 1], &values);
         }
 
         // reset selection to first row
-        // dialog_list_box.select_row((&dialog_list_box.get_row_at_index(0)).as_ref());
         dialog_tree_view.set_cursor(
             &gtk::TreePath::new_first(),
             gtk::NONE_TREE_VIEW_COLUMN,

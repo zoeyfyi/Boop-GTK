@@ -91,7 +91,13 @@ fn main() -> Result<(), ()> {
         let command_pallete_action = gio::SimpleAction::new("command_pallete", None);
         let scripts = scripts.clone();
         command_pallete_action.connect_activate(move |_, _| {
-            let dialog = CommandPalleteDialog::new(&window, scripts.clone());
+            let scripts = scripts
+                .iter()
+                .cloned()
+                .enumerate()
+                .map(|(i, s)| (i as u64, s))
+                .collect::<Vec<(u64, Script)>>();
+            let dialog = CommandPalleteDialog::new(&window, scripts);
             dialog.show_all();
             dialog.run();
             dialog.destroy();
