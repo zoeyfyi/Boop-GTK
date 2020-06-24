@@ -20,14 +20,22 @@ pub struct CommandPalleteDialog {
 impl CommandPalleteDialog {
     pub fn new<P: IsA<Window>>(window: &P, scripts: Vec<Script>) -> Self {
         let dialog = Dialog::new();
-        dialog.set_default_size(300, 0);
+        dialog.set_default_size(300, 300);
         dialog.set_modal(true);
         dialog.set_destroy_with_parent(true);
         dialog.set_property_window_position(gtk::WindowPosition::CenterOnParent);
         dialog.set_transient_for(Some(window));
 
+        let scrolled_window = gtk::ScrolledWindow::new(
+            gtk::NONE_ADJUSTMENT,
+            Some(&gtk::Adjustment::new(0.0, 0.0, 100.0, 1.0, 10.0, 10.0)),
+        );
+        dialog.get_content_area().add(&scrolled_window);
+        
         let dialog_list_box = ListBox::new();
-        dialog.get_content_area().add(&dialog_list_box);
+        scrolled_window.set_property_expand(true);
+        
+        scrolled_window.add(&dialog_list_box);
 
         for script in &scripts {
             dialog_list_box.add(&Label::new(Some(&script.metadata().name)));
@@ -86,7 +94,10 @@ impl CommandPalleteDialog {
                 new_index = 0;
             }
 
-            println!("key press {:?}, index: {}, new_index: {}", key, index, new_index);
+            println!(
+                "key press {:?}, index: {}, new_index: {}",
+                key, index, new_index
+            );
 
             dialog_list_box.select_row(dialog_list_box.get_row_at_index(new_index).as_ref());
         }
