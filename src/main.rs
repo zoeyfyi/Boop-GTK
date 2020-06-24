@@ -50,49 +50,6 @@ struct App {
     source_view: sourceview::View,
 }
 
-fn create_window(app: &Application, scripts: &Vec<Script>) -> App {
-    let window = ApplicationWindow::new(app);
-    window.set_can_focus(true);
-    window.set_title("Boop");
-    window.set_default_size(600, 400);
-
-    let header = gtk::HeaderBar::new();
-    let header_button = Button::new_with_label(HEADER_BUTTON_GET_STARTED);
-
-    header.set_custom_title(Some(&header_button));
-    // header.add(&gtk::Button::new_from_icon_name(
-    //     Some("window-close-symbolic"),
-    //     gtk::IconSize::Menu,
-    // ));
-    header.set_show_close_button(true);
-    window.set_titlebar(Some(&header));
-
-    let scroll = gtk::Adjustment::new(0.0, 0.0, 100.0, 1.0, 10.0, 10.0);
-    let scrolled_window = gtk::ScrolledWindow::new(gtk::NONE_ADJUSTMENT, Some(&scroll));
-    window.add(&scrolled_window);
-
-    let source_view: sourceview::View = sourceview::View::new();
-    source_view.set_show_line_numbers(true);
-    scrolled_window.add(&source_view);
-
-    let app = App {
-        window,
-        header_button,
-        source_view,
-    };
-
-    {
-        let app_ = app.clone();
-        let scripts = scripts.clone();
-        app.header_button
-            .connect_clicked(move |_| open_command_pallete(&app_, &scripts));
-    }
-
-    app.window.show_all();
-
-    return app;
-}
-
 fn open_command_pallete(app: &App, scripts: &Vec<Script>) {
     let scripts = scripts
         .iter()
@@ -152,14 +109,30 @@ fn main() -> Result<(), ()> {
         .expect("failed to initialize GTK application");
 
     application.connect_activate(move |application| {
-        // let menu = gio::Menu::new();
-        // menu.append(Some("Command Pallete..."), Some("app.command_pallete"));
+        let app_glade = include_str!("../boop-gtk.glade");
+        let builder = gtk::Builder::new_from_string(app_glade);
+        builder.set_application(application);
 
-        let app = create_window(application, &scripts);
+        let app = App {
+            window: builder.get_object("window").unwrap(),
+            header_button: builder.get_object("header_button").unwrap(),
+            source_view: builder.get_object("source_view").unwrap(),
+        };
+
+        app.window.set_application(Some(application));
+        app.window.show_all();
+
+        {
+            let app_ = app.clone();
+            let scripts = scripts.clone();
+            app.header_button
+                .connect_clicked(move |_| open_command_pallete(&app_, &scripts));
+        }
 
         let command_pallete_action = gio::SimpleAction::new("command_pallete", None);
 
         {
+            let app = app.clone();
             let scripts = scripts.clone();
             command_pallete_action
                 .connect_activate(move |_, _| open_command_pallete(&app, &scripts));
