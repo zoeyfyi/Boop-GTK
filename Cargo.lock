@@ -56,6 +56,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sourceview",
+ "sublime_fuzzy",
 ]
 
 [[package]]
@@ -625,6 +626,12 @@ dependencies = [
  "libc",
  "pango",
 ]
+
+[[package]]
+name = "sublime_fuzzy"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bdac3d983d073c19487ba1f5e16eda43e9c6e50aa895d87110d0febe389b66b9"
 
 [[package]]
 name = "syn"

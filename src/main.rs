@@ -25,6 +25,15 @@ use sourceview::prelude::*;
 use rust_embed::RustEmbed;
 use std::borrow::Cow;
 
+use sublime_fuzzy::{FuzzySearch, ScoreConfig};
+
+const SEARCH_CONFIG: ScoreConfig = ScoreConfig {
+    bonus_consecutive: 12,
+    bonus_word_start: 0,
+    bonus_coverage: 64,
+    penalty_distance: 4,
+};
+
 #[derive(RustEmbed)]
 #[folder = "scripts"]
 struct Scripts;
@@ -56,20 +65,65 @@ fn create_command_pallete_dialog(window: &ApplicationWindow, scripts: &Vec<Scrip
     dialog.set_property_window_position(gtk::WindowPosition::CenterOnParent);
     dialog.set_transient_for(Some(window));
 
-    let searchbar = gtk::Entry::new();
-    searchbar.set_hexpand(true);
-    let header = gtk::HeaderBar::new();
-    header.set_custom_title(Some(&searchbar));
-    dialog.set_titlebar(Some(&header));
-
     let dialog_box = dialog.get_content_area();
     for script in scripts {
         dialog_box.add(&Label::new(Some(&script.metadata().name)));
     }
 
+    let searchbar = gtk::Entry::new();
+    searchbar.set_hexpand(true);
+    let scripts = scripts.clone();
+    searchbar.connect_changed(move |searchbar| {
+        for child in dialog_box.get_children() {
+            dialog_box.remove(&child);
+        }
+
+        let searchbar_text = searchbar
+            .get_text()
+            .map(|s| s.to_string())
+            .unwrap_or_else(String::new);
+
+        println!("searchbar text: {}", searchbar_text);
+
+        let search_results = if searchbar_text.is_empty() {
+            scripts.clone()
+        } else {
+            let mut scored_scripts = scripts
+                .clone()
+                .into_iter()
+                .map(|script| {
+                    let mut search =
+                        FuzzySearch::new(&searchbar_text, &script.metadata().name, true);
+                    search.set_score_config(SEARCH_CONFIG);
+
+                    let score = search.best_match().map(|m| m.score()).unwrap_or(0);
+                    println!("score: {}", score);
+                    (script.clone(), score)
+                })
+                .filter(|(_, score)| *score > 0)
+                .collect::<Vec<(Script, isize)>>();
+
+            scored_scripts.sort_by_key(|(_, score)| *score);
+
+            scored_scripts
+                .into_iter()
+                .map(|(script, _)| script)
+                .collect()
+        };
+
+        for script in &search_results {
+            dialog_box.add(&gtk::Label::new(Some(&script.metadata().name)));
+        }
+
+        dialog_box.show_all();
+    });
+
+    let header = gtk::HeaderBar::new();
+    header.set_custom_title(Some(&searchbar));
+    dialog.set_titlebar(Some(&header));
+
     return dialog;
 }
-use std::{process, ptr};
 
 fn main() -> Result<(), ()> {
     // initalize V8
