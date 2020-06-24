@@ -13,6 +13,9 @@ gdk = "0.12.1"
 rust-embed = "5.5.1"
 rusty_v8 = "0.5.1"
 libc = "0.2.71"
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+regex = "1"
 
 [dependencies.gtk]
 version = "0.8.1"

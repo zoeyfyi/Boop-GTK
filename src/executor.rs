@@ -2,17 +2,10 @@ extern crate rusty_v8;
 
 use rusty_v8 as v8;
 
-pub struct Executor {
-    source: String,
-    text: String,
-}
+pub struct Executor;
 
 impl Executor {
-    pub fn new(source: String, text: String) -> Self {
-        Executor { source, text }
-    }
-
-    pub fn execute(&self) -> String {
+    pub fn execute(source: &str, text: &str) -> String {
         // setup instance of v8
         let mut isolate = v8::Isolate::new(Default::default());
         let mut handle_scope = v8::HandleScope::new(&mut isolate);
@@ -22,7 +15,7 @@ impl Executor {
         let scope = context_scope.enter();
 
         // complile and run script
-        let code = v8::String::new(scope, &self.source).unwrap();
+        let code = v8::String::new(scope, source).unwrap();
         let mut compiled_script = v8::Script::compile(scope, context, code, None).unwrap();
         let result = compiled_script.run(scope, context).unwrap();
 
@@ -43,7 +36,7 @@ impl Executor {
         payload.set(
             context,
             key_text.into(),
-            v8::String::new(scope, &self.text).unwrap().into(),
+            v8::String::new(scope, text).unwrap().into(),
         );
 
         // call main

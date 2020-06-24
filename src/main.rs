@@ -4,12 +4,16 @@ extern crate glib;
 extern crate gtk;
 extern crate sourceview;
 
-extern crate rusty_v8;
 extern crate libc;
 extern crate rust_embed;
+extern crate rusty_v8;
+
+extern crate serde;
 
 mod executor;
 use executor::Executor;
+mod script;
+use script::Script;
 
 use rusty_v8 as v8;
 
@@ -44,9 +48,9 @@ fn create_window(app: &Application) -> ApplicationWindow {
     return window;
 }
 
-fn create_command_pallete_dialog(window: &ApplicationWindow) -> Dialog {
+fn create_command_pallete_dialog(window: &ApplicationWindow, scripts: &Vec<Script>) -> Dialog {
     let dialog = Dialog::new();
-    dialog.set_default_size(300, 300);
+    dialog.set_default_size(300, 0);
     dialog.set_modal(true);
     dialog.set_destroy_with_parent(true);
     dialog.set_property_window_position(gtk::WindowPosition::CenterOnParent);
@@ -59,7 +63,9 @@ fn create_command_pallete_dialog(window: &ApplicationWindow) -> Dialog {
     dialog.set_titlebar(Some(&header));
 
     let dialog_box = dialog.get_content_area();
-    dialog_box.add(&Label::new(Some("Command Pallete")));
+    for script in scripts {
+        dialog_box.add(&Label::new(Some(&script.metadata().name)));
+    }
 
     return dialog;
 }
@@ -71,20 +77,23 @@ fn main() -> Result<(), ()> {
     v8::V8::initialize_platform(platform);
     v8::V8::initialize();
 
+    let mut scripts: Vec<Script> = Vec::with_capacity(Scripts::iter().count());
+
     for file in Scripts::iter() {
         let file: Cow<'_, str> = file;
         let source: Cow<'static, [u8]> = Scripts::get(&file).unwrap();
         let script_source = String::from_utf8(source.to_vec()).unwrap();
 
-        let text = "foobar";
-        let result = Executor::new(script_source, text.to_owned()).execute();
-        println!("executing {} on {} produced {}", file, text, result);
+        match Script::from_source(script_source) {
+            Ok(script) => scripts.push(script),
+            Err(e) => println!("failed to parse script {}: {}", file, e),
+        };
     }
 
     let application = Application::new(Some("uk.co.mrbenshef.boop-gtk"), Default::default())
         .expect("failed to initialize GTK application");
 
-    application.connect_activate(|app| {
+    application.connect_activate(move |app| {
         let menu = gio::Menu::new();
         menu.append(Some("Command Pallete..."), Some("app.command_pallete"));
         app.set_app_menu(Some(&menu));
@@ -92,8 +101,9 @@ fn main() -> Result<(), ()> {
         let window = create_window(app);
 
         let command_pallete_action = gio::SimpleAction::new("command_pallete", None);
+        let scripts = scripts.clone();
         command_pallete_action.connect_activate(move |_, _| {
-            let dialog = create_command_pallete_dialog(&window);
+            let dialog = create_command_pallete_dialog(&window, &scripts);
             dialog.show_all();
             dialog.run();
             dialog.destroy();
