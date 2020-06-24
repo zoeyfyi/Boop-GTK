@@ -14,6 +14,8 @@ mod executor;
 use executor::Executor;
 mod script;
 use script::Script;
+mod command_pallete;
+use command_pallete::CommandPalleteDialog;
 
 use rusty_v8 as v8;
 
@@ -25,7 +27,7 @@ use sourceview::prelude::*;
 use rust_embed::RustEmbed;
 use std::borrow::Cow;
 
-use sublime_fuzzy::{FuzzySearch, ScoreConfig};
+use sublime_fuzzy::ScoreConfig;
 
 const SEARCH_CONFIG: ScoreConfig = ScoreConfig {
     bonus_consecutive: 12,
@@ -55,74 +57,6 @@ fn create_window(app: &Application) -> ApplicationWindow {
     window.show_all();
 
     return window;
-}
-
-fn create_command_pallete_dialog(window: &ApplicationWindow, scripts: &Vec<Script>) -> Dialog {
-    let dialog = Dialog::new();
-    dialog.set_default_size(300, 0);
-    dialog.set_modal(true);
-    dialog.set_destroy_with_parent(true);
-    dialog.set_property_window_position(gtk::WindowPosition::CenterOnParent);
-    dialog.set_transient_for(Some(window));
-
-    let dialog_box = dialog.get_content_area();
-    for script in scripts {
-        dialog_box.add(&Label::new(Some(&script.metadata().name)));
-    }
-
-    let searchbar = gtk::Entry::new();
-    searchbar.set_hexpand(true);
-    let scripts = scripts.clone();
-    searchbar.connect_changed(move |searchbar| {
-        for child in dialog_box.get_children() {
-            dialog_box.remove(&child);
-        }
-
-        let searchbar_text = searchbar
-            .get_text()
-            .map(|s| s.to_string())
-            .unwrap_or_else(String::new);
-
-        println!("searchbar text: {}", searchbar_text);
-
-        let search_results = if searchbar_text.is_empty() {
-            scripts.clone()
-        } else {
-            let mut scored_scripts = scripts
-                .clone()
-                .into_iter()
-                .map(|script| {
-                    let mut search =
-                        FuzzySearch::new(&searchbar_text, &script.metadata().name, true);
-                    search.set_score_config(SEARCH_CONFIG);
-
-                    let score = search.best_match().map(|m| m.score()).unwrap_or(0);
-                    println!("score: {}", score);
-                    (script.clone(), score)
-                })
-                .filter(|(_, score)| *score > 0)
-                .collect::<Vec<(Script, isize)>>();
-
-            scored_scripts.sort_by_key(|(_, score)| *score);
-
-            scored_scripts
-                .into_iter()
-                .map(|(script, _)| script)
-                .collect()
-        };
-
-        for script in &search_results {
-            dialog_box.add(&gtk::Label::new(Some(&script.metadata().name)));
-        }
-
-        dialog_box.show_all();
-    });
-
-    let header = gtk::HeaderBar::new();
-    header.set_custom_title(Some(&searchbar));
-    dialog.set_titlebar(Some(&header));
-
-    return dialog;
 }
 
 fn main() -> Result<(), ()> {
@@ -157,7 +91,7 @@ fn main() -> Result<(), ()> {
         let command_pallete_action = gio::SimpleAction::new("command_pallete", None);
         let scripts = scripts.clone();
         command_pallete_action.connect_activate(move |_, _| {
-            let dialog = create_command_pallete_dialog(&window, &scripts);
+            let dialog = CommandPalleteDialog::new(&window, scripts.clone());
             dialog.show_all();
             dialog.run();
             dialog.destroy();
