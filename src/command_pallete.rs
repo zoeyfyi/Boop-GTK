@@ -29,24 +29,39 @@ impl CommandPalleteDialog {
             scripts: scripts.clone(),
         };
 
-        command_pallete_dialog.dialog.set_transient_for(Some(window));
+        command_pallete_dialog
+            .dialog
+            .set_transient_for(Some(window));
 
         // create list store
-        let store = gtk::ListStore::new(&[glib::Type::String, glib::Type::U64]);
-        
-        let renderer = gtk::CellRendererText::new();
-        let column = gtk::TreeViewColumn::new();
-        column.pack_start(&renderer, true);
-        column.add_attribute(&renderer, "text", 0);
-        command_pallete_dialog.dialog_tree_view.append_column(&column);
+        {
+            let store = gtk::ListStore::new(&[glib::Type::String, glib::Type::U64]);
+            let renderer = gtk::CellRendererText::new();
+            
+            renderer.set_property_wrap_mode(pango::WrapMode::Word);
 
-        for (script_id, script) in &scripts {
-            let values: [&dyn ToValue; 2] = [&script.metadata().name.to_string(), script_id];
-            store.set(&store.append(), &[0, 1], &values);
+            let column = gtk::TreeViewColumn::new();
+            column.pack_start(&renderer, true);
+            column.add_attribute(&renderer, "markup", 0);
+
+            command_pallete_dialog
+                .dialog_tree_view
+                .append_column(&column);
+
+            for (script_id, script) in &scripts {
+                let entry = format!(
+                    "<b>{}</b>\n<span size=\"smaller\">{}</span>",
+                    script.metadata().name.to_string(),
+                    script.metadata().description.to_string()
+                );
+                let values: [&dyn ToValue; 2] = [&entry, script_id];
+                store.set(&store.append(), &[0, 1], &values);
+            }
+
+            command_pallete_dialog
+                .dialog_tree_view
+                .set_model(Some(&store));
         }
-
-        command_pallete_dialog.dialog_tree_view.set_model(Some(&store));
-
 
         // select first row
         command_pallete_dialog.dialog_tree_view.set_cursor(
@@ -54,7 +69,7 @@ impl CommandPalleteDialog {
             gtk::NONE_TREE_VIEW_COLUMN,
             false,
         );
-            
+
         command_pallete_dialog.register_handlers();
         command_pallete_dialog
     }
@@ -168,7 +183,12 @@ impl CommandPalleteDialog {
         };
 
         for (script_id, script) in &search_results {
-            let values: [&dyn ToValue; 2] = [&script.metadata().name.to_string(), script_id];
+            let entry = format!(
+                "<b>{}</b>\n<span size=\"smaller\">{}</span>",
+                script.metadata().name.to_string(),
+                script.metadata().description.to_string()
+            );
+            let values: [&dyn ToValue; 2] = [&entry, script_id];
             model.set(&model.append(), &[0, 1], &values);
         }
 

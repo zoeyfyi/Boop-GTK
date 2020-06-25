@@ -22,6 +22,7 @@ regex = "1"
 sublime_fuzzy = "0.6.0"
 shrinkwraprs = "0.3.0"
 lazy_static = "1.4.0"
+pango = "0.8.0"
 
 [dependencies.gtk]
 version = "0.8.1"

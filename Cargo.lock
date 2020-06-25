@@ -51,6 +51,7 @@ dependencies = [
  "gtk",
  "lazy_static",
  "libc",
+ "pango",
  "regex",
  "rust-embed",
  "rusty_v8",

@@ -5,6 +5,7 @@ extern crate gdk;
 extern crate gio;
 extern crate glib;
 extern crate gtk;
+extern crate pango;
 extern crate sourceview;
 
 extern crate libc;
