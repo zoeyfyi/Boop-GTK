@@ -25,7 +25,6 @@ use rusty_v8 as v8;
 use gio::prelude::*;
 use gtk::prelude::*;
 use gtk::{Application, ApplicationWindow, Button, Statusbar};
-use sourceview::prelude::*;
 
 use rust_embed::RustEmbed;
 use std::borrow::Cow;
