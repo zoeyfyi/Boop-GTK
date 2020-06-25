@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<language id="boop" name="Boop" version="2.0" _section="Other">
+  <metadata>
+    <property name="line-comment-start">//</property>
+    <property name="block-comment-start">/*</property>
+    <property name="block-comment-end">*/</property>
+  </metadata>
+  
+  <styles>
+    <style id="keyword"    name="Keyword"       map-to="def:keyword"/>
+    <style id="type"       name="Data Type"     map-to="def:type"/>
+    <style id="date"       name="Date"          map-to="def:number"/>
+    <style id="md5"        name="MD5"           map-to="def:keyword"/>
+    <style id="tag"        name="Tags"          map-to="def:keyword"/>
+    <style id="string"     name="Strings"       map-to="def:string"/>
+    <style id="comment"    name="Comments"      map-to="def:comment"/>
+    <style id="number"     name="Number"        map-to="def:number"/>
+  </styles>
+
+  <definitions>
+    <context id="keywords" style-ref="keyword">
+      <keyword>var</keyword>
+      <keyword>val</keyword>
+      <keyword>let</keyword>
+      <keyword>if</keyword>
+      <keyword>else</keyword>
+      <keyword>export</keyword>
+      <keyword>import</keyword>
+      <keyword>return</keyword>
+      <keyword>static</keyword>
+      <keyword>fun</keyword>
+      <keyword>function</keyword>
+      <keyword>func</keyword>
+      <keyword>class</keyword>
+      <keyword>open</keyword>
+      <keyword>new</keyword>
+      <keyword>as</keyword>
+      <keyword>where</keyword>
+      <keyword>select</keyword>
+      <keyword>delete</keyword>
+      <keyword>add</keyword>
+      <keyword>limit</keyword>
+      <keyword>update</keyword>
+      <keyword>insert</keyword>
+      <keyword>to</keyword>
+      <keyword>from</keyword>
+    </context>
+
+    <context id="types" style-ref="type">
+      <keyword>string</keyword> 
+      <keyword>int</keyword> 
+      <keyword>float</keyword> 
+      <keyword>double</keyword> 
+      <keyword>bool</keyword> 
+      <keyword>boolean</keyword>
+    </context>
+
+    <context id="dates" style-ref="date">
+      <match>(?:(Sun|Mon|Tue|Wed|Thu|Fri|Sat),\s+)?(0[1-9]|[1-2]?[0-9]|3[01])\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(19[0-9]{2}|[2-9][0-9]{3})\s+(2[0-3]|[0-1][0-9]):([0-5][0-9])(?::(60|[0-5][0-9]))?\s+([-\+][0-9]{2}[0-5][0-9]|(?:UT|GMT|(?:E|C|M|P)(?:ST|DT)|[A-IK-Z]))</match>      
+    </context>
+
+    <context id="md5" style-ref="md5">
+      <match>([a-f0-9]{32})</match>
+    </context>
+
+    <context id="tags" style-ref="tag">
+      <match>&lt;(?:.*?)\b[^&gt;]*\/?&gt;</match>
+    </context>
+
+    <context id="quotes" style-ref="string">
+      <start>"</start>
+      <end>"</end>
+    </context>
+
+    <context id="singlequotes" style-ref="string">
+      <start>'</start>
+      <end>'</end>
+    </context>
+
+    <context id="backticks" style-ref="string">
+      <start>`</start>
+      <end>`</end>
+    </context>
+
+    <context id="htmlcomment" style-ref="comment">
+      <start>&lt;!--</start>
+      <end>--&gt;</end>
+    </context>
+
+    <context id="comment-multiline-nested" style-ref="comment" class-disabled="no-spell-check" class="comment" >
+      <start>/\*</start>
+      <end>\*/</end>
+      <include>
+        <context ref="comment-multiline-nested"/>
+      </include>
+    </context>
+
+    <context id="float" style-ref="number">
+      <match extended="true">
+        (?&lt;![\w\.])
+        ((\.[0-9]+ | [0-9]+\.[0-9]*) ([Ee][+-]?[0-9]*)? |
+         ([0-9]+[Ee][+-]?[0-9]*))
+        [fFlL]?
+        (?![\w\.])
+      </match>
+    </context>
+
+    <context id="hexadecimal" style-ref="number">
+      <match extended="true">
+        (?&lt;![\w\.])
+        0[xX][a-fA-F0-9]+[uUlL]*
+        (?![\w\.])
+      </match>
+    </context>
+
+    <context id="octal" style-ref="number">
+      <match extended="true">
+        (?&lt;![\w\.])
+        0[0-7]+[uUlL]*
+        (?![\w\.])
+      </match>
+    </context>
+
+    <context id="decimal" style-ref="number">
+      <match extended="true">
+        (?&lt;![\w\.])
+        (0|[1-9][0-9]*)[uUlL]*
+        (?![\w\.])
+      </match>
+    </context>
+
+    <context id="boop" class="no-spell-check">
+      <include>
+        <context ref="def:c-like-comment" style-ref="comment"/>
+        <context ref="comment-multiline-nested"/>
+        <context ref="keywords"/>
+        <context ref="types"/>
+        <context ref="dates"/>
+        <context ref="md5"/>
+        <context ref="tags"/>
+        <context ref="quotes"/>
+        <context ref="singlequotes"/>
+        <context ref="backticks"/>
+        <context ref="htmlcomment"/>
+        <context ref="float"/>
+        <context ref="hexadecimal"/>
+        <context ref="octal"/>
+        <context ref="decimal"/>
+      </include>
+    </context>
+  </definitions>
+</language>

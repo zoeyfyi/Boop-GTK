@@ -31,6 +31,7 @@ use rusty_v8 as v8;
 use gio::prelude::*;
 use gtk::prelude::*;
 use gtk::{Application, ApplicationWindow, Button, Statusbar};
+use sourceview::prelude::*;
 
 use rust_embed::RustEmbed;
 use std::{
@@ -43,6 +44,7 @@ use std::{
 use sublime_fuzzy::ScoreConfig;
 
 use directories::{BaseDirs, ProjectDirs, UserDirs};
+use std::io::prelude::*;
 
 const SEARCH_CONFIG: ScoreConfig = ScoreConfig {
     bonus_consecutive: 12,
@@ -132,11 +134,10 @@ impl fmt::Display for LoadScriptError {
     }
 }
 
-fn load_user_scripts() -> Result<Vec<Result<Script, ParseScriptError>>, LoadScriptError> {
-    let scripts_dir: PathBuf = ProjectDirs::from("uk.co", "mrbenshef", "boop-gtk")
-        .ok_or(LoadScriptError::CantConstuctProjectDirectory)?
-        .config_dir()
-        .join("scripts");
+fn load_user_scripts(
+    config_dir: &Path,
+) -> Result<Vec<Result<Script, ParseScriptError>>, LoadScriptError> {
+    let scripts_dir: PathBuf = config_dir.join("scripts");
 
     std::fs::create_dir_all(&scripts_dir)
         .map_err(|_| LoadScriptError::FailedToCreateScriptDirectory)?;
@@ -174,10 +175,36 @@ fn load_scripts() -> Vec<Script> {
 fn main() -> Result<(), ()> {
     env_logger::init();
 
+    let config_dir = ProjectDirs::from("uk.co", "mrbenshef", "boop-gtk")
+        .expect("Unable to find a configuration location for your platform")
+        .config_dir()
+        .to_path_buf();
+
+    info!("configuration directory at: {}", config_dir.display());
+
+    let lang_file_path = {
+        let mut path = config_dir.clone();
+        path.push("boop.lang");
+        path
+    };
+
+    if !lang_file_path.exists() {
+        info!(
+            "language file does not exist, creating a new one at: {}",
+            lang_file_path.display()
+        );
+        let mut file =
+            std::fs::File::create(&lang_file_path).expect("Could not create language file");
+        file.write_all(include_str!("../boop.lang").as_bytes())
+            .expect("Failed to write language file");
+        info!("language file created at: {}", lang_file_path.display());
+    }
+
     // initalize V8
     let platform = v8::new_default_platform().unwrap();
     v8::V8::initialize_platform(platform);
     v8::V8::initialize();
+    info!("V8 initialized");
 
     let application = Application::new(Some("uk.co.mrbenshef.boop-gtk"), Default::default())
         .expect("failed to initialize GTK application");
@@ -200,9 +227,39 @@ fn main() -> Result<(), ()> {
 
         let context_id = app.status_bar.get_context_id("script execution");
 
+        // set syntax highlighting
+        {
+            let language_manager = sourceview::LanguageManager::get_default().unwrap();
+            
+            // add config_dir to language manager's search path
+            let dirs = language_manager.get_search_path();
+            let mut dirs: Vec<&str> = dirs.iter().map(|s| s.as_ref()).collect();
+            let config_dir_str = config_dir.to_string_lossy().to_string();
+            dirs.push(&config_dir_str);
+            info!("Language manager search directorys: {}", dirs.join(":"));
+            language_manager.set_search_path(&dirs);
+
+            let boop_language = language_manager.get_language("boop");
+            if boop_language.is_none() {
+                app.status_bar.push(context_id, "ERROR: failed to load language file");
+            }
+
+            println!("language: {:?}", boop_language.clone().unwrap().get_style_ids());
+
+            // set language
+            let buffer: sourceview::Buffer = app
+                .source_view
+                .get_buffer()
+                .unwrap()
+                .downcast::<sourceview::Buffer>()
+                .unwrap();
+            buffer.set_highlight_syntax(true);
+            buffer.set_language(boop_language.as_ref());
+        }
+        
         let mut scripts = load_scripts();
 
-        match load_user_scripts() {
+        match load_user_scripts(&config_dir) {
             Ok(user_scripts) => {
                 for script in user_scripts {
                     match script {
@@ -220,6 +277,7 @@ fn main() -> Result<(), ()> {
             }
         }
 
+        // register button to open command pallete
         {
             let app_ = app.clone();
             let scripts = scripts.clone();
@@ -227,17 +285,18 @@ fn main() -> Result<(), ()> {
                 .connect_clicked(move |_| open_command_pallete(&app_, &scripts, context_id));
         }
 
-        let command_pallete_action = gio::SimpleAction::new("command_pallete", None);
-
+        // add keyboard shortcut for opening command pallete
         {
+            let command_pallete_action = gio::SimpleAction::new("command_pallete", None);
+
             let app = app.clone();
             let scripts = scripts.clone();
             command_pallete_action
                 .connect_activate(move |_, _| open_command_pallete(&app, &scripts, context_id));
-        }
 
-        application.add_action(&command_pallete_action);
-        application.set_accels_for_action("app.command_pallete", &["<Primary><Shift>P"]);
+            application.add_action(&command_pallete_action);
+            application.set_accels_for_action("app.command_pallete", &["<Primary><Shift>P"]);
+        }
     });
 
     application.run(&[]);
