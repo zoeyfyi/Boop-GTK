@@ -1,4 +1,4 @@
-use gdk::EventKey;
+use gdk::{enums::key, EventKey};
 use gio::prelude::*;
 use gtk::prelude::*;
 use gtk::{Dialog, Entry, TreeView, Window};
@@ -7,6 +7,14 @@ use sublime_fuzzy::FuzzySearch;
 
 use crate::script::Script;
 use crate::SEARCH_CONFIG;
+use glib::Type;
+
+const ICON_COLUMN: u32 = 0;
+const TEXT_COLUMN: u32 = 1;
+const ID_COLUMN: u32 = 2;
+
+const COLUMNS: [u32; 3] = [ICON_COLUMN, TEXT_COLUMN, ID_COLUMN];
+const COLUMN_TYPES: [Type; 3] = [Type::String, Type::String, Type::U64];
 
 #[derive(Shrinkwrap)]
 pub struct CommandPalleteDialog {
@@ -35,27 +43,59 @@ impl CommandPalleteDialog {
 
         // create list store
         {
-            let store = gtk::ListStore::new(&[glib::Type::String, glib::Type::U64]);
-            let renderer = gtk::CellRendererText::new();
-            
-            renderer.set_property_wrap_mode(pango::WrapMode::Word);
+            let store = gtk::ListStore::new(&COLUMN_TYPES);
 
-            let column = gtk::TreeViewColumn::new();
-            column.pack_start(&renderer, true);
-            column.add_attribute(&renderer, "markup", 0);
+            // icon column
+            {
+                let renderer = gtk::CellRendererPixbuf::new();
+                renderer.set_padding(8, 0);
 
-            command_pallete_dialog
-                .dialog_tree_view
-                .append_column(&column);
+                let column = gtk::TreeViewColumn::new();
+                column.pack_start(&renderer, false);
+                column.add_attribute(&renderer, "icon-name", ICON_COLUMN as i32);
+
+                command_pallete_dialog
+                    .dialog_tree_view
+                    .append_column(&column);
+            }
+
+            // text column
+            {
+                let renderer = gtk::CellRendererText::new();
+                renderer.set_property_wrap_mode(pango::WrapMode::Word);
+
+                let column = gtk::TreeViewColumn::new();
+                column.pack_start(&renderer, true);
+                column.add_attribute(&renderer, "markup", TEXT_COLUMN as i32);
+
+                command_pallete_dialog
+                    .dialog_tree_view
+                    .append_column(&column);
+            }
 
             for (script_id, script) in &scripts {
-                let entry = format!(
+                let icon_name = String::from(match script.metadata().icon.as_str() {
+                    "broom" => "draw-eraser",
+                    "counter" => "cm_markplus",
+                    "fingerprint" => "auth-fingerprint-symbolic",
+                    "flip" => "object-flip-verical",
+                    "HTML" => "format-text-code",
+                    "link" => "edit-link",
+                    "metamorphose" => "shapes",
+                    "quote" => "format-text-blockquote",
+                    "table" => "table",
+                    "watch" => "view-calendar-time-spent",
+                    _ => "fcitx-remind-active",
+                });
+
+                let entry_text = format!(
                     "<b>{}</b>\n<span size=\"smaller\">{}</span>",
                     script.metadata().name.to_string(),
                     script.metadata().description.to_string()
                 );
-                let values: [&dyn ToValue; 2] = [&entry, script_id];
-                store.set(&store.append(), &[0, 1], &values);
+
+                let values: [&dyn ToValue; 3] = [&icon_name, &entry_text, script_id];
+                store.set(&store.append(), &COLUMNS, &values);
             }
 
             command_pallete_dialog
@@ -97,19 +137,19 @@ impl CommandPalleteDialog {
 
         let key = key.get_keyval();
 
-        if key == gdk::enums::key::Up || key == gdk::enums::key::Down {
+        if key == key::Up || key == key::Down {
             if let (Some(mut path), _) = dialog_tree_view.get_cursor() {
                 let index: i32 = path.get_indices()[0];
 
                 match key {
-                    gdk::enums::key::Up => {
+                    key::Up => {
                         if index == 0 {
                             path = gtk::TreePath::new_from_indicesv(&[result_count - 1]);
                         } else {
                             path.prev();
                         }
                     }
-                    gdk::enums::key::Down => {
+                    key::Down => {
                         if index >= result_count - 1 {
                             path = gtk::TreePath::new_first();
                         } else {
@@ -123,9 +163,9 @@ impl CommandPalleteDialog {
             }
 
             return Inhibit(true);
-        } else if key == gdk::enums::key::Return {
+        } else if key == key::Return {
             CommandPalleteDialog::on_click(dialog_tree_view, dialog);
-        } else if key == gdk::enums::key::Escape {
+        } else if key == key::Escape {
             dialog.destroy();
         }
 
@@ -136,7 +176,7 @@ impl CommandPalleteDialog {
         let model: gtk::ListStore = dialog_tree_view.get_model().unwrap().downcast().unwrap();
 
         if let (Some(path), _) = dialog_tree_view.get_cursor() {
-            let value = model.get_value(&model.get_iter(&path).unwrap(), 1);
+            let value = model.get_value(&model.get_iter(&path).unwrap(), ID_COLUMN as i32);
 
             let v = value.downcast::<u64>().unwrap().get().unwrap();
 
@@ -183,13 +223,28 @@ impl CommandPalleteDialog {
         };
 
         for (script_id, script) in &search_results {
-            let entry = format!(
+            let icon_name = String::from(match script.metadata().icon.as_str() {
+                "broom" => "draw-eraser",
+                "counter" => "cm_markplus",
+                "fingerprint" => "auth-fingerprint-symbolic",
+                "flip" => "object-flip-verical",
+                "HTML" => "format-text-code",
+                "link" => "edit-link",
+                "metamorphose" => "shapes",
+                "quote" => "format-text-blockquote",
+                "table" => "table",
+                "watch" => "view-calendar-time-spent",
+                _ => "fcitx-remind-active",
+            });
+
+            let entry_text = format!(
                 "<b>{}</b>\n<span size=\"smaller\">{}</span>",
                 script.metadata().name.to_string(),
                 script.metadata().description.to_string()
             );
-            let values: [&dyn ToValue; 2] = [&entry, script_id];
-            model.set(&model.append(), &[0, 1], &values);
+
+            let values: [&dyn ToValue; 3] = [&icon_name, &entry_text, script_id];
+            model.set(&model.append(), &COLUMNS, &values);
         }
 
         // reset selection to first row
