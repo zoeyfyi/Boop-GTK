@@ -133,6 +133,7 @@ fn main() -> Result<(), ()> {
         };
 
         app.window.set_application(Some(application));
+        app.header_button.set_label(HEADER_BUTTON_GET_STARTED);
         app.window.show_all();
 
         let context_id = app.status_bar.get_context_id("script execution");

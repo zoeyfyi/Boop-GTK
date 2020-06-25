@@ -12,94 +12,67 @@ use crate::SEARCH_CONFIG;
 pub struct CommandPalleteDialog {
     #[shrinkwrap(main_field)]
     dialog: Dialog,
-    dialog_list_box: TreeView,
-    searchbar: Entry,
+    dialog_tree_view: TreeView,
+    search_bar: Entry,
     scripts: Vec<(u64, Script)>,
 }
 
 impl CommandPalleteDialog {
     pub fn new<P: IsA<Window>>(window: &P, scripts: Vec<(u64, Script)>) -> Self {
-        let dialog = Dialog::new();
-        dialog.set_default_size(300, 300);
-        dialog.set_modal(true);
-        dialog.set_destroy_with_parent(true);
-        dialog.set_property_window_position(gtk::WindowPosition::CenterOnParent);
-        dialog.set_transient_for(Some(window));
+        let dialog_glade = include_str!("../ui/command-pallete.glade");
+        let builder = gtk::Builder::new_from_string(dialog_glade);
 
-        let scrolled_window = gtk::ScrolledWindow::new(
-            gtk::NONE_ADJUSTMENT,
-            Some(&gtk::Adjustment::new(0.0, 0.0, 100.0, 1.0, 10.0, 10.0)),
-        );
-        dialog.get_content_area().add(&scrolled_window);
+        let command_pallete_dialog = CommandPalleteDialog {
+            dialog: builder.get_object("dialog").unwrap(),
+            dialog_tree_view: builder.get_object("dialog_tree_view").unwrap(),
+            search_bar: builder.get_object("search_bar").unwrap(),
+            scripts: scripts.clone(),
+        };
 
-        let dialog_tree_view = TreeView::new();
-        dialog_tree_view.set_activate_on_single_click(true);
-        dialog_tree_view.set_headers_visible(false);
+        command_pallete_dialog.dialog.set_transient_for(Some(window));
+
+        // create list store
+        let store = gtk::ListStore::new(&[glib::Type::String, glib::Type::U64]);
+        
         let renderer = gtk::CellRendererText::new();
         let column = gtk::TreeViewColumn::new();
         column.pack_start(&renderer, true);
         column.add_attribute(&renderer, "text", 0);
-        dialog_tree_view.append_column(&column);
-
-        let store = gtk::ListStore::new(&[glib::Type::String, glib::Type::U64]);
+        command_pallete_dialog.dialog_tree_view.append_column(&column);
 
         for (script_id, script) in &scripts {
             let values: [&dyn ToValue; 2] = [&script.metadata().name.to_string(), script_id];
             store.set(&store.append(), &[0, 1], &values);
         }
 
-        dialog_tree_view.set_model(Some(&store));
+        command_pallete_dialog.dialog_tree_view.set_model(Some(&store));
 
-        scrolled_window.set_property_expand(true);
-
-        scrolled_window.add(&dialog_tree_view);
-
-        // for script in &scripts {
-        //     dialog_list_box.add(&Label::new(Some(&script.metadata().name)));
-        // }
 
         // select first row
-        dialog_tree_view.set_cursor(
+        command_pallete_dialog.dialog_tree_view.set_cursor(
             &gtk::TreePath::new_first(),
             gtk::NONE_TREE_VIEW_COLUMN,
             false,
         );
-        // dialog_list_box.select_row((&dialog_list_box.get_row_at_index(0)).as_ref());
-
-        let searchbar = gtk::Entry::new();
-        searchbar.set_hexpand(true);
-        let scripts = scripts.clone();
-
-        let header = gtk::HeaderBar::new();
-        header.set_custom_title(Some(&searchbar));
-        dialog.set_titlebar(Some(&header));
-
-        searchbar.grab_focus();
-
-        let command_pallete_dialog = CommandPalleteDialog {
-            dialog,
-            dialog_list_box: dialog_tree_view,
-            searchbar,
-            scripts: scripts.clone(),
-        };
+            
         command_pallete_dialog.register_handlers();
         command_pallete_dialog
     }
 
     fn register_handlers(&self) {
-        let lb = self.dialog_list_box.clone();
+        let lb = self.dialog_tree_view.clone();
         let dialog = self.dialog.clone();
         self.dialog.connect_key_press_event(move |_, k| {
             CommandPalleteDialog::on_key_press(k, &lb, &dialog)
         });
 
-        let lb = self.dialog_list_box.clone();
+        let lb = self.dialog_tree_view.clone();
         let scripts = self.scripts.clone();
-        self.searchbar
+        self.search_bar
             .connect_changed(move |s| CommandPalleteDialog::on_changed(s, &lb, &scripts));
 
         let dialog = self.dialog.clone();
-        self.dialog_list_box
+        self.dialog_tree_view
             .connect_row_activated(move |tv, _, _| CommandPalleteDialog::on_click(tv, &dialog));
     }
 
@@ -135,10 +108,10 @@ impl CommandPalleteDialog {
             }
 
             return Inhibit(true);
-        }
-
-        if key == gdk::enums::key::Return {
+        } else if key == gdk::enums::key::Return {
             CommandPalleteDialog::on_click(dialog_tree_view, dialog);
+        } else if key == gdk::enums::key::Escape {
+            dialog.destroy();
         }
 
         Inhibit(false)
