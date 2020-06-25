@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate lazy_static;
+
 extern crate gdk;
 extern crate gio;
 extern crate glib;
@@ -21,7 +24,7 @@ use rusty_v8 as v8;
 
 use gio::prelude::*;
 use gtk::prelude::*;
-use gtk::{Application, ApplicationWindow, Button};
+use gtk::{Application, ApplicationWindow, Button, Statusbar};
 use sourceview::prelude::*;
 
 use rust_embed::RustEmbed;
@@ -48,9 +51,10 @@ struct App {
     window: ApplicationWindow,
     header_button: Button,
     source_view: sourceview::View,
+    status_bar: Statusbar,
 }
 
-fn open_command_pallete(app: &App, scripts: &Vec<Script>) {
+fn open_command_pallete(app: &App, scripts: &Vec<Script>, context_id: u32) {
     let scripts = scripts
         .iter()
         .cloned()
@@ -63,22 +67,30 @@ fn open_command_pallete(app: &App, scripts: &Vec<Script>) {
     &app.header_button.set_label(HEADER_BUTTON_CHOOSE_ACTION);
 
     if let gtk::ResponseType::Other(script_id) = dialog.run() {
-        println!(
-            "executing {}",
-            scripts[script_id as usize].1.metadata().name
-        );
+        let script = scripts[script_id as usize].1.clone();
+
+        println!("executing {}", script.metadata().name);
+
+        app.status_bar.remove_all(context_id);
 
         let buffer = &app.source_view.get_buffer().unwrap();
 
         let result = Executor::execute(
-            scripts[script_id as usize].1.source(),
+            script.source(),
             &buffer
                 .get_text(&buffer.get_start_iter(), &buffer.get_end_iter(), false)
                 .unwrap()
                 .to_string(),
         );
 
-        buffer.set_text(&result);
+        buffer.set_text(&result.text);
+
+        // TODO: how to handle multiple messages?
+        if let Some(error) =  result.error {
+            app.status_bar.push(context_id, &error);
+        } else if let Some(info) = result.info {
+            app.status_bar.push(context_id, &info);
+        }
     }
 
     &app.header_button.set_label(HEADER_BUTTON_GET_STARTED);
@@ -109,7 +121,7 @@ fn main() -> Result<(), ()> {
         .expect("failed to initialize GTK application");
 
     application.connect_activate(move |application| {
-        let app_glade = include_str!("../boop-gtk.glade");
+        let app_glade = include_str!("../ui/boop-gtk.glade");
         let builder = gtk::Builder::new_from_string(app_glade);
         builder.set_application(application);
 
@@ -117,16 +129,19 @@ fn main() -> Result<(), ()> {
             window: builder.get_object("window").unwrap(),
             header_button: builder.get_object("header_button").unwrap(),
             source_view: builder.get_object("source_view").unwrap(),
+            status_bar: builder.get_object("status_bar").unwrap(),
         };
 
         app.window.set_application(Some(application));
         app.window.show_all();
 
+        let context_id = app.status_bar.get_context_id("script execution");
+
         {
             let app_ = app.clone();
             let scripts = scripts.clone();
             app.header_button
-                .connect_clicked(move |_| open_command_pallete(&app_, &scripts));
+                .connect_clicked(move |_| open_command_pallete(&app_, &scripts, context_id));
         }
 
         let command_pallete_action = gio::SimpleAction::new("command_pallete", None);
@@ -135,7 +150,7 @@ fn main() -> Result<(), ()> {
             let app = app.clone();
             let scripts = scripts.clone();
             command_pallete_action
-                .connect_activate(move |_, _| open_command_pallete(&app, &scripts));
+                .connect_activate(move |_, _| open_command_pallete(&app, &scripts, context_id));
         }
 
         application.add_action(&command_pallete_action);

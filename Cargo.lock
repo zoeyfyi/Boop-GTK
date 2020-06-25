@@ -49,6 +49,7 @@ dependencies = [
  "gio",
  "glib",
  "gtk",
+ "lazy_static",
  "libc",
  "regex",
  "rust-embed",
