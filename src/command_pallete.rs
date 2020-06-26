@@ -186,7 +186,7 @@ impl CommandPalleteDialog {
         }
     }
 
-    fn on_changed(searchbar: &Entry, dialog_tree_view: &TreeView, scripts: &Vec<(u64, Script)>) {
+    fn on_changed(searchbar: &Entry, dialog_tree_view: &TreeView, scripts: &[(u64, Script)]) {
         let model: gtk::ListStore = dialog_tree_view.get_model().unwrap().downcast().unwrap();
         model.clear();
 
@@ -198,18 +198,17 @@ impl CommandPalleteDialog {
         println!("searchbar text: {}", searchbar_text);
 
         let search_results = if searchbar_text.is_empty() {
-            scripts.clone()
+            scripts.to_owned()
         } else {
             let mut scored_scripts = scripts
-                .clone()
-                .into_iter()
+                .iter()
                 .map(|(script_id, script)| {
                     let mut search =
                         FuzzySearch::new(&searchbar_text, &script.metadata().name, true);
                     search.set_score_config(SEARCH_CONFIG);
 
                     let score = search.best_match().map(|m| m.score()).unwrap_or(0);
-                    (script_id, script.clone(), score)
+                    (*script_id, script.clone(), score)
                 })
                 .filter(|(_, _, score)| *score > 0)
                 .collect::<Vec<(u64, Script, isize)>>();

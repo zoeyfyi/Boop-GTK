@@ -36,14 +36,13 @@ use sourceview::prelude::*;
 use rust_embed::RustEmbed;
 use std::{
     borrow::Cow,
-    error::Error,
     fmt,
     path::{Path, PathBuf},
 };
 
 use sublime_fuzzy::ScoreConfig;
 
-use directories::{BaseDirs, ProjectDirs, UserDirs};
+use directories::{ProjectDirs};
 use std::io::prelude::*;
 
 const SEARCH_CONFIG: ScoreConfig = ScoreConfig {
@@ -68,17 +67,17 @@ struct App {
     status_bar: Statusbar,
 }
 
-fn open_command_pallete(app: &App, scripts: &Vec<Script>, context_id: u32) {
+fn open_command_pallete(app: &App, scripts: &[Script], context_id: u32) {
     let scripts = scripts
         .iter()
         .cloned()
         .enumerate()
         .map(|(i, s)| (i as u64, s))
         .collect::<Vec<(u64, Script)>>();
-    let dialog = CommandPalleteDialog::new(&app.window, scripts.clone());
+    let dialog = CommandPalleteDialog::new(&app.window, scripts.to_owned());
     dialog.show_all();
 
-    &app.header_button.set_label(HEADER_BUTTON_CHOOSE_ACTION);
+    app.header_button.set_label(HEADER_BUTTON_CHOOSE_ACTION);
 
     if let gtk::ResponseType::Other(script_id) = dialog.run() {
         let script = scripts[script_id as usize].1.clone();
@@ -107,13 +106,12 @@ fn open_command_pallete(app: &App, scripts: &Vec<Script>, context_id: u32) {
         }
     }
 
-    &app.header_button.set_label(HEADER_BUTTON_GET_STARTED);
+    app.header_button.set_label(HEADER_BUTTON_GET_STARTED);
 
     dialog.destroy();
 }
 
 enum LoadScriptError {
-    CantConstuctProjectDirectory,
     FailedToCreateScriptDirectory,
     FailedToReadScriptDirectory,
 }
@@ -121,9 +119,6 @@ enum LoadScriptError {
 impl fmt::Display for LoadScriptError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LoadScriptError::CantConstuctProjectDirectory => {
-                write!(f, "Can't find a configuration directory for your platform")
-            }
             LoadScriptError::FailedToCreateScriptDirectory => {
                 write!(f, "Can't create scripts directory, check your permissions")
             }
@@ -146,12 +141,11 @@ fn load_user_scripts(
         .map_err(|_| LoadScriptError::FailedToReadScriptDirectory)?;
 
     Ok(paths
-        .into_iter()
         .filter_map(|f| f.ok())
         .map(|f| f.path())
         .filter(|path| path.is_file())
         .filter_map(|path| std::fs::read_to_string(path).ok())
-        .map(|source| Script::from_source(source))
+        .map(Script::from_source)
         .collect())
 }
 
@@ -195,7 +189,7 @@ fn main() -> Result<(), ()> {
         );
         let mut file =
             std::fs::File::create(&lang_file_path).expect("Could not create language file");
-        file.write_all(include_str!("../boop.lang").as_bytes())
+        file.write_all(include_bytes!("../boop.lang"))
             .expect("Failed to write language file");
         info!("language file created at: {}", lang_file_path.display());
     }
@@ -289,8 +283,6 @@ fn main() -> Result<(), ()> {
         {
             let command_pallete_action = gio::SimpleAction::new("command_pallete", None);
 
-            let app = app.clone();
-            let scripts = scripts.clone();
             command_pallete_action
                 .connect_activate(move |_, _| open_command_pallete(&app, &scripts, context_id));
 

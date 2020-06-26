@@ -37,7 +37,7 @@ impl Script {
         let end = source.find("**/").ok_or(ParseScriptError::NoMetadata)?;
 
         let mut metadata: Metadata = serde_json::from_str(&source[start + 3..end])
-            .map_err(|e| ParseScriptError::InvalidMetadata(e))?;
+            .map_err(ParseScriptError::InvalidMetadata)?;
 
         metadata.icon = metadata.icon.to_lowercase();
 
@@ -45,10 +45,10 @@ impl Script {
     }
 
     pub fn metadata(&self) -> &Metadata {
-        return &self.metadata;
+        &self.metadata
     }
 
     pub fn source(&self) -> &str {
-        return &self.source;
+        &self.source
     }
 }
