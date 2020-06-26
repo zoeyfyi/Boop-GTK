@@ -56,7 +56,7 @@ const HEADER_BUTTON_GET_STARTED: &str = "Press Ctrl+Shift+P to get started";
 const HEADER_BUTTON_CHOOSE_ACTION: &str = "Select an action";
 
 #[derive(RustEmbed)]
-#[folder = "scripts"]
+#[folder = "submodules/Boop/Boop/Boop/scripts"]
 struct Scripts;
 
 #[derive(Clone)]
