@@ -13,7 +13,7 @@ lto = "off"
 sourceview = "0.8.0"
 glib = "0.9.3"
 gdk = "0.12.1"
-rust-embed = "5.5.1"
+rust-embed = { version = "5.5.1", features = ["debug-embed"] }
 rusty_v8 = "0.5.1"
 libc = "0.2.71"
 serde_json = "1.0"
