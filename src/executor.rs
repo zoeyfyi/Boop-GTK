@@ -2,7 +2,7 @@ extern crate rusty_v8;
 
 use crate::script::Script;
 use rusty_v8 as v8;
-use std::{cell::RefCell, sync::RwLock};
+use std::sync::RwLock;
 
 pub struct Executor<'a> {
     script: &'a Script,
@@ -144,8 +144,8 @@ impl<'a> Executor<'a> {
         function.call(scope, context, payload.into(), &[payload.into()]);
 
         // extract result
-        // TODO(mrbenshef): it would be better to use accessors/interseptors, so we don't have to 
-        // compare potentially very large strings. however, I can't figure out how to do this 
+        // TODO(mrbenshef): it would be better to use accessors/interseptors, so we don't have to
+        // compare potentially very large strings. however, I can't figure out how to do this
         // without static RwLock's
         let new_text_value = payload
             .get(scope, context, key_text.into())
@@ -178,14 +178,12 @@ impl<'a> Executor<'a> {
         } else if selection.is_some() && new_selection_value != selection.unwrap() {
             info!("found selection replacement");
             TextReplacement::Selection(new_selection_value)
+        } else if selection.is_some() {
+            info!("found text (with selection) replacement");
+            TextReplacement::Selection(new_text_value)
         } else {
-            if selection.is_some() {
-                info!("found text (with selection) replacement");
-                TextReplacement::Selection(new_text_value)
-            } else {
-                info!("found text (without selection) replacement");
-                TextReplacement::Full(new_text_value)
-            }
+            info!("found text (without selection) replacement");
+            TextReplacement::Full(new_text_value)
         };
 
         ExecutionResult {
