@@ -20,6 +20,16 @@ jobs:
       run: ls -al
     - name: ls submodules
       run: ls -al submodules
+    - name: ls submodules/Boop
+      run: ls -al submodules/Boop
+    - name: ls submodules/Boop/Boop
+      run: ls -al submodules/Boop/Boop
+    - name: ls submodules/Boop/Boop/Boop
+      run: ls -al submodules/Boop/Boop/Boop
+    - name: ls submodules/Boop/Boop/Boop/scripts
+      run: ls -al submodules/Boop/Boop/Boop/scripts
+    - name: pwd
+      run: pwd
     - name: Build
       run: cargo build --verbose
     - name: Run tests
