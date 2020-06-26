@@ -42,7 +42,7 @@ use std::{
 
 use sublime_fuzzy::ScoreConfig;
 
-use directories::{ProjectDirs};
+use directories::ProjectDirs;
 use std::io::prelude::*;
 
 const SEARCH_CONFIG: ScoreConfig = ScoreConfig {
@@ -88,15 +88,39 @@ fn open_command_pallete(app: &App, scripts: &[Script], context_id: u32) {
 
         let buffer = &app.source_view.get_buffer().unwrap();
 
-        let result = Executor::execute(
-            script.source(),
-            &buffer
-                .get_text(&buffer.get_start_iter(), &buffer.get_end_iter(), false)
-                .unwrap()
-                .to_string(),
+        let full_text = &buffer
+            .get_text(&buffer.get_start_iter(), &buffer.get_end_iter(), false)
+            .unwrap()
+            .to_string();
+
+        let selection_bounds = buffer.get_selection_bounds();
+        let selection: Option<String> = if let Some((start, end)) = &selection_bounds {
+            let selected_text = buffer.get_text(start, end, false).unwrap().to_string();
+            Some(selected_text)
+        } else {
+            None
+        };
+
+        info!(
+            "full_text length: {}, selection length: {}",
+            full_text.len(),
+            selection.as_ref().map(String::len).unwrap_or(0)
         );
 
-        buffer.set_text(&result.text);
+        let result = Executor::new(&script).execute(full_text, selection.as_deref());
+
+        match result.replacement {
+            executor::TextReplacement::Full(text) => {
+                info!("replacing full text");
+                buffer.set_text(&text);
+            }
+            executor::TextReplacement::Selection(text) => {
+                info!("replacing selection");
+                let (start, end) = &mut selection_bounds.unwrap();
+                buffer.delete(start, end);
+                buffer.insert(start, &text);
+            }
+        }
 
         // TODO: how to handle multiple messages?
         if let Some(error) = result.error {
@@ -224,7 +248,7 @@ fn main() -> Result<(), ()> {
         // set syntax highlighting
         {
             let language_manager = sourceview::LanguageManager::get_default().unwrap();
-            
+
             // add config_dir to language manager's search path
             let dirs = language_manager.get_search_path();
             let mut dirs: Vec<&str> = dirs.iter().map(|s| s.as_ref()).collect();
@@ -235,10 +259,14 @@ fn main() -> Result<(), ()> {
 
             let boop_language = language_manager.get_language("boop");
             if boop_language.is_none() {
-                app.status_bar.push(context_id, "ERROR: failed to load language file");
+                app.status_bar
+                    .push(context_id, "ERROR: failed to load language file");
             }
 
-            println!("language: {:?}", boop_language.clone().unwrap().get_style_ids());
+            println!(
+                "language: {:?}",
+                boop_language.clone().unwrap().get_style_ids()
+            );
 
             // set language
             let buffer: sourceview::Buffer = app
@@ -250,7 +278,7 @@ fn main() -> Result<(), ()> {
             buffer.set_highlight_syntax(true);
             buffer.set_language(boop_language.as_ref());
         }
-        
+
         let mut scripts = load_scripts();
 
         match load_user_scripts(&config_dir) {
