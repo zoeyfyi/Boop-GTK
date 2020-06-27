@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>co.uk.mrbenshef.Boop-GTK</id>
+  <metadata_license>CC0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Boop-GTK</name>
+  <summary>Port of IvanMathy's Boop to GTK, a scriptable scratchpad for developers.</summary>
+  <description>
+    <p></p>
+  </description>
+  <!-- <screenshots>
+    <screenshot type="default">
+      <image>https://gitlab.gnome.org/World/design/contrast/raw/master/data/resources/screenshots/screenshot1.png</image>
+      <caption>Main Window</caption>
+    </screenshot>
+  </screenshots> -->
+  <url type="homepage">https://boop-gtk.mrbenshef.co.uk/</url>
+  <content_rating type="oars-1.0" />
+  <releases>
+    <release version="0.0.1" date="2020-06-27">
+      <description>
+        <p>Initial release</p>
+      </description>
+    </release>
+  </releases>
+  <kudos>
+    <!--
+    GNOME Software kudos:
+    https://gitlab.gnome.org/GNOME/gnome-software/blob/master/doc/kudos.md
+    -->
+    <kudo>ModernToolkit</kudo>
+    <kudo>HiDpiIcon</kudo>
+  </kudos>
+  <developer_name>Ben Sheffield</developer_name>
+  <update_contact>me@mrbenshef.co.uk</update_contact>
+
+  <launchable type="desktop-id">uk.co.mrbenshef.Boop-GTK.desktop</launchable>
+</component>

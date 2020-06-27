@@ -1,3 +1,6 @@
 [submodule "submodules/Boop"]
 	path = submodules/Boop
 	url = https://github.com/IvanMathy/Boop.git
+[submodule "submodules/flatpak-builder-tools"]
+	path = submodules/flatpak-builder-tools
+	url = https://github.com/flatpak/flatpak-builder-tools.git
