@@ -73,4 +73,4 @@ jobs:
     - name: Generate sources
       run: bash flatpak/gen-sources.sh
     - name: Flatpak
-      run: flatpak-builder build-dir flatpak/uk.co.mrbenshef.Boop-GTK.json
+      run: sudo flatpak-builder build-dir flatpak/uk.co.mrbenshef.Boop-GTK.json
