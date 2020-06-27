@@ -10,7 +10,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  release-amd64:
+  release-linux-amd64:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -20,6 +20,7 @@ jobs:
       run: sudo apt-get install -y libgtk-3-dev libgtksourceview-3.0-dev
     - name: build
       run: cargo build --release --all-features 
+  
   release-windows:
     runs-on: windows-latest
     steps:
@@ -27,11 +28,12 @@ jobs:
       with:
         submodules: 'recursive'
     - name: GTK development librarys
-      run: C:\msys pacman -S mingw-w64-x86_64-gtk3
+      run: C:\msys64 pacman -S mingw-w64-x86_64-gtk3
     - name: build
       run: cargo build --release --all-features
+  
   release-macosx:
-    runs-on: osx-latest
+    runs-on: macos-latest
     steps:
     - uses: actions/checkout@v2
       with:
