@@ -59,7 +59,9 @@ jobs:
       with:
         submodules: 'recursive'
     - name: Flatpak builder
-      run: sudo apt-get install flatpak-builder python3-toml
+      run: wget https://github.com/flatpak/flatpak-builder/releases/download/1.0.10/flatpak-builder-1.0.10.tar.xz && tar -xvf flatpak-builder-1.0.10.tar.xz && cd flatpak-builder-1.0.10 && ./configure && make && sudo make install
+    - name: Python TOML
+      run: sudo apt-get install python3-toml 
     - name: Generate sources
       run: bash flatpak/gen-sources.sh
     - name: Flatpak
