@@ -16,9 +16,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-      - dpkg: arm64
-        triple: arm-linux-gnueabi
-        rust: aarch64-unknown-linux-gnu
+        dpkg: [arm64]
+        include:
+        - dpkg: arm64
+          triple: arm-linux-gnueabi
+          rust: aarch64-unknown-linux-gnu
     steps:
     - uses: actions/checkout@v2
       with:
