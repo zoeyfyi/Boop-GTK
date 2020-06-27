@@ -59,7 +59,7 @@ jobs:
       with:
         submodules: 'recursive'
     - name: Flatpak
-      run: sudo apt-get install flatpak
+      run: sudo apt-get install flatpak libcap-dev
     - name: Flatpak builder
       run: wget https://github.com/flatpak/flatpak-builder/releases/download/1.0.10/flatpak-builder-1.0.10.tar.xz && tar -xvf flatpak-builder-1.0.10.tar.xz && cd flatpak-builder-1.0.10 && ./configure && make && sudo make install
     - name: Python TOML
