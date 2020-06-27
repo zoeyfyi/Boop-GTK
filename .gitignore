@@ -4,3 +4,4 @@
 .flatpak-builder
 build-dir
 repo
+flatpak/generated-sources.json
