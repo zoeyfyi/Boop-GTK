@@ -23,13 +23,13 @@ jobs:
       with:
         submodules: 'recursive'
     - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: ${{ matrix.target }}
-          override: true
+      with:
+        toolchain: stable
+        target: ${{ matrix.target }}
+        override: true
     - uses: actions-rs/cargo@v1
-        with:
-          use-cross: true
-          command: build
-          args: --release --target=${{ matrix.target }}
+      with:
+        use-cross: true
+        command: build
+        args: --release --target=${{ matrix.target }}
   
