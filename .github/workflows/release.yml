@@ -51,3 +51,16 @@ jobs:
       with:
         submodules: 'recursive'
     - uses: snapcore/action-build@v1
+
+  release-flatpak:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
+    - name: Flatpak builder
+      run: sudo apt-get install flatpak-builder
+    - name: Generate sources
+      run: bash flatpak/gen-sources.sh
+    - name: Flatpak
+      run: flatpak-builder build-dir flatpak/uk.co.mrbenshef.Boop-GTK.json
