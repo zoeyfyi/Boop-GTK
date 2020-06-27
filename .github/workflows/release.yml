@@ -61,7 +61,7 @@ jobs:
     - name: Flatpak
       run: sudo add-apt-repository -y ppa:alexlarsson/flatpak && sudo apt-get update -y && sudo apt-get install -y flatpak
     - name: Flatpak builder deps
-      run: sudo apt-get update && sudo apt-get install -y libcap-dev libsoup-gnome2.4-dev libostree-dev libjson-glib-dev libcurl4-gnutls-dev libelf-dev libdwarf-dev xsltproc
+      run: sudo apt-get update && sudo apt-get install -y elfutils libcap-dev libsoup-gnome2.4-dev libostree-dev libjson-glib-dev libcurl4-gnutls-dev libelf-dev libdwarf-dev xsltproc
     - name: Flatpak remote
       run: sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
     - name: Flatpak SDK's
