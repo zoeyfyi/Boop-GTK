@@ -8,7 +8,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  PKG_CONFIG_ALLOW_CROSS: 1
 
 jobs:
   release-amd64:
@@ -17,38 +16,27 @@ jobs:
     - uses: actions/checkout@v2
       with:
         submodules: 'recursive'
-    - uses: actions-rs/cargo@v1
-      with:
-        command: build
-        args: --release --all-features
-  release-aarch64:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: 'recursive'
-    - uses: docker/build-push-action@v1
-      with:
-        push: false
-        repository: boop-gtk/aarch64-unknown-linux-gnu
-        dockerfile: docker/aarch64-unknown-linux-gnu.Dockerfile
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        target: aarch64-unknown-linux-gnu
-        override: true
-    - uses: actions-rs/cargo@v1
-      with:
-        cross: true
-        command: build
-        args: --target aarch64-unknown-linux-gnu --release --all-features
+    - name: GTK development librarys
+      run: sudo apt-get install -y libgtk-3-dev libgtksourceview-3.0-dev
+    - name: build
+      run: cargo build --release --all-features 
   release-windows:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v2
       with:
         submodules: 'recursive'
-    - uses: actions-rs/cargo@v1
+    - name: GTK development librarys
+      run: C:\msys pacman -S mingw-w64-x86_64-gtk3
+    - name: build
+      run: cargo build --release --all-features
+  release-macosx:
+    runs-on: osx-latest
+    steps:
+    - uses: actions/checkout@v2
       with:
-        command: build
-        args: --release --all-features
+        submodules: 'recursive'
+    - name: GTK development librarys
+      run: brew install gtk+3
+    - name: build
+      run: cargo build --release --all-features 
