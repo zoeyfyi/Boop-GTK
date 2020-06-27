@@ -63,6 +63,7 @@ jobs:
       with:
         submodules: 'recursive'
     - uses: snapcore/action-build@v1
+      id: snapcraft
     - uses: actions/upload-artifact@v2
       with:
         name: boop-gtk.snap
