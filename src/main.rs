@@ -198,6 +198,14 @@ fn main() -> Result<(), ()> {
         .config_dir()
         .to_path_buf();
 
+    if !config_dir.exists() {
+        info!("config directory does not exist, attempting to create it");
+        match std::fs::create_dir_all(&config_dir) {
+            Ok(()) => info!("created config directory"),
+            Err(e) => panic!("could not create config directory: {}", e),
+        }
+    }
+
     info!("configuration directory at: {}", config_dir.display());
 
     let lang_file_path = {
@@ -224,7 +232,7 @@ fn main() -> Result<(), ()> {
     v8::V8::initialize();
     info!("V8 initialized");
 
-    let application = Application::new(Some("uk.co.mrbenshef.boop-gtk"), Default::default())
+    let application = Application::new(Some("uk.co.mrbenshef.Boop-GTK"), Default::default())
         .expect("failed to initialize GTK application");
 
     application.connect_activate(move |application| {
