@@ -45,6 +45,7 @@ jobs:
       run: cargo build --release --all-features 
 
   release-snap:
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - uses: snapcore/action-build@v1
