@@ -27,8 +27,9 @@ jobs:
     - uses: actions/checkout@v2
       with:
         submodules: 'recursive'
+    - uses: numworks/setup-msys2@v1
     - name: GTK development librarys
-      run: C:\msys64 pacman -S mingw-w64-x86_64-gtk3
+      run: msys2do pacman -S mingw-w64-x86_64-gtk3 mingw-w64-gtksourceview3
     - name: build
       run: cargo build --release --all-features
   
@@ -39,6 +40,6 @@ jobs:
       with:
         submodules: 'recursive'
     - name: GTK development librarys
-      run: brew install gtk+3
+      run: brew install gtk+3 gtksourceview3
     - name: build
       run: cargo build --release --all-features 
