@@ -59,9 +59,9 @@ jobs:
       with:
         submodules: 'recursive'
     - name: Flatpak
-      run: sudo apt-get install flatpak libcap-dev
+      run: sudo apt-get install flatpak libcap-dev libsoup-gnome2.4-dev libostree-dev libjson-glib-dev libcurl4-gnutls-dev libelf-dev libdwarf-dev xsltproc
     - name: Flatpak builder
-      run: wget https://github.com/flatpak/flatpak-builder/releases/download/1.0.10/flatpak-builder-1.0.10.tar.xz && tar -xvf flatpak-builder-1.0.10.tar.xz && cd flatpak-builder-1.0.10 && ./configure && make && sudo make install
+      run: wget https://github.com/flatpak/flatpak-builder/releases/download/1.0.10/flatpak-builder-1.0.10.tar.xz && tar -xvf flatpak-builder-1.0.10.tar.xz && cd flatpak-builder-1.0.10 && ./configure --disable-documentation && make && sudo make install
     - name: Python TOML
       run: sudo apt-get install python3-toml 
     - name: Generate sources
