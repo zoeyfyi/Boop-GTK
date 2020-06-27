@@ -15,6 +15,7 @@ glib = "0.9.3"
 gdk = "0.12.1"
 rust-embed = { version = "5.5.1", features = ["debug-embed"] }
 rusty_v8 = "0.6.0"
+# rusty_v8 = { git = 'https://github.com/mrbenshef/rusty_v8' }
 libc = "0.2.71"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
@@ -34,3 +35,4 @@ features = ["v3_16"]
 [dependencies.gio]
 version = "0.8.1"
 features = ["v2_44"]
+
