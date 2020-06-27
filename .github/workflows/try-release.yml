@@ -1,7 +1,7 @@
-name: Release
+name: Try Release
 
 on:
-  push:
+  pull_request:
     branches: [ release ]
 
 env:
@@ -95,69 +95,3 @@ jobs:
       with:
         name: boop-gtk.flatpak
         path: boop-gtk.flatpak
-
-  release:
-    needs: [release-linux-amd64, release-macosx, release-snap, release-flatpak]
-    steps:
-    - uses: actions/download-artifact@v2
-      with:
-        name: boop-gtk.linux.amd64
-        path: boop-gtk.linux.amd64
-    - uses: actions/download-artifact@v2
-      with:
-        name: boop-gtk.macos
-        path: boop-gtk.macos
-    - uses: actions/download-artifact@v2
-      with:
-        name: boop-gtk.snap
-        path: boop-gtk.snap
-    - uses: actions/download-artifact@v2
-      with:
-        name: boop-gtk.flatpak
-        path: boop-gtk.flatpak
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        draft: true
-        prerelease: false
-    - name: Upload Release Asset
-        id: upload-release-asset 
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: boop-gtk.linux.amd64
-          asset_name: boop-gtk.linux.amd64
-    - name: Upload Release Asset
-        id: upload-release-asset 
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: boop-gtk.macos
-          asset_name: boop-gtk.macos
-    - name: Upload Release Asset
-        id: upload-release-asset 
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: boop-gtk.snap
-          asset_name: boop-gtk.snap
-    - name: Upload Release Asset
-        id: upload-release-asset 
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: boop-gtk.flatpak
-          asset_name: boop-gtk.flatpak
