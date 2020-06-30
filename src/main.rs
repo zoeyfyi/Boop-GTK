@@ -8,6 +8,7 @@ extern crate gdk;
 extern crate gio;
 extern crate glib;
 extern crate gtk;
+extern crate gdk_pixbuf;
 extern crate pango;
 extern crate sourceview;
 

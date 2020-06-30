@@ -4,10 +4,12 @@ use crate::{
     gtk::ButtonExt,
     script::Script,
 };
-use gio::{prelude::*};
+use gdk_pixbuf::prelude::*;
+use gio::prelude::*;
 use gtk::prelude::*;
-use gtk::{ApplicationWindow, Builder, Button, ModelButton, Statusbar};
 use sourceview::prelude::*;
+
+use gtk::{AboutDialog, ApplicationWindow, Builder, Button, ModelButton, Statusbar};
 use std::{path::Path, process::Command, rc::Rc};
 
 const HEADER_BUTTON_GET_STARTED: &str = "Press Ctrl+Shift+P to get started";
@@ -17,7 +19,7 @@ const HEADER_BUTTON_CHOOSE_ACTION: &str = "Select an action";
 pub struct App {
     #[shrinkwrap(main_field)]
     window: ApplicationWindow,
-    
+
     header_button: Button,
     source_view: sourceview::View,
     status_bar: Statusbar,
@@ -25,6 +27,8 @@ pub struct App {
     config_directory_button: ModelButton,
     more_scripts_button: ModelButton,
     about_button: ModelButton,
+
+    about_dialog: AboutDialog,
 
     context_id: u32,
     scripts: Rc<Vec<Script>>,
@@ -34,7 +38,7 @@ impl App {
     pub fn from_builder(builder: Builder, config_dir: &Path, scripts: Rc<Vec<Script>>) -> Self {
         let mut app = App {
             window: builder.get_object("window").unwrap(),
-            
+
             header_button: builder.get_object("header_button").unwrap(),
             source_view: builder.get_object("source_view").unwrap(),
             status_bar: builder.get_object("status_bar").unwrap(),
@@ -43,12 +47,20 @@ impl App {
             more_scripts_button: builder.get_object("more_scripts_button").unwrap(),
             about_button: builder.get_object("about_button").unwrap(),
 
+            about_dialog: builder.get_object("about_dialog").unwrap(),
+
             context_id: 0,
             scripts,
         };
 
         app.context_id = app.status_bar.get_context_id("script execution");
         app.header_button.set_label(HEADER_BUTTON_GET_STARTED);
+        app.about_dialog.set_logo({
+            let loader = gdk_pixbuf::PixbufLoader::new_with_type("png").unwrap();
+            loader.write(include_bytes!("../ui/boop-gtk.png")).unwrap();
+            loader.close().unwrap();
+            loader.get_pixbuf().as_ref()    
+        });
         app.setup_syntax_highlighting(config_dir);
 
         // launch config directory in default file manager
@@ -87,6 +99,13 @@ impl App {
                     error!("could not find app for `https` type");
                     app_.push_error("could not find app for `https` type");
                 }
+            });
+        }
+
+        {
+            let about_dialog = app.about_dialog.clone();
+            app.about_button.connect_clicked(move |_| {
+                about_dialog.show();
             });
         }
 

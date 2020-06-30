@@ -94,6 +94,7 @@ dependencies = [
  "directories",
  "env_logger",
  "gdk",
+ "gdk-pixbuf",
  "gio",
  "glib",
  "gtk",
