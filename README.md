@@ -7,6 +7,9 @@
 <h2 align="center">A scriptable scratchpad for developers</h2>
 <p align="center">Port of <a href="https://github.com/IvanMathy"><b>@IvanMathy</b></a>'s <a href="https://github.com/IvanMathy/Boop">Boop</a> to GTK</p>
 
+![Continuous integration](https://github.com/mrbenshef/Boop-GTK/workflows/Continuous%20integration/badge.svg)
+![Crates.io](https://img.shields.io/crates/v/boop-gtk)
+
 ### Get Boop-GTK
 
 - Pre-build binarys, flatpak and snaps on [Github releases](https://github.com/mrbenshef/Boop-GTK/releases)
