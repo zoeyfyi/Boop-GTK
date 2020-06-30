@@ -4,10 +4,11 @@ use crate::{
     gtk::ButtonExt,
     script::Script,
 };
+use gio::{prelude::*};
 use gtk::prelude::*;
-use gtk::{ApplicationWindow, Builder, Button, Statusbar};
+use gtk::{ApplicationWindow, Builder, Button, ModelButton, Statusbar};
 use sourceview::prelude::*;
-use std::{path::Path, rc::Rc};
+use std::{path::Path, process::Command, rc::Rc};
 
 const HEADER_BUTTON_GET_STARTED: &str = "Press Ctrl+Shift+P to get started";
 const HEADER_BUTTON_CHOOSE_ACTION: &str = "Select an action";
@@ -16,9 +17,15 @@ const HEADER_BUTTON_CHOOSE_ACTION: &str = "Select an action";
 pub struct App {
     #[shrinkwrap(main_field)]
     window: ApplicationWindow,
-    pub header_button: Button,
+    
+    header_button: Button,
     source_view: sourceview::View,
     status_bar: Statusbar,
+
+    config_directory_button: ModelButton,
+    more_scripts_button: ModelButton,
+    about_button: ModelButton,
+
     context_id: u32,
     scripts: Rc<Vec<Script>>,
 }
@@ -27,9 +34,15 @@ impl App {
     pub fn from_builder(builder: Builder, config_dir: &Path, scripts: Rc<Vec<Script>>) -> Self {
         let mut app = App {
             window: builder.get_object("window").unwrap(),
+            
             header_button: builder.get_object("header_button").unwrap(),
             source_view: builder.get_object("source_view").unwrap(),
             status_bar: builder.get_object("status_bar").unwrap(),
+
+            config_directory_button: builder.get_object("config_directory_button").unwrap(),
+            more_scripts_button: builder.get_object("more_scripts_button").unwrap(),
+            about_button: builder.get_object("about_button").unwrap(),
+
             context_id: 0,
             scripts,
         };
@@ -38,11 +51,51 @@ impl App {
         app.header_button.set_label(HEADER_BUTTON_GET_STARTED);
         app.setup_syntax_highlighting(config_dir);
 
+        // launch config directory in default file manager
+        {
+            let app_ = app.clone();
+            let config_dir_str = config_dir.display().to_string();
+            app.config_directory_button.connect_clicked(move |_| {
+                if let Err(launch_err) = {
+                    #[cfg(target_os = "macos")]
+                    return Command::new("open");
+                    #[cfg(target_os = "windows")]
+                    return Command::new("start");
+                    Command::new("xdg-open")
+                }
+                .arg(config_dir_str.clone())
+                .output()
+                {
+                    error!("could not launch config directory: {}", launch_err);
+                    app_.push_error("failed to launch config directory");
+                }
+            });
+        }
+
+        // launch more scripts page in default web browser
+        {
+            let app_ = app.clone();
+            app.more_scripts_button.connect_clicked(move |_| {
+                if let Some(browser_app) = gio::AppInfo::get_default_for_uri_scheme("https") {
+                    if let Err(launch_err) = browser_app.launch_uris(
+                        &["https://github.com/IvanMathy/Boop/tree/main/Scripts"],
+                        gio::NONE_APP_LAUNCH_CONTEXT,
+                    ) {
+                        error!("could not launch config directory: {}", launch_err);
+                    }
+                } else {
+                    error!("could not find app for `https` type");
+                    app_.push_error("could not find app for `https` type");
+                }
+            });
+        }
+
         {
             let app_ = app.clone();
             app.header_button
                 .connect_clicked(move |_| app_.open_command_pallete());
         }
+
         app
     }
 
