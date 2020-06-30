@@ -59,7 +59,7 @@ impl App {
             let loader = gdk_pixbuf::PixbufLoader::new_with_type("png").unwrap();
             loader.write(include_bytes!("../ui/boop-gtk.png")).unwrap();
             loader.close().unwrap();
-            loader.get_pixbuf().as_ref()    
+            loader.get_pixbuf().as_ref()
         });
         app.setup_syntax_highlighting(config_dir);
 

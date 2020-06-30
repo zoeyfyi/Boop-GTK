@@ -5,10 +5,10 @@ extern crate lazy_static;
 extern crate shrinkwraprs;
 
 extern crate gdk;
+extern crate gdk_pixbuf;
 extern crate gio;
 extern crate glib;
 extern crate gtk;
-extern crate gdk_pixbuf;
 extern crate pango;
 extern crate sourceview;
 
@@ -202,7 +202,7 @@ fn main() -> Result<(), ()> {
         let (scripts, script_error) = load_all_scripts(&config_dir);
         let scripts = Rc::new(scripts);
 
-        let app = App::from_builder(builder, &config_dir, scripts.clone());
+        let app = App::from_builder(builder, &config_dir, scripts);
         app.set_application(Some(application));
         app.show_all();
 
@@ -214,11 +214,10 @@ fn main() -> Result<(), ()> {
         let command_pallete_action = gio::SimpleAction::new("command_pallete", None);
         application.add_action(&command_pallete_action);
         application.set_accels_for_action("app.command_pallete", &["<Primary><Shift>P"]);
-        
+
         // regisiter handler
         {
-            let app_ = app.clone();
-            command_pallete_action.connect_activate(move |_, _| app_.open_command_pallete());   
+            command_pallete_action.connect_activate(move |_, _| app.open_command_pallete());
         }
     });
 
