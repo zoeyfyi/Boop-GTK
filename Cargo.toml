@@ -1,8 +1,17 @@
 [package]
 name = "boop-gtk"
 version = "0.0.1"
-authors = ["ben"]
+authors = ["Ben Sheffield"]
 edition = "2018"
+description = """A scriptable scratchpad for developers
+
+Port of @IvanMathy's Boop to GTK
+"""
+license = "MIT"
+homepage = "https://boop-gtk.mrbenshef.co.uk"
+repository = "https://github.com/mrbenshef/boop-gtk/"
+keywords = ["gtk", "text-editor", "editor", "linux", "javascript"]
+categories = ["text-editors"]
 
 [profile.dev]
 lto = "off"
