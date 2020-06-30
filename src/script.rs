@@ -7,6 +7,7 @@ pub struct Script {
     source: String,
 }
 
+#[derive(Debug)]
 pub enum ParseScriptError {
     NoMetadata,
     InvalidMetadata(serde_json::error::Error),
