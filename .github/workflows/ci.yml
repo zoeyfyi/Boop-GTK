@@ -96,8 +96,15 @@ jobs:
     #   run: msys2do pacman -S --noconfirm mingw-w64-x86_64-hicolor-icon-theme mingw-w64-x86_64-adwaita-icon-theme
     - name: gvsbuild
       run: git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
-    - name: GTK libs
-      run: cd C:\gtk-build\github\gvsbuild && python .\build.py build -p x64 --vs-ver 16 gtk3 gdk-pixbuf gtksourceview3
+    - name: GTK3
+      run: python .\build.py build -p x64 --vs-ver 16 gtk3
+      working-directory: C:\gtk-build\github\gvsbuild
+    - name: GDK pixbuf
+      run: python .\build.py build -p x64 --vs-ver 16 gdk-pixbuf
+      working-directory: C:\gtk-build\github\gvsbuild
+    - name: GTK sourceview 3
+      run: python .\build.py build -p x64 --vs-ver 16 gtksourceview3
+      working-directory: C:\gtk-build\github\gvsbuild
     - name: build
       run: cargo build
       env:
