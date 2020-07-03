@@ -100,13 +100,13 @@ jobs:
       run: rmdir "C:\Program Files\Git" /s /q
       shell: cmd
     - name: GTK3
-      run: python .\build.py build -p x64 --vs-ver 15 gtk3
+      run: python .\build.py build -p x64 --vs-ver 16 gtk3
       working-directory: C:\gtk-build\github\gvsbuild
     - name: GDK pixbuf
-      run: python .\build.py build -p x64 --vs-ver 15 gdk-pixbuf
+      run: python .\build.py build -p x64 --vs-ver 16 gdk-pixbuf
       working-directory: C:\gtk-build\github\gvsbuild
     - name: GTK sourceview 3
-      run: python .\build.py build -p x64 --vs-ver 15 gtksourceview3
+      run: python .\build.py build -p x64 --vs-ver 16 gtksourceview3
       working-directory: C:\gtk-build\github\gvsbuild
     - name: build
       run: cargo build
