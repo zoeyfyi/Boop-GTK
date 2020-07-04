@@ -94,10 +94,10 @@ jobs:
     # - uses: numworks/setup-msys2@v1
     # - name: GTK Icons # we have to install them from here because the gvsbuild mess up the icons
     #   run: msys2do pacman -S --noconfirm mingw-w64-x86_64-hicolor-icon-theme mingw-w64-x86_64-adwaita-icon-theme
+    - uses: numworks/setup-msys2@v1
     - name: Remove Git # cygwin binaries conflicting with MSYS2 (https://github.com/wingtk/gvsbuild/blob/master/azure-pipelines.yml)
       run: rmdir "C:\Program Files\Git" /s /q
       shell: cmd
-    - uses: numworks/setup-msys2@v1
     - name: Install Git with MSYS2
       run: msys2do pacman -S --noconfirm git  
     - name: gvsbuild
