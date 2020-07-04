@@ -100,6 +100,8 @@ jobs:
       shell: cmd
     - name: Install Git with MSYS2
       run: msys2do pacman -S --noconfirm git  
+    - name: Add MSYS2 to PATH
+      run:  echo "::add-path::C:\msys64\usr\bin"
     - name: gvsbuild
       run: git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
     # - name: Remove GIT # cygwin binaries conflicting with MSYS2 (https://github.com/wingtk/gvsbuild/blob/master/azure-pipelines.yml)
