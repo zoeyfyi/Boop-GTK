@@ -100,10 +100,8 @@ jobs:
       shell: cmd
     - name: Install Git with MSYS2
       run: msys2do pacman -S --noconfirm git  
-    # - name: Add MSYS2 to PATH
-    #   run: echo "::add-path::C:\msys64\usr\bin"
     - name: Add MSYS2 to PATH
-      run: setx /M path "%path%;C:\msys64\usr\bin"
+      run: echo "::add-path::C:\msys64\usr\bin"
     - name: Debug %PATH%
       run: echo %path%
       shell: cmd
