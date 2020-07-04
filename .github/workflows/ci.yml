@@ -99,9 +99,8 @@ jobs:
     # - name: Remove GIT # cygwin binaries conflicting with MSYS2 (https://github.com/wingtk/gvsbuild/blob/master/azure-pipelines.yml)
     #   run: rmdir "C:\Program Files\Git" /s /q
     #   shell: cmd
-    - name: where
-      run: where cygwin1.dll 
-      shell: cmd
+    - name: Override bash shell PATH (windows-latest)
+      run: echo "::add-path::C:\Program Files\Git\bin"
     - name: GTK3
       run: python .\build.py build -p x64 --vs-ver 16 gtk3
       working-directory: C:\gtk-build\github\gvsbuild
