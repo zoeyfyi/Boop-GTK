@@ -106,8 +106,10 @@ jobs:
       run: setx /M path "%path%;C:\msys64\usr\bin"
     - name: Debug %PATH%
       run: echo %path%
+      shell: cmd
     - name: Debug %PATH%
       run: echo %PATH%
+      shell: cmd
     - name: gvsbuild
       run: git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
     # - name: Remove GIT # cygwin binaries conflicting with MSYS2 (https://github.com/wingtk/gvsbuild/blob/master/azure-pipelines.yml)
