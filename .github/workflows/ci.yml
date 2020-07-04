@@ -96,6 +96,7 @@ jobs:
     #   run: msys2do pacman -S --noconfirm mingw-w64-x86_64-hicolor-icon-theme mingw-w64-x86_64-adwaita-icon-theme
     - name: remove MSYS2
       run: rmdir "C:\msys64" /s /q
+      shell: cmd
     - name: gvsbuild
       run: git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
     # - name: Remove GIT # cygwin binaries conflicting with MSYS2 (https://github.com/wingtk/gvsbuild/blob/master/azure-pipelines.yml)
