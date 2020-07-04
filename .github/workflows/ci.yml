@@ -91,7 +91,7 @@ jobs:
     - uses: actions/checkout@v2
       with:
         submodules: 'recursive'
-    - uses: numworks/setup-msys2@v1
+    # - uses: numworks/setup-msys2@v1
     - name: Add MSYS2 to PATH
       run: echo "::add-path::C:\msys64\usr\bin"
     - name: debug %PATH%
@@ -99,7 +99,14 @@ jobs:
       shell: cmd
     - name: ls bin
       run: ls C:\msys64\usr\bin
-    
+    - name: remove Git
+      run: rmdir "C:\Program Files\Git" /s /q
+      shell: cmd
+    - name: install Git with MSYS2
+      run: C:\msys64\usr\bin\bash.exe -l -c "pacman -S --noconfirm git"
+    - name: gvsbuild
+      run: git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
+
     # # - uses: numworks/setup-msys2@v1
     # # - name: GTK Icons # we have to install them from here because the gvsbuild mess up the icons
     # #   run: msys2do pacman -S --noconfirm mingw-w64-x86_64-hicolor-icon-theme mingw-w64-x86_64-adwaita-icon-theme
