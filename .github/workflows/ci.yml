@@ -10,79 +10,79 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  check:
-    name: Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          submodules: 'recursive'
-      - name: GTK development librarys
-        run: sudo apt-get install -y libgtk-3-dev libgtksourceview-3.0-dev
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
+  # check:
+  #   name: Check
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #       with:
+  #         submodules: 'recursive'
+  #     - name: GTK development librarys
+  #       run: sudo apt-get install -y libgtk-3-dev libgtksourceview-3.0-dev
+  #     - uses: actions-rs/toolchain@v1
+  #       with:
+  #         profile: minimal
+  #         toolchain: stable
+  #         override: true
+  #     - uses: actions-rs/cargo@v1
+  #       with:
+  #         command: check
 
-  test:
-    name: Test Suite
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          submodules: 'recursive'
-      - name: GTK development librarys
-        run: sudo apt-get install -y libgtk-3-dev libgtksourceview-3.0-dev
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
+  # test:
+  #   name: Test Suite
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #       with:
+  #         submodules: 'recursive'
+  #     - name: GTK development librarys
+  #       run: sudo apt-get install -y libgtk-3-dev libgtksourceview-3.0-dev
+  #     - uses: actions-rs/toolchain@v1
+  #       with:
+  #         profile: minimal
+  #         toolchain: stable
+  #         override: true
+  #     - uses: actions-rs/cargo@v1
+  #       with:
+  #         command: test
 
-  fmt:
-    name: Rustfmt
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          submodules: 'recursive'
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - run: rustup component add rustfmt
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+  # fmt:
+  #   name: Rustfmt
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #       with:
+  #         submodules: 'recursive'
+  #     - uses: actions-rs/toolchain@v1
+  #       with:
+  #         profile: minimal
+  #         toolchain: stable
+  #         override: true
+  #     - run: rustup component add rustfmt
+  #     - uses: actions-rs/cargo@v1
+  #       with:
+  #         command: fmt
+  #         args: --all -- --check
 
-  clippy:
-    name: Clippy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          submodules: 'recursive'
-      - name: GTK development librarys
-        run: sudo apt-get install -y libgtk-3-dev libgtksourceview-3.0-dev
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - run: rustup component add clippy
-      - uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
+  # clippy:
+  #   name: Clippy
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #       with:
+  #         submodules: 'recursive'
+  #     - name: GTK development librarys
+  #       run: sudo apt-get install -y libgtk-3-dev libgtksourceview-3.0-dev
+  #     - uses: actions-rs/toolchain@v1
+  #       with:
+  #         profile: minimal
+  #         toolchain: stable
+  #         override: true
+  #     - run: rustup component add clippy
+  #     - uses: actions-rs/cargo@v1
+  #       with:
+  #         command: clippy
+  #         args: -- -D warnings
 
   build-windows:
     name: Build Windows
@@ -90,43 +90,45 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        submodules: 'recursive'
-    # - uses: numworks/setup-msys2@v1
-    # - name: GTK Icons # we have to install them from here because the gvsbuild mess up the icons
-    #   run: msys2do pacman -S --noconfirm mingw-w64-x86_64-hicolor-icon-theme mingw-w64-x86_64-adwaita-icon-theme
-    - uses: numworks/setup-msys2@v1
-    - name: Remove Git # cygwin binaries conflicting with MSYS2 (https://github.com/wingtk/gvsbuild/blob/master/azure-pipelines.yml)
-      run: rmdir "C:\Program Files\Git" /s /q
-      shell: cmd
-    - name: Install Git with MSYS2
-      run: msys2do pacman -S --noconfirm git  
+        submodules: 'recursive'- uses: numworks/setup-msys2@v1
     - name: Add MSYS2 to PATH
       run: echo "::add-path::C:\msys64\usr\bin"
-    - name: Debug %PATH%
+    - name: debug %PATH%
       run: echo %path%
       shell: cmd
-    - name: Debug %PATH%
-      run: echo %PATH%
-      shell: cmd
-    - name: gvsbuild
-      run: git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
-    # - name: Remove GIT # cygwin binaries conflicting with MSYS2 (https://github.com/wingtk/gvsbuild/blob/master/azure-pipelines.yml)
+    - name: ls bin
+      run: ls C:\msys64\usr\bin
+    
+    # # - uses: numworks/setup-msys2@v1
+    # # - name: GTK Icons # we have to install them from here because the gvsbuild mess up the icons
+    # #   run: msys2do pacman -S --noconfirm mingw-w64-x86_64-hicolor-icon-theme mingw-w64-x86_64-adwaita-icon-theme
+    # - name: Remove Git # cygwin binaries conflicting with MSYS2 (https://github.com/wingtk/gvsbuild/blob/master/azure-pipelines.yml)
     #   run: rmdir "C:\Program Files\Git" /s /q
     #   shell: cmd
-    # - name: Override bash shell PATH (windows-latest)
-    #   run: echo "::add-path::C:\Program Files\Git\bin"
-    - name: GTK3
-      run: python .\build.py build -p x64 --vs-ver 16 gtk3
-      working-directory: C:\gtk-build\github\gvsbuild
-    - name: GDK pixbuf
-      run: python .\build.py build -p x64 --vs-ver 16 gdk-pixbuf
-      working-directory: C:\gtk-build\github\gvsbuild
-    - name: GTK sourceview 3
-      run: python .\build.py build -p x64 --vs-ver 16 gtksourceview3
-      working-directory: C:\gtk-build\github\gvsbuild
-    - name: build
-      run: cargo build
-      env:
-        RUSTFLAGS: -L C:\gtk-build\gtk\x64\release\lib
-    - name: test
-      run: cargo test
+    # - name: Install Git with MSYS2
+    #   run: msys2do pacman -S --noconfirm git  
+    # - name: Debug %PATH%
+    #   run: echo %PATH%
+    #   shell: cmd
+    # - name: gvsbuild
+    #   run: git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
+    # # - name: Remove GIT # cygwin binaries conflicting with MSYS2 (https://github.com/wingtk/gvsbuild/blob/master/azure-pipelines.yml)
+    # #   run: rmdir "C:\Program Files\Git" /s /q
+    # #   shell: cmd
+    # # - name: Override bash shell PATH (windows-latest)
+    # #   run: echo "::add-path::C:\Program Files\Git\bin"
+    # - name: GTK3
+    #   run: python .\build.py build -p x64 --vs-ver 16 gtk3
+    #   working-directory: C:\gtk-build\github\gvsbuild
+    # - name: GDK pixbuf
+    #   run: python .\build.py build -p x64 --vs-ver 16 gdk-pixbuf
+    #   working-directory: C:\gtk-build\github\gvsbuild
+    # - name: GTK sourceview 3
+    #   run: python .\build.py build -p x64 --vs-ver 16 gtksourceview3
+    #   working-directory: C:\gtk-build\github\gvsbuild
+    # - name: build
+    #   run: cargo build
+    #   env:
+    #     RUSTFLAGS: -L C:\gtk-build\gtk\x64\release\lib
+    # - name: test
+    #   run: cargo test
