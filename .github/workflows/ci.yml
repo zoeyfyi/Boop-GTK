@@ -106,6 +106,15 @@ jobs:
       run: C:\msys64\usr\bin\bash.exe -l -c "pacman -S --noconfirm git"
     - name: gvsbuild
       run: git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
+    - name: GTK3
+      run: python .\build.py build -p x64 --vs-ver 16 gtk3
+      working-directory: C:\gtk-build\github\gvsbuild
+    - name: GDK pixbuf
+      run: python .\build.py build -p x64 --vs-ver 16 gdk-pixbuf
+      working-directory: C:\gtk-build\github\gvsbuild
+    - name: GTK sourceview 3
+      run: python .\build.py build -p x64 --vs-ver 16 gtksourceview3
+      working-directory: C:\gtk-build\github\gvsbuild
 
     # # - uses: numworks/setup-msys2@v1
     # # - name: GTK Icons # we have to install them from here because the gvsbuild mess up the icons
