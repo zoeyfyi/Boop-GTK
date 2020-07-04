@@ -90,7 +90,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        submodules: 'recursive'- uses: numworks/setup-msys2@v1
+        submodules: 'recursive'
+    - uses: numworks/setup-msys2@v1
     - name: Add MSYS2 to PATH
       run: echo "::add-path::C:\msys64\usr\bin"
     - name: debug %PATH%
