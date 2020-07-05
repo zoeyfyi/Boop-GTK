@@ -102,8 +102,8 @@ jobs:
       run: msys2do pacman -Syy --overwrite \\* --noconfirm
     - name: GTK development librarys
       run: msys2do pacman -S --noconfirm mingw-w64-x86_64-gtk3 mingw-w64-x86_64-gtksourceview3 mingw-w64-x86_64-rust
-    - name: make python2 default # v8 assumes python2 :(
-      run: rm C:\msys64\mingw64\bin\python.exe ; cp C:\msys64\mingw64\bin\python2.exe C:\msys64\mingw64\bin\python.exe
+    # - name: make python2 default # v8 assumes python2 :(
+    #   run: rm C:\msys64\mingw64\bin\python.exe ; cp C:\msys64\mingw64\bin\python2.exe C:\msys64\mingw64\bin\python.exe
     - name: build
       run: msys2do cargo build -vv
       env:
