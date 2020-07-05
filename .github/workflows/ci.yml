@@ -97,7 +97,7 @@ jobs:
       shell: cmd
       working-directory: C:\Program Files (x86)\Windows Kits\
     - name: debug tree
-      run: tree /f
+      run: dir /s user32.lib
       shell: cmd
       working-directory: C:\Program Files (x86)\Windows Kits\
     # - uses: actions/checkout@v2
