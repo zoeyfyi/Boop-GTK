@@ -85,9 +85,9 @@ jobs:
   #         args: -- -D warnings
 
   build-windows:
-    # name: Build Windows
-    # runs-on: windows-latest
-    # steps:
+    name: Build Windows
+    runs-on: windows-latest
+    steps:
     # - name: debug dir 1
     #   run: dir
     #   shell: cmd
