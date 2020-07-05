@@ -85,24 +85,24 @@ jobs:
   #         args: -- -D warnings
 
   build-windows:
-    name: Build Windows
-    runs-on: windows-latest
-    steps:
-    - name: debug dir 1
-      run: dir
-      shell: cmd
-      working-directory: C:\Program Files (x86)\
-    - name: debug dir 2
-      run: dir
-      shell: cmd
-      working-directory: C:\Program Files (x86)\Windows Kits\
-    - name: debug tree
-      run: dir /s user32.lib
-      shell: cmd
-      working-directory: C:\Program Files (x86)\Windows Kits\
-    # - uses: actions/checkout@v2
-    #   with:
-    #     submodules: 'recursive'
+    # name: Build Windows
+    # runs-on: windows-latest
+    # steps:
+    # - name: debug dir 1
+    #   run: dir
+    #   shell: cmd
+    #   working-directory: C:\Program Files (x86)\
+    # - name: debug dir 2
+    #   run: dir
+    #   shell: cmd
+    #   working-directory: C:\Program Files (x86)\Windows Kits\
+    # - name: debug tree
+    #   run: dir /s user32.lib
+    #   shell: cmd
+    #   working-directory: C:\Program Files (x86)\Windows Kits\
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
     # - uses: numworks/setup-msys2@v1
     # - name: update pacman
     #   run: msys2do pacman -Sy pacman --ask 20 --noconfirm --needed --noconfirm --noprogressbar --overwrite \\*
@@ -140,11 +140,14 @@ jobs:
     #   shell: cmd
     # - name: install Git with MSYS2
     #   run: C:\msys64\usr\bin\bash.exe -l -c "pacman -S --noconfirm git"
-    # - name: gvsbuild
-    #   run: git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
-    # - name: GTK3
-    #   run: python .\build.py build -p x64 --vs-ver 16 gtk3
-    #   working-directory: C:\gtk-build\github\gvsbuild
+    - name: gvsbuild
+      run: git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
+    - name: remove Git
+      run: rmdir "C:\Program Files\Git" /s /q
+      shell: cmd
+    - name: GTK3
+      run: python .\build.py build -p=x64 --vs-ver=16 --msys-dir=C:\msys64 -k --enable-gi --py-wheel --py-egg gtk3
+      working-directory: C:\gtk-build\github\gvsbuild
     # - name: GDK pixbuf
     #   run: python .\build.py build -p x64 --vs-ver 16 gdk-pixbuf
     #   working-directory: C:\gtk-build\github\gvsbuild
