@@ -94,6 +94,7 @@ jobs:
     - uses: numworks/setup-msys2@v1
     - name: update pacman
       run: msys2do pacman -Sy --noconfirm pacman
+      shell: powershell -Command "& '{0}'" # MSYS doesn't list to --noconfirm when trying to kill MSYS, so ignore exit code
     - name: update packages
       run: msys2do pacman -Su --noconfirm 
     - name: GTK development librarys
