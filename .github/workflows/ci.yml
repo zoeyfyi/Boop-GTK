@@ -89,14 +89,17 @@ jobs:
     runs-on: windows-latest
     steps:
     - name: debug dir 1
-      run: cd C:\Program Files (x86)\ & dir
+      run: dir
       shell: cmd
+      working-directory: C:\Program Files (x86)\
     - name: debug dir 2
-      run: cd C:\Program Files (x86)\Windows Kits\ & dir
+      run: dir
       shell: cmd
+      working-directory: C:\Program Files (x86)\Windows Kits\
     - name: debug tree
-      run: cd C:\Program Files (x86)\Windows Kits\ & tree /f
+      run: tree /f
       shell: cmd
+      working-directory: C:\Program Files (x86)\Windows Kits\
     # - uses: actions/checkout@v2
     #   with:
     #     submodules: 'recursive'
