@@ -103,15 +103,15 @@ jobs:
     - uses: actions/checkout@v2
       with:
         submodules: 'recursive'
-    # - uses: numworks/setup-msys2@v1
-    # - name: update pacman
-    #   run: msys2do pacman -Sy pacman --ask 20 --noconfirm --needed --noconfirm --noprogressbar --overwrite \\*
-    #   shell: powershell -Command "& '{0}'" # MSYS doesn't list to --noconfirm when trying to kill MSYS, so ignore exit code
+    - uses: numworks/setup-msys2@v1
+    - name: update pacman
+      run: msys2do pacman -Sy pacman --ask 20 --noconfirm --needed --noconfirm --noprogressbar --overwrite \\*
+      shell: powershell -Command "& '{0}'" # MSYS doesn't list to --noconfirm when trying to kill MSYS, so ignore exit code
     # # - name: update packages
     # #   run: msys2do pacman -Syuu --ask 20 --noconfirm --needed --noconfirm --noprogressbar --overwrite \\*
     # #   shell: powershell -Command "& '{0}'" # MSYS doesn't list to --noconfirm when trying to kill MSYS, so ignore exit code
-    # - name: update package database
-    #   run: msys2do pacman -Syy --overwrite \\* --noconfirm
+    - name: update package database
+      run: msys2do pacman -Syy --overwrite \\* --noconfirm
     # - name: GTK development librarys
     #   run: msys2do pacman -S --noconfirm mingw-w64-x86_64-gtk3 mingw-w64-x86_64-gtksourceview3 mingw-w64-x86_64-rust mingw-w64-x86_64-python2
     # - name: debug find python3
@@ -128,25 +128,27 @@ jobs:
     #     V8_FROM_SOURCE: 1 # no mingw prebuild lib unfortunatly
     #     DEPOT_TOOLS_WIN_TOOLCHAIN: 0 # https://groups.google.com/a/chromium.org/g/chromium-dev/c/1LCz2ruDGZE
 
-    # - name: Add MSYS2 to PATH
-    #   run: echo "::add-path::C:\msys64\usr\bin"
-    # - name: debug %PATH%
-    #   run: echo %path%
-    #   shell: cmd
-    # - name: ls bin
-    #   run: ls C:\msys64\usr\bin
-    # - name: remove Git
-    #   run: rmdir "C:\Program Files\Git" /s /q
-    #   shell: cmd
-    # - name: install Git with MSYS2
-    #   run: C:\msys64\usr\bin\bash.exe -l -c "pacman -S --noconfirm git"
+    - name: Add MSYS2 to PATH
+      run: echo "::add-path::D:\a\_temp\msys\usr\bin"
+    - name: debug %PATH%
+      run: echo %path%
+      shell: cmd
+    - name: ls bin
+      run: ls D:\a\_temp\msys\usr\bin
+    - name: remove Git
+      run: rmdir "C:\Program Files\Git" /s /q
+      shell: cmd
+    - name: install Git with MSYS2
+      run: msys2do pacman -S --noconfirm git
+    - name: ls bin
+      run: ls D:\a\_temp\msys\usr\bin
     - name: gvsbuild
       run: git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
-    - name: remove Git
-      run: rmdir "C:\Program Files\Git\usr\bin" /s /q
+    # - name: remove Git
+    #   run: rmdir "C:\Program Files\Git\usr\bin" /s /q
       shell: cmd
-    - name: GTK3
-      run: python .\build.py build -p=x64 --vs-ver=16 --msys-dir=C:\msys64 -k --enable-gi --py-wheel --py-egg gtk3
+    - name: GTK libs
+      run: python .\build.py build -p=x64 --vs-ver=16 --msys-dir=C:\msys64 -k --enable-gi --py-wheel --py-egg gtk3 gdk-pixbuf gtksourceview3
       working-directory: C:\gtk-build\github\gvsbuild
     # - name: GDK pixbuf
     #   run: python .\build.py build -p x64 --vs-ver 16 gdk-pixbuf
@@ -182,9 +184,9 @@ jobs:
     # - name: GTK sourceview 3
     #   run: python .\build.py build -p x64 --vs-ver 16 gtksourceview3
     #   working-directory: C:\gtk-build\github\gvsbuild
-    # - name: build
-    #   run: cargo build
-    #   env:
-    #     RUSTFLAGS: -L C:\gtk-build\gtk\x64\release\lib
-    # - name: test
-    #   run: cargo test
+    - name: build
+      run: cargo build
+      env:
+        RUSTFLAGS: -L C:\gtk-build\gtk\x64\release\lib
+    - name: test
+      run: cargo test
