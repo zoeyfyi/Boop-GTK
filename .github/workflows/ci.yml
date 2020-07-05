@@ -143,7 +143,7 @@ jobs:
     - name: gvsbuild
       run: git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
     - name: remove Git
-      run: rmdir "C:\Program Files\Git" /s /q
+      run: rmdir "C:\Program Files\Git\usr\bin" /s /q
       shell: cmd
     - name: GTK3
       run: python .\build.py build -p=x64 --vs-ver=16 --msys-dir=C:\msys64 -k --enable-gi --py-wheel --py-egg gtk3
