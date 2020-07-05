@@ -89,7 +89,7 @@ jobs:
     runs-on: windows-latest
     steps:
     - name: debug tree
-      run: cd C:\Program Files (x86)\Windows Kits\10\Lib & tree /f
+      run: cd C:\Program Files (x86)\Windows Kits\ & tree /f
       shell: cmd
     # - uses: actions/checkout@v2
     #   with:
