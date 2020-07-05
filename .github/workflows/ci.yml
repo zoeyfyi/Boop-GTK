@@ -99,7 +99,7 @@ jobs:
     #   run: msys2do pacman -Syuu --ask 20 --noconfirm --needed --noconfirm --noprogressbar --overwrite \\*
     #   shell: powershell -Command "& '{0}'" # MSYS doesn't list to --noconfirm when trying to kill MSYS, so ignore exit code
     - name: update package database
-      run: msys2do pacman -Syy --overwrite "*" --noconfirm
+      run: msys2do pacman -Syy --overwrite \\* --noconfirm
     - name: GTK development librarys
       run: msys2do pacman -S --noconfirm mingw-w64-x86_64-gtk3 mingw-w64-x86_64-gtksourceview3 mingw-w64-x86_64-rust
     - name: make python2 default # v8 assumes python2 :(
