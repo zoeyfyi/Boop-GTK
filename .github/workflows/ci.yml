@@ -103,13 +103,11 @@ jobs:
     - name: GTK development librarys
       run: msys2do pacman -S --noconfirm mingw-w64-x86_64-gtk3 mingw-w64-x86_64-gtksourceview3 mingw-w64-x86_64-rust mingw-w64-x86_64-python2
     - name: debug find python3
-      run: dir /s python3.exe
+      run: cd C:\msys64\ & dir /s python3.exe
       shell: cmd
-      working-directory: "C:"
     - name: debug find python2
-      run: dir /s python2.exe
+      run: cd C:\msys64\ & dir /s python2.exe
       shell: cmd
-      working-directory: "C:"
     - name: make python2 default # v8 assumes python2 :(
       run: rm C:\msys64\mingw64\bin\python.exe ; cp C:\msys64\mingw64\bin\python2.exe C:\msys64\mingw64\bin\python.exe
     - name: build
