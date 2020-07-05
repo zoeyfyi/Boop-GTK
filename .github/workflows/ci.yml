@@ -88,33 +88,36 @@ jobs:
     name: Build Windows
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: 'recursive'
-    - uses: numworks/setup-msys2@v1
-    - name: update pacman
-      run: msys2do pacman -Sy pacman --ask 20 --noconfirm --needed --noconfirm --noprogressbar --overwrite \\*
-      shell: powershell -Command "& '{0}'" # MSYS doesn't list to --noconfirm when trying to kill MSYS, so ignore exit code
-    # - name: update packages
-    #   run: msys2do pacman -Syuu --ask 20 --noconfirm --needed --noconfirm --noprogressbar --overwrite \\*
+    - name: debug tree
+      run: cd C:\Program Files (x86)\Windows Kits\10\Lib & tree /f
+      shell: cmd
+    # - uses: actions/checkout@v2
+    #   with:
+    #     submodules: 'recursive'
+    # - uses: numworks/setup-msys2@v1
+    # - name: update pacman
+    #   run: msys2do pacman -Sy pacman --ask 20 --noconfirm --needed --noconfirm --noprogressbar --overwrite \\*
     #   shell: powershell -Command "& '{0}'" # MSYS doesn't list to --noconfirm when trying to kill MSYS, so ignore exit code
-    - name: update package database
-      run: msys2do pacman -Syy --overwrite \\* --noconfirm
-    - name: GTK development librarys
-      run: msys2do pacman -S --noconfirm mingw-w64-x86_64-gtk3 mingw-w64-x86_64-gtksourceview3 mingw-w64-x86_64-rust mingw-w64-x86_64-python2
-    - name: debug find python3
-      run: cd D:\a\_temp\msys\ & dir /s python3.exe
-      shell: cmd
-    - name: debug find python2
-      run: cd D:\a\_temp\msys\ & dir /s python2.exe
-      shell: cmd
-    - name: make python2 default # v8 assumes python2 :(
-      run: rm D:\a\_temp\msys\msys64\mingw64\bin\python.exe ; cp D:\a\_temp\msys\msys64\mingw64\bin\python2.exe D:\a\_temp\msys\msys64\mingw64\bin\python.exe
-    - name: build
-      run: msys2do cargo build -vv
-      env:
-        V8_FROM_SOURCE: 1 # no mingw prebuild lib unfortunatly
-        DEPOT_TOOLS_WIN_TOOLCHAIN: 0 # https://groups.google.com/a/chromium.org/g/chromium-dev/c/1LCz2ruDGZE
+    # # - name: update packages
+    # #   run: msys2do pacman -Syuu --ask 20 --noconfirm --needed --noconfirm --noprogressbar --overwrite \\*
+    # #   shell: powershell -Command "& '{0}'" # MSYS doesn't list to --noconfirm when trying to kill MSYS, so ignore exit code
+    # - name: update package database
+    #   run: msys2do pacman -Syy --overwrite \\* --noconfirm
+    # - name: GTK development librarys
+    #   run: msys2do pacman -S --noconfirm mingw-w64-x86_64-gtk3 mingw-w64-x86_64-gtksourceview3 mingw-w64-x86_64-rust mingw-w64-x86_64-python2
+    # - name: debug find python3
+    #   run: cd D:\a\_temp\msys\ & dir /s python3.exe
+    #   shell: cmd
+    # - name: debug find python2
+    #   run: cd D:\a\_temp\msys\ & dir /s python2.exe
+    #   shell: cmd
+    # - name: make python2 default # v8 assumes python2 :(
+    #   run: rm D:\a\_temp\msys\msys64\mingw64\bin\python.exe ; cp D:\a\_temp\msys\msys64\mingw64\bin\python2.exe D:\a\_temp\msys\msys64\mingw64\bin\python.exe
+    # - name: build
+    #   run: msys2do cargo build -vv
+    #   env:
+    #     V8_FROM_SOURCE: 1 # no mingw prebuild lib unfortunatly
+    #     DEPOT_TOOLS_WIN_TOOLCHAIN: 0 # https://groups.google.com/a/chromium.org/g/chromium-dev/c/1LCz2ruDGZE
 
     # - name: Add MSYS2 to PATH
     #   run: echo "::add-path::C:\msys64\usr\bin"
