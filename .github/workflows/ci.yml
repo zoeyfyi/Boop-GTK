@@ -114,7 +114,7 @@ jobs:
       run: msys2do cargo build -vv
       env:
         V8_FROM_SOURCE: 1 # no mingw prebuild lib unfortunatly
-
+        DEPOT_TOOLS_WIN_TOOLCHAIN: 0 # https://groups.google.com/a/chromium.org/g/chromium-dev/c/1LCz2ruDGZE
 
     # - name: Add MSYS2 to PATH
     #   run: echo "::add-path::C:\msys64\usr\bin"
