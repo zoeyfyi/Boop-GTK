@@ -88,6 +88,12 @@ jobs:
     name: Build Windows
     runs-on: windows-latest
     steps:
+    - name: debug dir 1
+      run: cd C:\Program Files (x86)\ & dir
+      shell: cmd
+    - name: debug dir 2
+      run: cd C:\Program Files (x86)\Windows Kits\ & dir
+      shell: cmd
     - name: debug tree
       run: cd C:\Program Files (x86)\Windows Kits\ & tree /f
       shell: cmd
