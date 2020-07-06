@@ -69,11 +69,13 @@ impl App {
             let config_dir_str = config_dir.display().to_string();
             app.config_directory_button.connect_clicked(move |_| {
                 if let Err(launch_err) = {
-                    #[cfg(target_os = "macos")]
-                    return Command::new("open");
-                    #[cfg(target_os = "windows")]
-                    return Command::new("start");
-                    Command::new("xdg-open")
+                    if cfg!(target_os = "macos") {
+                        Command::new("open")
+                    } else if cfg!(target_os = "windows") {
+                        Command::new("start")
+                    } else {
+                        Command::new("xdg-open")
+                    }
                 }
                 .arg(config_dir_str.clone())
                 .output()
