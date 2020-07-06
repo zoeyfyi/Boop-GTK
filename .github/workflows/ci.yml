@@ -110,7 +110,7 @@ jobs:
       if: steps.cache.outputs.cache-hit != 'true'
     
     - name: debug tree 1
-      name: tree
+      run: tree
       shell: cmd
     - name: debug tree 2
       run: tree C:\gtk-build
