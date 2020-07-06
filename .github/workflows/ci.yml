@@ -103,7 +103,7 @@ jobs:
       id: cache
       with:
         path: C:\gtk-build\**
-        key: ${{ runner.os }}-gvsbuild-${{ hashFiles('**/commit.txt') }}
+        key: ${{ runner.os }}-gvsbuild-cache-${{ hashFiles('**/commit.txt') }}
     # if there was a cache miss, clone
     - name: gvsbuild
       run: git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
@@ -115,29 +115,23 @@ jobs:
     - name: debug tree 2
       run: tree C:\gtk-build
       shell: cmd
-    # # if there was a cache hit, move
-    # - name: copy gvsbuild
-    #   run: xcopy gtk-build\ C:\gtk-build\
-    #   if: steps.cache.outputs.cache-hit == 'true'
-    # # remove git's bin, there are conflicting cygwin dll's
-    # - name: remove Git
-    #   run: rmdir "C:\Program Files\Git\usr\bin" /s /q
-    #   shell: cmd
-    # # fetch gtk dependencies
-    # - name: GTK development librarys
-    #   run: python .\build.py build -p=x64 --vs-ver=16 --msys-dir=C:\msys64 -k --enable-gi --py-wheel --py-egg gtk3 gdk-pixbuf gtksourceview3
-    #   working-directory: C:\gtk-build\github\gvsbuild
-    #   if: steps.cache.outputs.cache-hit != 'true'
-    # # build
-    # - name: build
-    #   run: cargo build
-    #   env:
-    #     RUSTFLAGS: -L C:\gtk-build\gtk\x64\release\lib
-    # # test
-    # - name: test
-    #   run: cargo test
-    #   env:
-    #     RUSTFLAGS: -L C:\gtk-build\gtk\x64\release\lib
-    # move gvsbuild back for caching
-    # - name: copy gvsbuild (for cache)
-    #   run: xcopy C:\gtk-build\gtk\x64\release\lib\ gtk-build\
+
+    # remove git's bin, there are conflicting cygwin dll's
+    - name: remove Git
+      run: rmdir "C:\Program Files\Git\usr\bin" /s /q
+      shell: cmd
+    # fetch gtk dependencies
+    - name: GTK development librarys
+      run: python .\build.py build -p=x64 --vs-ver=16 --msys-dir=C:\msys64 -k --enable-gi --py-wheel --py-egg gtk3 gdk-pixbuf gtksourceview3
+      working-directory: C:\gtk-build\github\gvsbuild
+      if: steps.cache.outputs.cache-hit != 'true'
+    # build
+    - name: build
+      run: cargo build
+      env:
+        RUSTFLAGS: -L C:\gtk-build\gtk\x64\release\lib
+    # test
+    - name: test
+      run: cargo test
+      env:
+        RUSTFLAGS: -L C:\gtk-build\gtk\x64\release\lib
