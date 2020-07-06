@@ -190,7 +190,8 @@ fn main() -> Result<(), ()> {
     v8::V8::initialize();
     info!("V8 initialized");
 
-    // load scripts
+    // needed on windows
+    sourceview::View::static_type();
 
     let application = Application::new(Some("uk.co.mrbenshef.Boop-GTK"), Default::default())
         .expect("failed to initialize GTK application");
