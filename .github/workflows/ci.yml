@@ -110,7 +110,7 @@ jobs:
       if: steps.cache.outputs.cache-hit != 'true'
     # if there was a cache hit, move
     - name: move gvsbuild
-      run: move gtk-build C:\
+      run: xcopy gtk-build\ C:\gtk-build\
       if: steps.cache.outputs.cache-hit == 'true'
     # remove git's bin, there are conflicting cygwin dll's
     - name: remove Git
@@ -132,5 +132,5 @@ jobs:
       env:
         RUSTFLAGS: -L C:\gtk-build\gtk\x64\release\lib
     # move gvsbuild back for caching
-    - name: move gvsbuild (for cache)
-      run: move C:\gtk-build gtk-build
+    - name: copy gvsbuild (for cache)
+      run: xcopy C:\gtk-build\ gtk-build\
