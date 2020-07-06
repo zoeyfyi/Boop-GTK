@@ -108,6 +108,13 @@ jobs:
     - name: gvsbuild
       run: git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
       if: steps.cache.outputs.cache-hit != 'true'
+    
+    - name: debug tree 1
+      name: tree
+      shell: cmd
+    - name: debug tree 2
+      run: tree C:\gtk-build
+      shell: cmd
     # # if there was a cache hit, move
     # - name: copy gvsbuild
     #   run: xcopy gtk-build\ C:\gtk-build\
