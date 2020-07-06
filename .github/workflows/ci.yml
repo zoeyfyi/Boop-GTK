@@ -102,12 +102,16 @@ jobs:
     - uses: actions/cache@v2
       id: cache
       with:
-        path: C:\gtk-build\github\gvsbuild
+        path: gtk-build
         key: ${{ runner.os }}-gvsbuild-${{ hashFiles('**/commit.txt') }}
     # if there was a cache miss, clone
     - name: gvsbuild
       run: git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
       if: steps.cache.outputs.cache-hit != 'true'
+    # if there was a cache hit, move
+    - name: move gvsbuild
+      run: move gtk-build C:\
+      if: steps.cache.outputs.cache-hit == 'true'
     # remove git's bin, there are conflicting cygwin dll's
     - name: remove Git
       run: rmdir "C:\Program Files\Git\usr\bin" /s /q
@@ -127,3 +131,6 @@ jobs:
       run: cargo test
       env:
         RUSTFLAGS: -L C:\gtk-build\gtk\x64\release\lib
+    # move gvsbuild back for caching
+    - name: move gvsbuild (for cache)
+      run: move C:\gtk-build gtk-build
