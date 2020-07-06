@@ -102,8 +102,8 @@ jobs:
     - uses: actions/cache@v2
       id: cache
       with:
-        path: C:\gtk-build\**
-        key: ${{ runner.os }}-gvsbuild-cache-${{ hashFiles('**/commit.txt') }}
+        path: C:\gtk-build\gtk\x64\release\lib\**
+        key: ${{ runner.os }}-gvsbuild-c-${{ hashFiles('**/commit.txt') }}
     # if there was a cache miss, clone
     - name: gvsbuild
       run: git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
