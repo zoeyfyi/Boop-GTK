@@ -109,7 +109,7 @@ jobs:
       run: git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
       if: steps.cache.outputs.cache-hit != 'true'
     # if there was a cache hit, move
-    - name: move gvsbuild
+    - name: copy gvsbuild
       run: xcopy gtk-build\ C:\gtk-build\
       if: steps.cache.outputs.cache-hit == 'true'
     # remove git's bin, there are conflicting cygwin dll's
