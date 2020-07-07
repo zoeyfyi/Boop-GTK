@@ -57,8 +57,20 @@ jobs:
     - uses: actions/cache@v2
       id: cache
       with:
-        path: C:\gtk-build\gtk\x64\release\lib\**
-        key: ${{ runner.os }}-gvsbuild-c-${{ hashFiles('**/commit.txt') }}
+        path: lib\**
+        key: ${{ runner.os }}-gvsbuild-${{ hashFiles('**/commit.txt') }}
+    - name: make library directory
+      run: mkdir C:\gtk-build\gtk\x64\release\lib
+      shell: cmd
+      if: steps.cache.outputs.cache-hit == 'true'
+    - name: move lib files
+      run: xcopy /e /i lib C:\gtk-build\gtk\x64\release\lib
+      shell: cmd
+      if: steps.cache.outputs.cache-hit == 'true'
+    - name: debug tree
+      run: tree C:\gtk-build\gtk\x64\release\lib
+      shell: cmd
+      if: steps.cache.outputs.cache-hit == 'true'
     # if there was a cache miss, clone
     - name: gvsbuild
       run: git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
@@ -83,6 +95,13 @@ jobs:
       with:
         name: boop-gtk.windows.exe
         path: ./boop-gtk.windows.exe
+    # copy lib files for cacheing
+    - name: make lib folder
+      run: mkdir lib
+      shell: cmd
+    - name: move lib files
+      run: xcopy /e /i C:\gtk-build\gtk\x64\release\lib %cd%\lib
+      shell: cmd
 
   release-macosx:
     runs-on: macos-latest
