@@ -177,11 +177,7 @@ impl CommandPalleteDialog {
 
         if let (Some(path), _) = dialog_tree_view.get_cursor() {
             let value = model.get_value(&model.get_iter(&path).unwrap(), ID_COLUMN as i32);
-
             let v = value.downcast::<u64>().unwrap().get().unwrap();
-
-            println!("value is {:?}", v);
-
             dialog.response(gtk::ResponseType::Other(v as u16));
         }
     }
@@ -194,8 +190,6 @@ impl CommandPalleteDialog {
             .get_text()
             .map(|s| s.to_string())
             .unwrap_or_else(String::new);
-
-        println!("searchbar text: {}", searchbar_text);
 
         let search_results = if searchbar_text.is_empty() {
             scripts.to_owned()

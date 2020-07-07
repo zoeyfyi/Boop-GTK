@@ -149,6 +149,11 @@ fn load_all_scripts(config_dir: &Path) -> (Vec<Script>, Option<ScriptError>) {
 }
 
 fn main() -> Result<(), ()> {
+    info!(
+        "found {} pixbuf loaders",
+        gdk_pixbuf::Pixbuf::get_formats().len()
+    );
+
     env_logger::init();
 
     let config_dir = ProjectDirs::from("uk.co", "mrbenshef", "boop-gtk")
@@ -190,7 +195,8 @@ fn main() -> Result<(), ()> {
     v8::V8::initialize();
     info!("V8 initialized");
 
-    // load scripts
+    // needed on windows
+    sourceview::View::static_type();
 
     let application = Application::new(Some("uk.co.mrbenshef.Boop-GTK"), Default::default())
         .expect("failed to initialize GTK application");

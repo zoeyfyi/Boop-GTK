@@ -101,6 +101,7 @@ dependencies = [
  "lazy_static",
  "libc",
  "log",
+ "open",
  "pango",
  "regex",
  "rust-embed",
@@ -560,6 +561,15 @@ name = "once_cell"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b631f7e854af39a1739f401cf34a8a013dfe09eac4fa4dba91e9768bd28168d"
+
+[[package]]
+name = "open"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c283bf0114efea9e42f1a60edea9859e8c47528eae09d01df4b29c1e489cc48"
+dependencies = [
+ "winapi",
+]
 
 [[package]]
 name = "pango"

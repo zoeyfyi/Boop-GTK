@@ -5,12 +5,11 @@ use crate::{
     script::Script,
 };
 use gdk_pixbuf::prelude::*;
-use gio::prelude::*;
 use gtk::prelude::*;
 use sourceview::prelude::*;
 
 use gtk::{AboutDialog, ApplicationWindow, Builder, Button, ModelButton, Statusbar};
-use std::{path::Path, process::Command, rc::Rc};
+use std::{path::Path, rc::Rc};
 
 const HEADER_BUTTON_GET_STARTED: &str = "Press Ctrl+Shift+P to get started";
 const HEADER_BUTTON_CHOOSE_ACTION: &str = "Select an action";
@@ -68,17 +67,8 @@ impl App {
             let app_ = app.clone();
             let config_dir_str = config_dir.display().to_string();
             app.config_directory_button.connect_clicked(move |_| {
-                if let Err(launch_err) = {
-                    #[cfg(target_os = "macos")]
-                    return Command::new("open");
-                    #[cfg(target_os = "windows")]
-                    return Command::new("start");
-                    Command::new("xdg-open")
-                }
-                .arg(config_dir_str.clone())
-                .output()
-                {
-                    error!("could not launch config directory: {}", launch_err);
+                if let Err(open_err) = open::that(config_dir_str.clone()) {
+                    error!("could not launch config directory: {}", open_err);
                     app_.push_error("failed to launch config directory");
                 }
             });
@@ -88,16 +78,11 @@ impl App {
         {
             let app_ = app.clone();
             app.more_scripts_button.connect_clicked(move |_| {
-                if let Some(browser_app) = gio::AppInfo::get_default_for_uri_scheme("https") {
-                    if let Err(launch_err) = browser_app.launch_uris(
-                        &["https://github.com/IvanMathy/Boop/tree/main/Scripts"],
-                        gio::NONE_APP_LAUNCH_CONTEXT,
-                    ) {
-                        error!("could not launch config directory: {}", launch_err);
-                    }
-                } else {
-                    error!("could not find app for `https` type");
-                    app_.push_error("could not find app for `https` type");
+                if let Err(open_err) =
+                    open::that("https://github.com/IvanMathy/Boop/tree/main/Scripts")
+                {
+                    error!("could not launch website: {}", open_err);
+                    app_.push_error("failed to launch website");
                 }
             });
         }
