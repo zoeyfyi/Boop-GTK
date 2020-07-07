@@ -107,12 +107,15 @@ jobs:
     - name: make library directory
       run: mkdir C:\gtk-build\gtk\x64\release\lib
       shell: cmd
+      if: steps.cache.outputs.cache-hit == 'true'
     - name: move lib files
-      run: xcopy /e /i lib C:\gtk-build\gtk\x64\release\lib\
+      run: xcopy /e /i lib\ C:\gtk-build\gtk\x64\release\lib\
       shell: cmd
+      if: steps.cache.outputs.cache-hit == 'true'
     - name: debug tree
       run: tree C:\gtk-build\gtk\x64\release\lib
       shell: cmd
+      if: steps.cache.outputs.cache-hit == 'true'
     # if there was a cache miss, clone
     - name: gvsbuild
       run: git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
