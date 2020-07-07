@@ -143,7 +143,9 @@ jobs:
     - name: make lib folder
       run: mkdir lib
       shell: cmd
+      if: steps.cache.outputs.cache-hit != 'true'
     - name: move lib files
       run: xcopy /e /i C:\gtk-build\gtk\x64\release\lib %cd%\lib
       shell: cmd
+      if: steps.cache.outputs.cache-hit != 'true'
     
