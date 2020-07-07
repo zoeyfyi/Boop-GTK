@@ -163,6 +163,6 @@ jobs:
       shell: cmd
     
     - name: move lib files
-      run: xcopy /e /i C:\gtk-build\gtk\x64\release\lib\ %cd%\lib\
+      run: xcopy /e /i C:\gtk-build\gtk\x64\release\lib %cd%\lib
       shell: cmd
     
