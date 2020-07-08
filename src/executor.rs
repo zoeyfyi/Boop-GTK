@@ -17,12 +17,13 @@ pub struct Executor {
     main_function: *mut v8::Local<'static, v8::Function>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ExecutionStatus {
     pub info: Option<String>,
     pub error: Option<String>,
 }
 
+#[derive(Debug, PartialEq)]
 pub enum TextReplacement {
     Full(String),
     Selection(String),
@@ -271,6 +272,86 @@ impl Drop for Executor {
             Box::from_raw(self.context);
             Box::from_raw(self.handle_scope);
             Box::from_raw(self.isolate);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{borrow::Cow, sync::Mutex};
+
+    lazy_static! {
+        static ref INIT_LOCK: Mutex<u32> = Mutex::new(0);
+    }
+
+    #[must_use]
+    struct SetupGuard {}
+
+    fn setup() -> SetupGuard {
+        let mut g = INIT_LOCK.lock().unwrap();
+        *g += 1;
+        if *g == 1 {
+            v8::V8::initialize_platform(v8::new_default_platform().unwrap());
+            v8::V8::initialize();
+        }
+        SetupGuard {}
+    }
+
+    #[test]
+    fn test_retain_execution_context() {
+        let _guard = setup();
+
+        let mut executor = Executor::new(
+            Script::from_source(
+                "
+            /**
+                {
+                    \"api\":1,
+                    \"name\":\"Counter\",
+                    \"description\":\"Counts up\",
+                    \"author\":\"Ben\",
+                    \"icon\":\"html\",
+                    \"tags\":\"count\"
+                }
+            **/
+            
+            let number = 0;
+            
+            function main(state) {
+                number += 1;
+                state.text = number;
+            }"
+                .to_string(),
+            )
+            .unwrap(),
+        );
+
+        for i in 1..10 {
+            let (_, replacement) = executor.execute("", None);
+            assert_eq!(TextReplacement::Full(i.to_string()), replacement);
+        }
+    }
+
+    #[test]
+    fn test_builtin_scripts() {
+        let _guard = setup();
+
+        use rust_embed::RustEmbed;
+
+        #[derive(RustEmbed)]
+        #[folder = "submodules/Boop/Boop/Boop/scripts/"]
+        struct Scripts;
+
+        for file in Scripts::iter() {
+            let source: Cow<'static, [u8]> = Scripts::get(&file).unwrap();
+            let script_source = String::from_utf8(source.to_vec()).unwrap();
+            let script = Script::from_source(script_source).unwrap();
+            let mut executor = Executor::new(script);
+            executor.execute(
+                "foobar ♈ ♉ ♊ ♋ ♌ ♍ ♎ ♏ ♐ ♑ ♒ ♓ 😁 😝 😋 😄",
+                None,
+            );
         }
     }
 }
