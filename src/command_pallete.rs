@@ -6,8 +6,9 @@ use shrinkwraprs::Shrinkwrap;
 use sublime_fuzzy::FuzzySearch;
 
 use crate::script::Script;
-use crate::SEARCH_CONFIG;
+use crate::{executor::Executor, SEARCH_CONFIG};
 use glib::Type;
+use std::{cell::RefCell, rc::Rc};
 
 const ICON_COLUMN: u32 = 0;
 const TEXT_COLUMN: u32 = 1;
@@ -22,11 +23,11 @@ pub struct CommandPalleteDialog {
     dialog: Dialog,
     dialog_tree_view: TreeView,
     search_bar: Entry,
-    scripts: Vec<(u64, Script)>,
+    scripts: Rc<RefCell<Vec<Executor>>>,
 }
 
 impl CommandPalleteDialog {
-    pub fn new<P: IsA<Window>>(window: &P, scripts: Vec<(u64, Script)>) -> Self {
+    pub fn new<P: IsA<Window>>(window: &P, scripts: Rc<RefCell<Vec<Executor>>>) -> Self {
         let dialog_glade = include_str!("../ui/command-pallete.glade");
         let builder = gtk::Builder::new_from_string(dialog_glade);
 
@@ -73,8 +74,8 @@ impl CommandPalleteDialog {
                     .append_column(&column);
             }
 
-            for (script_id, script) in &scripts {
-                let icon_name = String::from(match script.metadata().icon.as_str() {
+            for script in scripts.borrow().iter() {
+                let icon_name = String::from(match script.script().metadata().icon.as_str() {
                     "broom" => "draw-eraser",
                     "counter" => "cm_markplus",
                     "fingerprint" => "auth-fingerprint-symbolic",
@@ -90,11 +91,11 @@ impl CommandPalleteDialog {
 
                 let entry_text = format!(
                     "<b>{}</b>\n<span size=\"smaller\">{}</span>",
-                    script.metadata().name.to_string(),
-                    script.metadata().description.to_string()
+                    script.script().metadata().name.to_string(),
+                    script.script().metadata().description.to_string()
                 );
 
-                let values: [&dyn ToValue; 3] = [&icon_name, &entry_text, script_id];
+                let values: [&dyn ToValue; 3] = [&icon_name, &entry_text, &script.script().id];
                 store.set(&store.append(), &COLUMNS, &values);
             }
 
@@ -124,7 +125,7 @@ impl CommandPalleteDialog {
         let lb = self.dialog_tree_view.clone();
         let scripts = self.scripts.clone();
         self.search_bar
-            .connect_changed(move |s| CommandPalleteDialog::on_changed(s, &lb, &scripts));
+            .connect_changed(move |s| CommandPalleteDialog::on_changed(s, &lb, scripts.clone()));
 
         let dialog = self.dialog.clone();
         self.dialog_tree_view
@@ -182,7 +183,11 @@ impl CommandPalleteDialog {
         }
     }
 
-    fn on_changed(searchbar: &Entry, dialog_tree_view: &TreeView, scripts: &[(u64, Script)]) {
+    fn on_changed(
+        searchbar: &Entry,
+        dialog_tree_view: &TreeView,
+        scripts: Rc<RefCell<Vec<Executor>>>,
+    ) {
         let model: gtk::ListStore = dialog_tree_view.get_model().unwrap().downcast().unwrap();
         model.clear();
 
@@ -191,31 +196,37 @@ impl CommandPalleteDialog {
             .map(|s| s.to_string())
             .unwrap_or_else(String::new);
 
-        let search_results = if searchbar_text.is_empty() {
-            scripts.to_owned()
+        let search_results: Vec<Script> = if searchbar_text.is_empty() {
+            scripts
+                .borrow()
+                .iter()
+                .map(|s| s.script())
+                .cloned()
+                .collect()
         } else {
             let mut scored_scripts = scripts
+                .borrow()
                 .iter()
-                .map(|(script_id, script)| {
+                .map(|script| {
                     let mut search =
-                        FuzzySearch::new(&searchbar_text, &script.metadata().name, true);
+                        FuzzySearch::new(&searchbar_text, &script.script().metadata().name, true);
                     search.set_score_config(SEARCH_CONFIG);
 
                     let score = search.best_match().map(|m| m.score()).unwrap_or(0);
-                    (*script_id, script.clone(), score)
+                    (script.script().clone(), score)
                 })
-                .filter(|(_, _, score)| *score > 0)
-                .collect::<Vec<(u64, Script, isize)>>();
+                .filter(|(_, score)| *score > 0)
+                .collect::<Vec<(Script, isize)>>();
 
-            scored_scripts.sort_by_key(|(_, _, score)| *score);
+            scored_scripts.sort_by_key(|(_, score)| *score);
 
             scored_scripts
                 .into_iter()
-                .map(|(script_id, script, _)| (script_id, script))
+                .map(|(script, _)| script)
                 .collect()
         };
 
-        for (script_id, script) in &search_results {
+        for script in &search_results {
             let icon_name = String::from(match script.metadata().icon.as_str() {
                 "broom" => "draw-eraser",
                 "counter" => "cm_markplus",
@@ -236,7 +247,7 @@ impl CommandPalleteDialog {
                 script.metadata().description.to_string()
             );
 
-            let values: [&dyn ToValue; 3] = [&icon_name, &entry_text, script_id];
+            let values: [&dyn ToValue; 3] = [&icon_name, &entry_text, &script.id];
             model.set(&model.append(), &COLUMNS, &values);
         }
 

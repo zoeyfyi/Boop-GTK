@@ -1,7 +1,4 @@
 #[macro_use]
-extern crate lazy_static;
-
-#[macro_use]
 extern crate shrinkwraprs;
 
 extern crate gdk;
@@ -46,8 +43,9 @@ use sublime_fuzzy::ScoreConfig;
 
 use app::App;
 use directories::ProjectDirs;
+use executor::Executor;
 use fmt::Display;
-use std::{error::Error, io::prelude::*, rc::Rc};
+use std::{error::Error, io::prelude::*, rc::Rc, cell::RefCell};
 
 const SEARCH_CONFIG: ScoreConfig = ScoreConfig {
     bonus_consecutive: 12,
@@ -116,7 +114,7 @@ fn load_user_scripts(
         .collect())
 }
 
-fn load_internal_scripts() -> Vec<Script> {
+fn load_internal_scripts<'a>() -> Vec<Script> {
     let mut scripts: Vec<Script> = Vec::with_capacity(Scripts::iter().count());
 
     // scripts are internal, so we can unwrap "safely"
@@ -205,8 +203,18 @@ fn main() -> Result<(), ()> {
         let builder = gtk::Builder::new_from_string(include_str!("../ui/boop-gtk.glade"));
         builder.set_application(application);
 
-        let (scripts, script_error) = load_all_scripts(&config_dir);
-        let scripts = Rc::new(scripts);
+        let (mut scripts, script_error) = load_all_scripts(&config_dir);
+
+        // sort alphabetically and assign id's
+        scripts.sort_by_cached_key(|s| s.metadata().name.clone());
+        for (i, script) in scripts.iter_mut().enumerate() {
+            script.id = i as u32;
+        }
+
+        // TODO(mrbenshef): merge executor and script
+        let scripts: Rc<RefCell<Vec<Executor>>> = Rc::new(RefCell::new(
+            scripts.into_iter().map(Executor::new).collect(),
+        ));
 
         let app = App::from_builder(builder, &config_dir, scripts);
         app.set_application(Some(application));
