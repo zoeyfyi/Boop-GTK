@@ -2,14 +2,13 @@ use crate::{
     command_pallete::CommandPalleteDialog,
     executor::{self, Executor},
     gtk::ButtonExt,
-    script::Script,
 };
 use gdk_pixbuf::prelude::*;
 use gtk::prelude::*;
 use sourceview::prelude::*;
 
 use gtk::{AboutDialog, ApplicationWindow, Builder, Button, ModelButton, Statusbar};
-use std::{path::Path, rc::Rc};
+use std::{cell::RefCell, path::Path, rc::Rc};
 
 const HEADER_BUTTON_GET_STARTED: &str = "Press Ctrl+Shift+P to get started";
 const HEADER_BUTTON_CHOOSE_ACTION: &str = "Select an action";
@@ -30,11 +29,15 @@ pub struct App {
     about_dialog: AboutDialog,
 
     context_id: u32,
-    scripts: Rc<Vec<Script>>,
+    scripts: Rc<RefCell<Vec<Executor>>>,
 }
 
 impl App {
-    pub fn from_builder(builder: Builder, config_dir: &Path, scripts: Rc<Vec<Script>>) -> Self {
+    pub fn from_builder(
+        builder: Builder,
+        config_dir: &Path,
+        scripts: Rc<RefCell<Vec<Executor>>>,
+    ) -> Self {
         let mut app = App {
             window: builder.get_object("window").unwrap(),
 
@@ -62,27 +65,33 @@ impl App {
         });
         app.setup_syntax_highlighting(config_dir);
 
+        let context_id = app.context_id;
+
         // launch config directory in default file manager
         {
-            let app_ = app.clone();
+            let status_bar = app.status_bar.clone();
             let config_dir_str = config_dir.display().to_string();
             app.config_directory_button.connect_clicked(move |_| {
                 if let Err(open_err) = open::that(config_dir_str.clone()) {
                     error!("could not launch config directory: {}", open_err);
-                    app_.push_error("failed to launch config directory");
+                    App::push_error_(
+                        status_bar.clone(),
+                        context_id,
+                        "failed to launch config directory",
+                    );
                 }
             });
         }
 
         // launch more scripts page in default web browser
         {
-            let app_ = app.clone();
+            let status_bar = app.status_bar.clone();
             app.more_scripts_button.connect_clicked(move |_| {
                 if let Err(open_err) =
                     open::that("https://github.com/IvanMathy/Boop/tree/main/Scripts")
                 {
                     error!("could not launch website: {}", open_err);
-                    app_.push_error("failed to launch website");
+                    App::push_error_(status_bar.clone(), context_id, "failed to launch website");
                 }
             });
         }
@@ -132,26 +141,22 @@ impl App {
         buffer.set_language(boop_language.as_ref());
     }
 
+    fn push_error_(status_bar: gtk::Statusbar, context_id: u32, error: impl std::fmt::Display) {
+        status_bar.push(context_id, &format!("ERROR: {}", error));
+    }
+
     pub fn push_error(&self, error: impl std::fmt::Display) {
-        self.status_bar
-            .push(self.context_id, &format!("ERROR: {}", error));
+        App::push_error_(self.status_bar.clone(), self.context_id, error);
     }
 
     pub fn open_command_pallete(&self) {
-        let scripts = self
-            .scripts
-            .iter()
-            .cloned()
-            .enumerate()
-            .map(|(i, s)| (i as u64, s))
-            .collect::<Vec<(u64, Script)>>();
-        let dialog = CommandPalleteDialog::new(&self.window, scripts.to_owned());
+        let dialog = CommandPalleteDialog::new(&self.window, self.scripts.clone());
         dialog.show_all();
 
         self.header_button.set_label(HEADER_BUTTON_CHOOSE_ACTION);
 
         if let gtk::ResponseType::Other(script_id) = dialog.run() {
-            let script = scripts[script_id as usize].1.clone();
+            let script = self.scripts.borrow()[script_id as usize].script().clone();
 
             info!("executing {}", script.metadata().name);
 
@@ -159,44 +164,35 @@ impl App {
 
             let buffer = &self.source_view.get_buffer().unwrap();
 
-            let full_text = &buffer
+            let buffer_text = buffer
                 .get_text(&buffer.get_start_iter(), &buffer.get_end_iter(), false)
-                .unwrap()
-                .to_string();
+                .unwrap();
+            let full_text = buffer_text.as_str();
 
-            let selection_bounds = buffer.get_selection_bounds();
-            let selection: Option<String> = if let Some((start, end)) = &selection_bounds {
-                let selected_text = buffer.get_text(start, end, false).unwrap().to_string();
-                Some(selected_text)
-            } else {
-                None
-            };
+            let selection_text = buffer
+                .get_selection_bounds()
+                .map(|(start, end)| buffer.get_text(&start, &end, false).unwrap().to_string());
 
-            info!(
-                "full_text length: {}, selection length: {}",
-                full_text.len(),
-                selection.as_ref().map(String::len).unwrap_or(0)
-            );
+            let (status, replacement) = self.scripts.borrow_mut()[script_id as usize]
+                .execute(full_text, selection_text.as_deref());
 
-            let result = Executor::new(&script).execute(full_text, selection.as_deref());
-
-            match result.replacement {
+            match replacement {
                 executor::TextReplacement::Full(text) => {
                     info!("replacing full text");
                     buffer.set_text(&text);
                 }
                 executor::TextReplacement::Selection(text) => {
                     info!("replacing selection");
-                    let (start, end) = &mut selection_bounds.unwrap();
+                    let (start, end) = &mut buffer.get_selection_bounds().unwrap();
                     buffer.delete(start, end);
                     buffer.insert(start, &text);
                 }
             }
 
             // TODO: how to handle multiple messages?
-            if let Some(error) = result.error {
+            if let Some(error) = status.error {
                 self.status_bar.push(self.context_id, &error);
-            } else if let Some(info) = result.info {
+            } else if let Some(info) = status.info {
                 self.status_bar.push(self.context_id, &info);
             }
         }

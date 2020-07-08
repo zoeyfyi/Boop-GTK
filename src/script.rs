@@ -3,6 +3,7 @@ use std::fmt;
 
 #[derive(Debug, Clone)]
 pub struct Script {
+    pub id: u32,
     metadata: Metadata,
     source: String,
 }
@@ -42,7 +43,11 @@ impl Script {
 
         metadata.icon = metadata.icon.to_lowercase();
 
-        Ok(Script { metadata, source })
+        Ok(Script {
+            metadata,
+            source,
+            id: 0,
+        })
     }
 
     pub fn metadata(&self) -> &Metadata {
