@@ -47,7 +47,7 @@ use app::App;
 use directories::ProjectDirs;
 use executor::Executor;
 use fmt::Display;
-use std::{error::Error, io::prelude::*, rc::Rc, cell::RefCell};
+use std::{cell::RefCell, error::Error, io::prelude::*, rc::Rc};
 
 const SEARCH_CONFIG: ScoreConfig = ScoreConfig {
     bonus_consecutive: 12,
