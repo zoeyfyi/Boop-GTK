@@ -38,7 +38,6 @@ impl Script {
         let start = source.find("/**").ok_or(ParseScriptError::NoMetadata)?;
         let end = source.find("**/").ok_or(ParseScriptError::NoMetadata)?;
 
-
         let mut metadata: Metadata = serde_jsonrc::from_str(&source[start + 3..end])
             .map_err(ParseScriptError::InvalidMetadata)?;
 
