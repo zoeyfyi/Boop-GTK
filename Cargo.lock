@@ -175,11 +175,10 @@ dependencies = [
 
 [[package]]
 name = "directories"
-version = "3.0.0"
+version = "3.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba927e81b69134a17de62e7be40364be6844f731238ed166f53aac36344ecc19"
+checksum = "f8fed639d60b58d0f53498ab13d26f621fd77569cc6edb031f4cc36a2ad9da0f"
 dependencies = [
- "cfg-if",
  "dirs-sys",
 ]
 
