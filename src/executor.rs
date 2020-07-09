@@ -346,7 +346,8 @@ mod tests {
         for file in Scripts::iter() {
             let source: Cow<'static, [u8]> = Scripts::get(&file).unwrap();
             let script_source = String::from_utf8(source.to_vec()).unwrap();
-            let script = Script::from_source(script_source).unwrap();
+            let script =
+                Script::from_source(script_source).expect(&format!("Could not parse {}", file));
             let mut executor = Executor::new(script);
             executor.execute(
                 "foobar ♈ ♉ ♊ ♋ ♌ ♍ ♎ ♏ ♐ ♑ ♒ ♓ 😁 😝 😋 😄",
