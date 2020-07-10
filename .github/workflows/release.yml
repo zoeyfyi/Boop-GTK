@@ -151,6 +151,7 @@ jobs:
     if: github.event_name != 'pull_request' # don't do a release for pull requests into release, just upload artifacts to test
     needs: [release-linux-amd64, release-macosx, release-windows, release-snap, release-flatpak]
     steps:
+    # download artifacts
     - uses: actions/download-artifact@v2
       with:
         name: boop-gtk.linux.amd64
@@ -167,6 +168,11 @@ jobs:
       with:
         name: boop-gtk.flatpak
         path: ./
+    - uses: actions/download-artifact@v2
+      with:
+        name: boop-gtk.windows.zip
+        path: ./
+    # create a release
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
@@ -179,6 +185,7 @@ jobs:
         prerelease: false
     - name: Debug LS
       run: ls -al
+    # upload
     - name: Upload Release Asset
       uses: actions/upload-release-asset@v1
       env:
@@ -215,3 +222,12 @@ jobs:
         asset_path: ./boop-gtk.flatpak
         asset_name: boop-gtk.flatpak
         asset_content_type: application/octet-stream
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+        asset_path: ./boop-gtk.windows.zip
+        asset_name: boop-gtk.windows.zip
+        asset_content_type: application/zip
