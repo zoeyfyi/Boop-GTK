@@ -1,8 +1,17 @@
 [package]
 name = "boop-gtk"
-version = "0.0.1"
-authors = ["ben"]
+version = "0.1.0"
+authors = ["Ben Sheffield"]
 edition = "2018"
+description = """A scriptable scratchpad for developers
+
+Port of @IvanMathy's Boop to GTK
+"""
+license = "MIT"
+homepage = "https://boop-gtk.mrbenshef.co.uk"
+repository = "https://github.com/mrbenshef/boop-gtk/"
+keywords = ["gtk", "text-editor", "editor", "linux", "javascript"]
+categories = ["text-editors"]
 
 [profile.dev]
 lto = "off"
@@ -13,11 +22,11 @@ lto = "off"
 sourceview = "0.8.0"
 glib = "0.9.3"
 gdk = "0.12.1"
+gdk-pixbuf = "0.8.0"
 rust-embed = { version = "5.5.1", features = ["debug-embed"] }
 rusty_v8 = "0.6.0"
-# rusty_v8 = { git = 'https://github.com/mrbenshef/rusty_v8' }
 libc = "0.2.71"
-serde_json = "1.0"
+serde_jsonrc = "0.1"
 serde = { version = "1.0", features = ["derive"] }
 regex = "1"
 sublime_fuzzy = "0.6.0"
@@ -27,6 +36,7 @@ pango = "0.8.0"
 directories = "3.0"
 log = "0.4.0"
 env_logger = "0.7.1"
+open = "1.4.0"
 
 [dependencies.gtk]
 version = "0.8.1"

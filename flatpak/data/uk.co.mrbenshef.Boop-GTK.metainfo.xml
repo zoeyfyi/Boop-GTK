@@ -17,6 +17,15 @@
   <url type="homepage">https://boop-gtk.mrbenshef.co.uk/</url>
   <content_rating type="oars-1.0" />
   <releases>
+    <release version="0.1.0" date="2020-07-10">
+      <description>
+        <ul>
+          <li>Windows build available</li>
+          <li>Application menu with links to config directory and website to get more scripts.</li>
+          <li>Scripts now retain the enviroment they where executed in to match Boop</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.0.1" date="2020-06-27">
       <description>
         <p>Initial release</p>

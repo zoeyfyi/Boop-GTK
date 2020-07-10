@@ -1,6 +1,6 @@
 # Maintainer: Ben Sheffield <me@mrbenshef.co.uk>
 pkgname=boop-gtk
-pkgver=0.0.1
+pkgver=0.1.0
 pkgrel=1
 epoch=
 pkgdesc="Port of IvanMathy's Boop to GTK, a scriptable scratchpad for developers."
