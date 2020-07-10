@@ -1,0 +1,17 @@
+name: Convert icons
+
+on: [ workflow_dispatch ]
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install pdf2svg
+      run: sudo apt-get install -y pdf2svg
+    - name: Convert pdfs
+      run: bash convert-icons.sh
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v2.8.1
+      with:
+        commmit-message: "chore: convert icons"
+        title: Update icons
