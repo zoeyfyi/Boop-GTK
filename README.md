@@ -8,6 +8,7 @@
 <p align="center">Port of <a href="https://github.com/IvanMathy"><b>@IvanMathy</b></a>'s <a href="https://github.com/IvanMathy/Boop">Boop</a> to GTK</p>
 
 ![Continuous integration](https://github.com/mrbenshef/Boop-GTK/workflows/Continuous%20integration/badge.svg)
+![Release](https://github.com/mrbenshef/Boop-GTK/workflows/Release/badge.svg?branch=release)
 ![Crates.io](https://img.shields.io/crates/v/boop-gtk)
 
 ### Get Boop-GTK
