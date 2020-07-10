@@ -16,5 +16,5 @@ jobs:
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v2.8.1
       with:
-        commmit-message: "chore: convert icons"
+        commit-message: "chore: convert icons"
         title: Update icons
