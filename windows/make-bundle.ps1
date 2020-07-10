@@ -31,3 +31,6 @@ try {
     "Failed to create archive"
     $_
 }
+
+# supress robocopy non-zero success
+if ($lastexitcode -lt 20) { $global:lastexitcode = 0 }
