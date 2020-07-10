@@ -95,6 +95,17 @@ jobs:
       with:
         name: boop-gtk.windows.exe
         path: ./boop-gtk.windows.exe
+    # download icons from MSYS since gcsbuild icons are broken
+    - name: download icons
+      run: C:\msys64\usr\bin\bash.exe -lc "pacman -S --noconfirm mingw-w64-x86_64-adwaita-icon-theme"
+    # create bundle
+    - name: create bundle
+      run: cd windows && ./make-bundle.ps1
+    # upload
+    - uses: actions/upload-artifact@v2.0.1
+      with:
+        name: boop-gtk.windows.zip
+        path: ./windows/boop-gtk.windows.zip
     # copy lib files for cacheing
     - name: make lib folder
       run: mkdir lib

@@ -5,3 +5,5 @@
 build-dir
 repo
 flatpak/generated-sources.json
+windows/*
+!windows/make-bundle.ps1
