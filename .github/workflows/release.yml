@@ -49,32 +49,9 @@ jobs:
           ~/.cargo/git
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-    # get the last commit of gvsbuild, this will be used as the cache key     
-    - name: get last gvsbuild commit
-      run: git ls-remote https://github.com/wingtk/gvsbuild.git refs/heads/master > commit.txt
-      shell: cmd
-    # cache gvsbuild
-    - uses: actions/cache@v2
-      id: cache
-      with:
-        path: lib\**
-        key: ${{ runner.os }}-gvsbuild-${{ hashFiles('**/commit.txt') }}
-    - name: make library directory
-      run: mkdir C:\gtk-build\gtk\x64\release\lib
-      shell: cmd
-      if: steps.cache.outputs.cache-hit == 'true'
-    - name: move lib files
-      run: xcopy /e /i lib C:\gtk-build\gtk\x64\release\lib
-      shell: cmd
-      if: steps.cache.outputs.cache-hit == 'true'
-    - name: debug tree
-      run: tree C:\gtk-build\gtk\x64\release\lib
-      shell: cmd
-      if: steps.cache.outputs.cache-hit == 'true'
     # if there was a cache miss, clone
     - name: gvsbuild
       run: git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
-      if: steps.cache.outputs.cache-hit != 'true'
     # remove git's bin, there are conflicting cygwin dll's
     - name: remove Git
       run: rmdir "C:\Program Files\Git\usr\bin" /s /q
@@ -83,7 +60,6 @@ jobs:
     - name: GTK development librarys
       run: python .\build.py build -p=x64 --vs-ver=16 --msys-dir=C:\msys64 -k --enable-gi --py-wheel --py-egg gtk3 gdk-pixbuf gtksourceview3
       working-directory: C:\gtk-build\github\gvsbuild
-      if: steps.cache.outputs.cache-hit != 'true'
     # build
     - name: build
       run: cargo build --release --all-features
@@ -106,15 +82,6 @@ jobs:
       with:
         name: boop-gtk.windows.zip
         path: ./windows/boop-gtk.windows.zip
-    # copy lib files for cacheing
-    - name: make lib folder
-      run: mkdir lib
-      shell: cmd
-      if: steps.cache.outputs.cache-hit != 'true'
-    - name: move lib files
-      run: xcopy /e /i C:\gtk-build\gtk\x64\release\lib %cd%\lib
-      shell: cmd
-      if: steps.cache.outputs.cache-hit != 'true'
 
   release-macosx:
     runs-on: macos-latest
