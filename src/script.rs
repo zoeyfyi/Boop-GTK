@@ -11,7 +11,7 @@ pub struct Script {
 #[derive(Debug)]
 pub enum ParseScriptError {
     NoMetadata,
-    InvalidMetadata(serde_json::error::Error),
+    InvalidMetadata(serde_jsonrc::error::Error),
 }
 
 impl fmt::Display for ParseScriptError {
@@ -38,7 +38,7 @@ impl Script {
         let start = source.find("/**").ok_or(ParseScriptError::NoMetadata)?;
         let end = source.find("**/").ok_or(ParseScriptError::NoMetadata)?;
 
-        let mut metadata: Metadata = serde_json::from_str(&source[start + 3..end])
+        let mut metadata: Metadata = serde_jsonrc::from_str(&source[start + 3..end])
             .map_err(ParseScriptError::InvalidMetadata)?;
 
         metadata.icon = metadata.icon.to_lowercase();
