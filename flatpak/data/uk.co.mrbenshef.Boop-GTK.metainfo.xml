@@ -22,6 +22,15 @@
         <p>Initial release</p>
       </description>
     </release>
+    <release version="0.1.0" date="2020-07-10">
+      <description>
+        <ul>
+          <li>Windows build available</li>
+          <li>Application menu with links to config directory and website to get more scripts.</li>
+          <li>Scripts now retain the enviroment they where executed in to match Boop</li>
+        </ul>
+      </description>
+    </release>
   </releases>
   <kudos>
     <!--
