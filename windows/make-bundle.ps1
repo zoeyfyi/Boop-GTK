@@ -25,4 +25,9 @@ robocopy C:\gtk-build\gtk\x64\release\share\gtksourceview-3.0 boop-gtk.windows\s
 robocopy C:\msys64\mingw64\share\icons boop-gtk.windows\share\icons /E
 
 # Create archive
-Compress-Archive -Path boop-gtk.windows\* -DestinationPath boop-gtk.windows.zip
+try {
+    Compress-Archive -Force -Path boop-gtk.windows\* -DestinationPath boop-gtk.windows.zip
+} catch {
+    "Failed to create archive"
+    $_
+}
