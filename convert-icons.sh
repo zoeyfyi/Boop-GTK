@@ -7,8 +7,11 @@ for dir in submodules/Boop/Boop/Boop/Assets.xcassets/Icons/*/; do
     # extract file name
     name="${dir#submodules/Boop/Boop/Boop/Assets.xcassets/Icons/icons8-}";
     name="${name%.imageset/}";
+    name=${name,,}
     echo "Processing icon $name";
-    name="$name.svg";
+    name="boop-gtk-$name-symbolic.svg";
     # convert file
     pdf2svg $file ui/icons/$name;
+    # convert strokes
+    ./submodules/svg-stroke-to-path/svg-stroke-to-path SameStrokeColor 'stroke="#000"' ui/icons/$name
 done
