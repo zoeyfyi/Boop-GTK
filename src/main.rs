@@ -1,4 +1,7 @@
 #[macro_use]
+#[cfg(test)]
+extern crate lazy_static;
+#[macro_use]
 extern crate shrinkwraprs;
 
 extern crate gdk;
