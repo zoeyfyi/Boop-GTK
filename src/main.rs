@@ -1,6 +1,4 @@
 #[macro_use]
-extern crate lazy_static;
-#[macro_use]
 extern crate shrinkwraprs;
 
 extern crate gdk;
@@ -47,7 +45,13 @@ use app::App;
 use directories::ProjectDirs;
 use executor::Executor;
 use fmt::Display;
-use std::{cell::RefCell, error::Error, io::prelude::*, rc::Rc};
+use std::{
+    cell::RefCell,
+    error::Error,
+    fs::{self, File},
+    io::prelude::*,
+    rc::Rc,
+};
 
 const SEARCH_CONFIG: ScoreConfig = ScoreConfig {
     bonus_consecutive: 12,
@@ -59,6 +63,10 @@ const SEARCH_CONFIG: ScoreConfig = ScoreConfig {
 #[derive(RustEmbed)]
 #[folder = "submodules/Boop/Boop/Boop/scripts/"]
 struct Scripts;
+
+#[derive(RustEmbed)]
+#[folder = "ui/icons/"]
+struct Icons;
 
 #[derive(Debug)]
 enum LoadScriptError {
@@ -101,17 +109,16 @@ fn load_user_scripts(
 ) -> Result<Vec<Result<Script, ParseScriptError>>, LoadScriptError> {
     let scripts_dir: PathBuf = config_dir.join("scripts");
 
-    std::fs::create_dir_all(&scripts_dir)
-        .map_err(|_| LoadScriptError::FailedToCreateScriptDirectory)?;
+    fs::create_dir_all(&scripts_dir).map_err(|_| LoadScriptError::FailedToCreateScriptDirectory)?;
 
-    let paths = std::fs::read_dir(&scripts_dir)
-        .map_err(|_| LoadScriptError::FailedToReadScriptDirectory)?;
+    let paths =
+        fs::read_dir(&scripts_dir).map_err(|_| LoadScriptError::FailedToReadScriptDirectory)?;
 
     Ok(paths
         .filter_map(|f| f.ok())
         .map(|f| f.path())
         .filter(|path| path.is_file())
-        .filter_map(|path| std::fs::read_to_string(path).ok())
+        .filter_map(|path| fs::read_to_string(path).ok())
         .map(Script::from_source)
         .collect())
 }
@@ -163,7 +170,7 @@ fn main() -> Result<(), ()> {
 
     if !config_dir.exists() {
         info!("config directory does not exist, attempting to create it");
-        match std::fs::create_dir_all(&config_dir) {
+        match fs::create_dir_all(&config_dir) {
             Ok(()) => info!("created config directory"),
             Err(e) => panic!("could not create config directory: {}", e),
         }
@@ -177,16 +184,59 @@ fn main() -> Result<(), ()> {
         path
     };
 
+    info!("lang file path: {}", lang_file_path.display());
+
     if !lang_file_path.exists() {
         info!(
             "language file does not exist, creating a new one at: {}",
             lang_file_path.display()
         );
-        let mut file =
-            std::fs::File::create(&lang_file_path).expect("Could not create language file");
+        let mut file = fs::File::create(&lang_file_path).expect("Could not create language file");
         file.write_all(include_bytes!("../boop.lang"))
             .expect("Failed to write language file");
         info!("language file created at: {}", lang_file_path.display());
+    }
+
+    let icons_path = {
+        let mut path = config_dir.clone();
+        path.push("icons");
+        path
+    };
+
+    // create icons directory
+    match fs::create_dir_all(&icons_path) {
+        Ok(()) => {
+            info!("created icons directory {}", icons_path.display());
+
+            for icon in Icons::iter() {
+                let icon: Cow<str> = icon;
+                let icon_path = {
+                    let mut path = icons_path.clone();
+                    path.push(icon.to_string());
+                    path
+                };
+
+                info!("icon: {}", icon_path.display());
+
+                if !icon_path.exists() {
+                    match File::create(icon_path) {
+                        Ok(mut file) => {
+                            let icon_data: Cow<'static, [u8]> = Icons::get(&icon).unwrap();
+                            match file.write_all(&icon_data) {
+                                Ok(()) => info!("written {}", icon),
+                                Err(err) => error!("error writing {}, {}", icon, err),
+                            }
+                        }
+                        Err(err) => {
+                            error!("error creating file for {}, {}", icon, err);
+                        }
+                    }
+                }
+            }
+        }
+        Err(err) => {
+            error!("failed to create icon directory: {}", err);
+        }
     }
 
     // initalize V8
@@ -202,6 +252,10 @@ fn main() -> Result<(), ()> {
         .expect("failed to initialize GTK application");
 
     application.connect_activate(move |application| {
+        let icon_theme = gtk::IconTheme::get_default().unwrap();
+        icon_theme.append_search_path(&icons_path);
+        icon_theme.prepend_search_path(&icons_path);
+
         let builder = gtk::Builder::new_from_string(include_str!("../ui/boop-gtk.glade"));
         builder.set_application(application);
 
