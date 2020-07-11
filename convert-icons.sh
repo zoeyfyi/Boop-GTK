@@ -1,12 +1,17 @@
 mkdir ui/icons;
 rm ui/icons/*.svg;
-for f in submodules/Boop/Boop/Boop/Assets.xcassets/Icons/**/*.pdf; do 
-echo "Processing $f file..";
-name="$(basename -- ${f})";
-name="${name#icons8-}";
-name="${name%.pdf}";
-name="$name.svg";
-pdf2svg $f ui/icons/$name;
-echo "  Created ui/icons/$name"
-echo "   "
+for dir in submodules/Boop/Boop/Boop/Assets.xcassets/Icons/*/; do 
+    # get pdf
+    files=( $dir*.pdf );
+    file="${files[0]}";
+    # extract file name
+    name="${dir#submodules/Boop/Boop/Boop/Assets.xcassets/Icons/icons8-}";
+    name="${name%.imageset/}";
+    name=${name,,}
+    echo "Processing icon $name";
+    name="boop-gtk-$name-symbolic.svg";
+    # convert file
+    pdf2svg $file ui/icons/$name;
+    # convert strokes
+    ./submodules/svg-stroke-to-path/svg-stroke-to-path SameStrokeColor 'stroke="#000"' ui/icons/$name
 done

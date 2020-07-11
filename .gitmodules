@@ -4,3 +4,6 @@
 [submodule "submodules/flatpak-builder-tools"]
 	path = submodules/flatpak-builder-tools
 	url = https://github.com/flatpak/flatpak-builder-tools.git
+[submodule "submodules/svg-stroke-to-path"]
+	path = submodules/svg-stroke-to-path
+	url = git@github.com:leifgehrmann/svg-stroke-to-path.git

@@ -49,7 +49,8 @@ impl CommandPalleteDialog {
             // icon column
             {
                 let renderer = gtk::CellRendererPixbuf::new();
-                renderer.set_padding(8, 0);
+                renderer.set_padding(8, 8);
+                renderer.set_property_stock_size(gtk::IconSize::Dnd);
 
                 let column = gtk::TreeViewColumn::new();
                 column.pack_start(&renderer, false);
@@ -75,19 +76,24 @@ impl CommandPalleteDialog {
             }
 
             for script in scripts.borrow().iter() {
-                let icon_name = String::from(match script.script().metadata().icon.as_str() {
-                    "broom" => "draw-eraser",
-                    "counter" => "cm_markplus",
-                    "fingerprint" => "auth-fingerprint-symbolic",
-                    "flip" => "object-flip-verical",
-                    "html" => "format-text-code",
-                    "link" => "edit-link",
-                    "metamorphose" => "shapes",
-                    "quote" => "format-text-blockquote",
-                    "table" => "table",
-                    "watch" => "view-calendar-time-spent",
-                    _ => "fcitx-remind-active",
-                });
+                // let icon_name = String::from(match script.script().metadata().icon.as_str() {
+                //     "broom" => "draw-eraser",
+                //     "counter" => "cm_markplus",
+                //     "fingerprint" => "auth-fingerprint-symbolic",
+                //     "flip" => "object-flip-verical",
+                //     "html" => "format-text-code",
+                //     "link" => "edit-link",
+                //     "metamorphose" => "shapes",
+                //     "quote" => "format-text-blockquote",
+                //     "table" => "table",
+                //     "watch" => "view-calendar-time-spent",
+                //     _ => "fcitx-remind-active",
+                // });
+                // let icon_name = script.script().metadata().icon.as_str();
+                let mut icon_name = script.script().metadata().icon.to_lowercase();
+                icon_name.insert_str(0, "boop-gtk-");
+                icon_name.push_str("-symbolic");
+                debug!("icon: {}", icon_name);
 
                 let entry_text = format!(
                     "<b>{}</b>\n<span size=\"smaller\">{}</span>",
@@ -227,19 +233,23 @@ impl CommandPalleteDialog {
         };
 
         for script in &search_results {
-            let icon_name = String::from(match script.metadata().icon.as_str() {
-                "broom" => "draw-eraser",
-                "counter" => "cm_markplus",
-                "fingerprint" => "auth-fingerprint-symbolic",
-                "flip" => "object-flip-verical",
-                "html" => "format-text-code",
-                "link" => "edit-link",
-                "metamorphose" => "shapes",
-                "quote" => "format-text-blockquote",
-                "table" => "table",
-                "watch" => "view-calendar-time-spent",
-                _ => "fcitx-remind-active",
-            });
+            // let icon_name = String::from(match script.metadata().icon.as_str() {
+            //     "broom" => "draw-eraser",
+            //     "counter" => "cm_markplus",
+            //     "fingerprint" => "auth-fingerprint-symbolic",
+            //     "flip" => "object-flip-verical",
+            //     "html" => "format-text-code",
+            //     "link" => "edit-link",
+            //     "metamorphose" => "shapes",
+            //     "quote" => "format-text-blockquote",
+            //     "table" => "table",
+            //     "watch" => "view-calendar-time-spent",
+            //     _ => "fcitx-remind-active",
+            // });
+            let mut icon_name = script.metadata().icon.to_lowercase();
+            icon_name.insert_str(0, "boop-gtk-");
+            icon_name.push_str("-symbolic");
+            debug!("icon: {}", icon_name);
 
             let entry_text = format!(
                 "<b>{}</b>\n<span size=\"smaller\">{}</span>",
