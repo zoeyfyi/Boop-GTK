@@ -1,12 +1,14 @@
 mkdir ui/icons;
 rm ui/icons/*.svg;
-for f in submodules/Boop/Boop/Boop/Assets.xcassets/Icons/**/*.pdf; do 
-echo "Processing $f file..";
-name="$(basename -- ${f})";
-name="${name#icons8-}";
-name="${name%.pdf}";
-name="$name.svg";
-pdf2svg $f ui/icons/$name;
-echo "  Created ui/icons/$name"
-echo "   "
+for dir in submodules/Boop/Boop/Boop/Assets.xcassets/Icons/*/; do 
+    # get pdf
+    files=( $dir*.pdf );
+    file="${files[0]}";
+    # extract file name
+    name="${dir#submodules/Boop/Boop/Boop/Assets.xcassets/Icons/icons8-}";
+    name="${name%.imageset/}";
+    echo "Processing icon $name";
+    name="$name.svg";
+    # convert file
+    pdf2svg $file ui/icons/$name;
 done
