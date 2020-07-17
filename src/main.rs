@@ -126,7 +126,7 @@ fn load_user_scripts(
         .collect())
 }
 
-fn load_internal_scripts<'a>() -> Vec<Script> {
+fn load_internal_scripts() -> Vec<Script> {
     let mut scripts: Vec<Script> = Vec::with_capacity(Scripts::iter().count());
 
     // scripts are internal, so we can unwrap "safely"

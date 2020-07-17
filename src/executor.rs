@@ -46,22 +46,12 @@ impl Executor {
         &self.script
     }
 
-    fn isolate(&self) -> &mut v8::OwnedIsolate {
+    fn isolate(&mut self) -> &mut v8::OwnedIsolate {
         assert!(!self.isolate.is_null());
         unsafe { &mut *self.isolate }
     }
 
-    fn scope(&self) -> &mut v8::ContextScope<'static, v8::HandleScope<'static, v8::Context>> {
-        assert!(!self.scope.is_null());
-        unsafe { &mut *self.scope }
-    }
-
-    fn main_function(&self) -> &mut v8::Local<'static, v8::Function> {
-        assert!(!self.main_function.is_null());
-        unsafe { &mut *self.main_function }
-    }
-
-    fn initalized_v8(&mut self) {
+    unsafe fn initalize_v8(&mut self) {
         assert!(!self.is_v8_initalized);
         assert!(self.isolate.is_null());
         assert!(self.handle_scope.is_null());
@@ -72,15 +62,11 @@ impl Executor {
 
         // set up execution context
         self.isolate = Box::into_raw(Box::new(v8::Isolate::new(Default::default())));
-        self.handle_scope = Box::into_raw(Box::new(v8::HandleScope::new(unsafe {
-            &mut *self.isolate
-        })));
-        self.context = Box::into_raw(Box::new(v8::Context::new(unsafe {
-            &mut *self.handle_scope
-        })));
+        self.handle_scope = Box::into_raw(Box::new(v8::HandleScope::new(&mut *self.isolate)));
+        self.context = Box::into_raw(Box::new(v8::Context::new(&mut *self.handle_scope)));
         self.scope = Box::into_raw(Box::new(v8::ContextScope::new(
-            unsafe { &mut *self.handle_scope },
-            unsafe { *self.context },
+            &mut *self.handle_scope,
+            *self.context,
         )));
 
         let status_slot: Rc<RefCell<ExecutionStatus>> = Rc::new(RefCell::new(ExecutionStatus {
@@ -91,17 +77,17 @@ impl Executor {
         // self.handle_scope().set_slot(status_slot);
 
         // complile and run script
-        let code = v8::String::new(self.scope(), self.script.source()).unwrap();
-        let compiled_script = v8::Script::compile(self.scope(), code, None).unwrap();
-        compiled_script.run(self.scope()).unwrap();
+        let code = v8::String::new(&mut *self.scope, self.script.source()).unwrap();
+        let compiled_script = v8::Script::compile(&mut *self.scope, code, None).unwrap();
+        compiled_script.run(&mut *self.scope).unwrap();
 
         // extract main function
-        let function_name = v8::String::new(self.scope(), "main").unwrap();
-        self.main_function = unsafe {
+        let function_name = v8::String::new(&mut *self.scope, "main").unwrap();
+        self.main_function = {
             Box::into_raw(Box::new(v8::Local::cast(
                 (*self.context)
-                    .global(self.scope())
-                    .get(self.scope(), function_name.into())
+                    .global(&mut *self.scope)
+                    .get(&mut *self.scope, function_name.into())
                     .unwrap(),
             )))
         };
@@ -109,18 +95,18 @@ impl Executor {
         self.is_v8_initalized = true;
     }
 
-    pub fn execute(
+    unsafe fn internal_execute(
         &mut self,
         full_text: &str,
         selection: Option<&str>,
     ) -> (ExecutionStatus, TextReplacement) {
         if !self.is_v8_initalized {
-            self.initalized_v8();
+            self.initalize_v8();
         }
 
         // create postInfo and postError functions
         let post_info = v8::Function::new(
-            self.scope(),
+            &mut *self.scope,
             |scope: &mut v8::HandleScope,
              args: v8::FunctionCallbackArguments,
              mut rv: v8::ReturnValue| {
@@ -144,7 +130,7 @@ impl Executor {
         .unwrap();
 
         let post_error = v8::Function::new(
-            self.scope(),
+            &mut *self.scope,
             |scope: &mut v8::HandleScope,
              args: v8::FunctionCallbackArguments,
              mut rv: v8::ReturnValue| {
@@ -168,38 +154,46 @@ impl Executor {
         .unwrap();
 
         // prepare payload
-        let payload = v8::Object::new(self.scope());
+        let payload = v8::Object::new(&mut *self.scope);
 
-        let key_full_text = v8::String::new(self.scope(), "fullText").unwrap();
-        let key_text = v8::String::new(self.scope(), "text").unwrap();
-        let key_selection = v8::String::new(self.scope(), "selection").unwrap();
-        let key_post_info = v8::String::new(self.scope(), "postInfo").unwrap();
-        let key_post_error = v8::String::new(self.scope(), "postError").unwrap();
+        let key_full_text = v8::String::new(&mut *self.scope, "fullText").unwrap();
+        let key_text = v8::String::new(&mut *self.scope, "text").unwrap();
+        let key_selection = v8::String::new(&mut *self.scope, "selection").unwrap();
+        let key_post_info = v8::String::new(&mut *self.scope, "postInfo").unwrap();
+        let key_post_error = v8::String::new(&mut *self.scope, "postError").unwrap();
 
         {
             // fullText
-            let payload_full_text = v8::String::new(self.scope(), full_text).unwrap();
-            payload.set(self.scope(), key_full_text.into(), payload_full_text.into());
+            let payload_full_text = v8::String::new(&mut *self.scope, full_text).unwrap();
+            payload.set(
+                &mut *self.scope,
+                key_full_text.into(),
+                payload_full_text.into(),
+            );
 
             // text
             let payload_text =
-                v8::String::new(self.scope(), selection.unwrap_or(full_text)).unwrap();
-            payload.set(self.scope(), key_text.into(), payload_text.into());
+                v8::String::new(&mut *self.scope, selection.unwrap_or(full_text)).unwrap();
+            payload.set(&mut *self.scope, key_text.into(), payload_text.into());
 
             // selection
-            let payload_selection = v8::String::new(self.scope(), selection.unwrap_or("")).unwrap();
-            payload.set(self.scope(), key_selection.into(), payload_selection.into());
+            let payload_selection =
+                v8::String::new(&mut *self.scope, selection.unwrap_or("")).unwrap();
+            payload.set(
+                &mut *self.scope,
+                key_selection.into(),
+                payload_selection.into(),
+            );
 
             // postInfo
-            payload.set(self.scope(), key_post_info.into(), post_info.into());
+            payload.set(&mut *self.scope, key_post_info.into(), post_info.into());
 
             // postError
-            payload.set(self.scope(), key_post_error.into(), post_error.into());
+            payload.set(&mut *self.scope, key_post_error.into(), post_error.into());
         }
 
         // call main
-        self.main_function()
-            .call(self.scope(), payload.into(), &[payload.into()]);
+        { &mut *self.main_function }.call(&mut *self.scope, payload.into(), &[payload.into()]);
 
         // extract result
         // TODO(mrbenshef): it would be better to use accessors/interseptors, so we don't have to
@@ -208,23 +202,23 @@ impl Executor {
         // NOTE(mrbenshef): doesn't seem like there is a way to create a setter on an object with
         // rusty_v8, so this might have to do for now.
         let new_text_value = payload
-            .get(self.scope(), key_text.into())
+            .get(&mut *self.scope, key_text.into())
             .unwrap()
-            .to_string(self.scope())
+            .to_string(&mut *self.scope)
             .unwrap()
-            .to_rust_string_lossy(self.scope());
+            .to_rust_string_lossy(&mut *self.scope);
         let new_full_text_value = payload
-            .get(self.scope(), key_full_text.into())
+            .get(&mut *self.scope, key_full_text.into())
             .unwrap()
-            .to_string(self.scope())
+            .to_string(&mut *self.scope)
             .unwrap()
-            .to_rust_string_lossy(self.scope());
+            .to_rust_string_lossy(&mut *self.scope);
         let new_selection_value = payload
-            .get(self.scope(), key_selection.into())
+            .get(&mut *self.scope, key_selection.into())
             .unwrap()
-            .to_string(self.scope())
+            .to_string(&mut *self.scope)
             .unwrap()
-            .to_rust_string_lossy(self.scope());
+            .to_rust_string_lossy(&mut *self.scope);
 
         // not quite sure what the correct behaviour here should be
         // right now the order of presidence is:
@@ -252,12 +246,15 @@ impl Executor {
             .unwrap();
 
         let status = (*status_slot).borrow().clone();
-        // let status = ExecutionStatus {
-        //     info: None,
-        //     error: None,
-        // };
-
         (status, replacement)
+    }
+
+    pub fn execute(
+        &mut self,
+        full_text: &str,
+        selection: Option<&str>,
+    ) -> (ExecutionStatus, TextReplacement) {
+        unsafe { self.internal_execute(full_text, selection) }
     }
 }
 
