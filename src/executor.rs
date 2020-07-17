@@ -147,7 +147,10 @@ impl Executor {
             // script is internal
 
             let internal_path = path.replace("@boop/", "lib/");
-            info!("found internal script, real path: #BINARY#/{}", internal_path);
+            info!(
+                "found internal script, real path: #BINARY#/{}",
+                internal_path
+            );
 
             let raw_source = String::from_utf8(
                 Scripts::get(&internal_path)
@@ -165,7 +168,10 @@ impl Executor {
         external_path.push("scripts");
         external_path.push(&path);
 
-        info!("found external script, real path: {}", external_path.display());
+        info!(
+            "found external script, real path: {}",
+            external_path.display()
+        );
 
         let mut raw_source = String::new();
         File::open(external_path)
@@ -208,11 +214,191 @@ impl Executor {
             }
             Err(e) => {
                 warn!("problem requiring script, {}", e);
-                
+
                 let undefined = v8::undefined(scope).into();
                 rv.set(undefined)
             }
         }
+    }
+
+    fn payload_post_info(
+        scope: &mut v8::HandleScope,
+        args: v8::FunctionCallbackArguments,
+        mut rv: v8::ReturnValue,
+    ) {
+        let info = args
+            .get(0)
+            .to_string(scope)
+            .unwrap()
+            .to_rust_string_lossy(scope);
+
+        scope
+            .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
+            .unwrap()
+            .borrow_mut()
+            .info
+            .replace(info);
+
+        let undefined = v8::undefined(scope).into();
+        rv.set(undefined)
+    }
+
+    fn payload_post_error(
+        scope: &mut v8::HandleScope,
+        args: v8::FunctionCallbackArguments,
+        mut rv: v8::ReturnValue,
+    ) {
+        let error = args
+            .get(0)
+            .to_string(scope)
+            .unwrap()
+            .to_rust_string_lossy(scope);
+
+        scope
+            .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
+            .unwrap()
+            .borrow_mut()
+            .error
+            .replace(error);
+
+        let undefined = v8::undefined(scope).into();
+        rv.set(undefined)
+    }
+
+    fn payload_insert(
+        scope: &mut v8::HandleScope,
+        args: v8::FunctionCallbackArguments,
+        mut rv: v8::ReturnValue,
+    ) {
+        let insert = args
+            .get(0)
+            .to_string(scope)
+            .unwrap()
+            .to_rust_string_lossy(scope);
+
+        scope
+            .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
+            .unwrap()
+            .borrow_mut()
+            .insert
+            .push(insert);
+
+        let undefined = v8::undefined(scope).into();
+        rv.set(undefined)
+    }
+
+    fn payload_full_text_getter(
+        scope: &mut v8::HandleScope,
+        _key: v8::Local<v8::Name>,
+        _args: v8::PropertyCallbackArguments,
+        mut rv: v8::ReturnValue,
+    ) {
+        let full_text = scope
+            .get_slot::<Rc<RefCell<ExecutionStatus>>>()
+            .unwrap()
+            .borrow()
+            .full_text
+            .read()
+            .clone();
+
+        rv.set(v8::String::new(scope, &full_text).unwrap().into());
+    }
+
+    fn payload_full_text_setter(
+        scope: &mut v8::HandleScope,
+        _key: v8::Local<v8::Name>,
+        value: v8::Local<v8::Value>,
+        _args: v8::PropertyCallbackArguments,
+    ) {
+        let new_value = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
+
+        info!("setting full_text ({} bytes)", new_value.len());
+
+        let slot = scope
+            .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
+            .unwrap();
+
+        let mut slot = slot.borrow_mut();
+
+        let full_text = slot.full_text.write();
+
+        *full_text = new_value;
+    }
+
+    fn payload_text_getter(
+        scope: &mut v8::HandleScope,
+        _key: v8::Local<v8::Name>,
+        _args: v8::PropertyCallbackArguments,
+        mut rv: v8::ReturnValue,
+    ) {
+        let text = scope
+            .get_slot::<Rc<RefCell<ExecutionStatus>>>()
+            .unwrap()
+            .borrow()
+            .text
+            .read()
+            .clone();
+
+        rv.set(v8::String::new(scope, &text).unwrap().into());
+    }
+
+    fn payload_text_setter(
+        scope: &mut v8::HandleScope,
+        _key: v8::Local<v8::Name>,
+        value: v8::Local<v8::Value>,
+        _args: v8::PropertyCallbackArguments,
+    ) {
+        let new_value = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
+
+        info!("setting text ({} bytes)", new_value.len());
+
+        let slot = scope
+            .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
+            .unwrap();
+
+        let mut slot = slot.borrow_mut();
+
+        let text = slot.text.write();
+
+        *text = new_value;
+    }
+
+    fn payload_selection_getter(
+        scope: &mut v8::HandleScope,
+        _key: v8::Local<v8::Name>,
+        _args: v8::PropertyCallbackArguments,
+        mut rv: v8::ReturnValue,
+    ) {
+        let selection = scope
+            .get_slot::<Rc<RefCell<ExecutionStatus>>>()
+            .unwrap()
+            .borrow()
+            .selection
+            .read()
+            .clone();
+
+        rv.set(v8::String::new(scope, &selection).unwrap().into());
+    }
+
+    fn payload_selection_setter(
+        scope: &mut v8::HandleScope,
+        _key: v8::Local<v8::Name>,
+        value: v8::Local<v8::Value>,
+        _args: v8::PropertyCallbackArguments,
+    ) {
+        let new_value = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
+
+        info!("setting selection ({} bytes)", new_value.len());
+
+        let slot = scope
+            .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
+            .unwrap();
+
+        let mut slot = slot.borrow_mut();
+
+        let selection = slot.selection.write();
+
+        *selection = new_value;
     }
 
     unsafe fn initalize_v8(&mut self) {
@@ -295,183 +481,9 @@ impl Executor {
             status.selection.clear();
         }
 
-        let post_info = v8::Function::new(
-            &mut *self.scope,
-            |scope: &mut v8::HandleScope,
-             args: v8::FunctionCallbackArguments,
-             mut rv: v8::ReturnValue| {
-                let info = args
-                    .get(0)
-                    .to_string(scope)
-                    .unwrap()
-                    .to_rust_string_lossy(scope);
-
-                scope
-                    .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
-                    .unwrap()
-                    .borrow_mut()
-                    .info
-                    .replace(info);
-
-                let undefined = v8::undefined(scope).into();
-                rv.set(undefined)
-            },
-        )
-        .unwrap();
-
-        let post_error = v8::Function::new(
-            &mut *self.scope,
-            |scope: &mut v8::HandleScope,
-             args: v8::FunctionCallbackArguments,
-             mut rv: v8::ReturnValue| {
-                let error = args
-                    .get(0)
-                    .to_string(scope)
-                    .unwrap()
-                    .to_rust_string_lossy(scope);
-
-                scope
-                    .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
-                    .unwrap()
-                    .borrow_mut()
-                    .error
-                    .replace(error);
-
-                let undefined = v8::undefined(scope).into();
-                rv.set(undefined)
-            },
-        )
-        .unwrap();
-
-        let insert = v8::Function::new(
-            &mut *self.scope,
-            |scope: &mut v8::HandleScope,
-             args: v8::FunctionCallbackArguments,
-             mut rv: v8::ReturnValue| {
-                let insert = args
-                    .get(0)
-                    .to_string(scope)
-                    .unwrap()
-                    .to_rust_string_lossy(scope);
-
-                scope
-                    .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
-                    .unwrap()
-                    .borrow_mut()
-                    .insert
-                    .push(insert);
-
-                let undefined = v8::undefined(scope).into();
-                rv.set(undefined)
-            },
-        )
-        .unwrap();
-
-        let full_text_getter = |scope: &mut v8::HandleScope,
-                                _key: v8::Local<v8::Name>,
-                                _args: v8::PropertyCallbackArguments,
-                                mut rv: v8::ReturnValue| {
-            let full_text = scope
-                .get_slot::<Rc<RefCell<ExecutionStatus>>>()
-                .unwrap()
-                .borrow()
-                .full_text
-                .read()
-                .clone();
-
-            rv.set(v8::String::new(scope, &full_text).unwrap().into());
-        };
-
-        let full_text_setter =
-            |scope: &mut v8::HandleScope,
-             _key: v8::Local<v8::Name>,
-             value: v8::Local<v8::Value>,
-             _args: v8::PropertyCallbackArguments| {
-                let new_value = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
-
-                info!("setting full_text ({} bytes)", new_value.len());
-
-                let slot = scope
-                    .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
-                    .unwrap();
-
-                let mut slot = slot.borrow_mut();
-
-                let full_text = slot.full_text.write();
-
-                *full_text = new_value;
-            };
-
-        let text_getter = |scope: &mut v8::HandleScope,
-                           _key: v8::Local<v8::Name>,
-                           _args: v8::PropertyCallbackArguments,
-                           mut rv: v8::ReturnValue| {
-            let text = scope
-                .get_slot::<Rc<RefCell<ExecutionStatus>>>()
-                .unwrap()
-                .borrow()
-                .text
-                .read()
-                .clone();
-
-            rv.set(v8::String::new(scope, &text).unwrap().into());
-        };
-
-        let text_setter = |scope: &mut v8::HandleScope,
-                           _key: v8::Local<v8::Name>,
-                           value: v8::Local<v8::Value>,
-                           _args: v8::PropertyCallbackArguments| {
-            let new_value = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
-
-            info!("setting text ({} bytes)", new_value.len());
-
-            let slot = scope
-                .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
-                .unwrap();
-
-            let mut slot = slot.borrow_mut();
-
-            let text = slot.text.write();
-
-            *text = new_value;
-        };
-
-        let selection_getter = |scope: &mut v8::HandleScope,
-                                _key: v8::Local<v8::Name>,
-                                _args: v8::PropertyCallbackArguments,
-                                mut rv: v8::ReturnValue| {
-            let selection = scope
-                .get_slot::<Rc<RefCell<ExecutionStatus>>>()
-                .unwrap()
-                .borrow()
-                .selection
-                .read()
-                .clone();
-
-            rv.set(v8::String::new(scope, &selection).unwrap().into());
-        };
-
-        let selection_setter =
-            |scope: &mut v8::HandleScope,
-             _key: v8::Local<v8::Name>,
-             value: v8::Local<v8::Value>,
-             _args: v8::PropertyCallbackArguments| {
-                let new_value = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
-
-                info!("setting selection ({} bytes)", new_value.len());
-
-                let slot = scope
-                    .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
-                    .unwrap();
-
-                let mut slot = slot.borrow_mut();
-
-                let selection = slot.selection.write();
-
-                *selection = new_value;
-            };
-
         // prepare payload
+        // TODO: use ObjectTemplate, problem: rusty_v8 doesn't have set_accessor_with_setter or even set_accessor for
+        // object templates
         let payload = v8::Object::new(&mut *self.scope);
 
         let key_full_text = v8::String::new(&mut *self.scope, "fullText").unwrap();
@@ -481,37 +493,31 @@ impl Executor {
         let key_post_error = v8::String::new(&mut *self.scope, "postError").unwrap();
         let key_insert = v8::String::new(&mut *self.scope, "insert").unwrap();
 
-        // full_text
+        let post_info = v8::Function::new(&mut *self.scope, Executor::payload_post_info).unwrap();
+        let post_error = v8::Function::new(&mut *self.scope, Executor::payload_post_error).unwrap();
+        let insert = v8::Function::new(&mut *self.scope, Executor::payload_insert).unwrap();
+
         payload.set_accessor_with_setter(
             &mut *self.scope,
             key_full_text.into(),
-            full_text_getter,
-            full_text_setter,
+            Executor::payload_full_text_getter,
+            Executor::payload_full_text_setter,
         );
-
-        // text
         payload.set_accessor_with_setter(
             &mut *self.scope,
             key_text.into(),
-            text_getter,
-            text_setter,
+            Executor::payload_text_getter,
+            Executor::payload_text_setter,
         );
-
-        // selection
         payload.set_accessor_with_setter(
             &mut *self.scope,
             key_selection.into(),
-            selection_getter,
-            selection_setter,
+            Executor::payload_selection_getter,
+            Executor::payload_selection_setter,
         );
 
-        // postInfo
         payload.set(&mut *self.scope, key_post_info.into(), post_info.into());
-
-        // postError
         payload.set(&mut *self.scope, key_post_error.into(), post_error.into());
-
-        // insert
         payload.set(&mut *self.scope, key_insert.into(), insert.into());
 
         // call main
