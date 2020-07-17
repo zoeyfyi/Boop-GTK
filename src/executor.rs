@@ -46,11 +46,6 @@ impl Executor {
         &self.script
     }
 
-    fn isolate(&mut self) -> &mut v8::OwnedIsolate {
-        assert!(!self.isolate.is_null());
-        unsafe { &mut *self.isolate }
-    }
-
     unsafe fn initalize_v8(&mut self) {
         assert!(!self.is_v8_initalized);
         assert!(self.isolate.is_null());
@@ -73,7 +68,7 @@ impl Executor {
             info: None,
             error: None,
         }));
-        self.isolate().set_slot(status_slot);
+        self.isolate.as_mut().unwrap().set_slot(status_slot);
         // self.handle_scope().set_slot(status_slot);
 
         // complile and run script
@@ -241,7 +236,9 @@ impl Executor {
         };
 
         let status_slot = self
-            .isolate()
+            .isolate
+            .as_ref()
+            .unwrap()
             .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
             .unwrap();
 
