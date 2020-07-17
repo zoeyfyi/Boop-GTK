@@ -183,9 +183,30 @@ impl App {
                 }
                 executor::TextReplacement::Selection(text) => {
                     info!("replacing selection");
-                    let (start, end) = &mut buffer.get_selection_bounds().unwrap();
-                    buffer.delete(start, end);
-                    buffer.insert(start, &text);
+                    match &mut buffer.get_selection_bounds() {
+                        Some((start, end)) => {
+                            buffer.delete(start, end);
+                            buffer.insert(start, &text);
+                        },
+                        None => {
+                            error!("tried to do a selection replacement, but no text is selected!");
+                        }
+                    }
+                }
+                executor::TextReplacement::Insert(insertions) => {
+                    let insert_text = insertions.join("");
+                    info!("inserting {} bytes", insert_text.len());
+                    
+                    match &mut buffer.get_selection_bounds() {
+                        Some((start, end)) => {
+                            buffer.delete(start, end);
+                            buffer.insert(start, &insert_text);
+                        },
+                        None => {
+                            let mut insert_point = buffer.get_iter_at_offset(buffer.get_property_cursor_position());
+                            buffer.insert(&mut insert_point, &insert_text)
+                        }
+                    }
                 }
             }
 

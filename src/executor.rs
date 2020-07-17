@@ -21,12 +21,22 @@ pub struct Executor {
 pub struct ExecutionStatus {
     pub info: Option<String>,
     pub error: Option<String>,
+    insert: Vec<String>,
+}
+
+impl ExecutionStatus {
+    fn reset(&mut self) {
+        self.info = None;
+        self.error = None;
+        self.insert.clear();
+    }
 }
 
 #[derive(Debug, PartialEq)]
 pub enum TextReplacement {
     Full(String),
     Selection(String),
+    Insert(Vec<String>),
 }
 
 impl Executor {
@@ -67,6 +77,7 @@ impl Executor {
         let status_slot: Rc<RefCell<ExecutionStatus>> = Rc::new(RefCell::new(ExecutionStatus {
             info: None,
             error: None,
+            insert: Vec::new(),
         }));
         self.isolate.as_mut().unwrap().set_slot(status_slot);
         // self.handle_scope().set_slot(status_slot);
@@ -98,6 +109,15 @@ impl Executor {
         if !self.is_v8_initalized {
             self.initalize_v8();
         }
+
+        // reset execution status
+        self.isolate
+            .as_ref()
+            .unwrap()
+            .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
+            .unwrap()
+            .borrow_mut()
+            .reset();
 
         // create postInfo and postError functions
         let post_info = v8::Function::new(
@@ -148,6 +168,30 @@ impl Executor {
         )
         .unwrap();
 
+        let insert = v8::Function::new(
+            &mut *self.scope,
+            |scope: &mut v8::HandleScope,
+             args: v8::FunctionCallbackArguments,
+             mut rv: v8::ReturnValue| {
+                let insert = args
+                    .get(0)
+                    .to_string(scope)
+                    .unwrap()
+                    .to_rust_string_lossy(scope);
+
+                scope
+                    .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
+                    .unwrap()
+                    .borrow_mut()
+                    .insert
+                    .push(insert);
+
+                let undefined = v8::undefined(scope).into();
+                rv.set(undefined)
+            },
+        )
+        .unwrap();
+
         // prepare payload
         let payload = v8::Object::new(&mut *self.scope);
 
@@ -156,6 +200,7 @@ impl Executor {
         let key_selection = v8::String::new(&mut *self.scope, "selection").unwrap();
         let key_post_info = v8::String::new(&mut *self.scope, "postInfo").unwrap();
         let key_post_error = v8::String::new(&mut *self.scope, "postError").unwrap();
+        let key_insert = v8::String::new(&mut *self.scope, "insert").unwrap();
 
         {
             // fullText
@@ -185,6 +230,9 @@ impl Executor {
 
             // postError
             payload.set(&mut *self.scope, key_post_error.into(), post_error.into());
+
+            // insert
+            payload.set(&mut *self.scope, key_insert.into(), insert.into());
         }
 
         // call main
@@ -215,13 +263,27 @@ impl Executor {
             .unwrap()
             .to_rust_string_lossy(&mut *self.scope);
 
+        let status_slot = self
+            .isolate
+            .as_ref()
+            .unwrap()
+            .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
+            .unwrap();
+
+        let status = (*status_slot).borrow().clone();
+
         // not quite sure what the correct behaviour here should be
         // right now the order of presidence is:
+        // 0. insertion
         // 1. fullText
         // 2. selection
         // 3. text (with select)
         // 4. text (without selection)
-        let replacement = if new_full_text_value != full_text {
+        // TODO: move into ExecutionStatus
+        let replacement = if !status.insert.is_empty() {
+            info!("found insertion");
+            TextReplacement::Insert(status.insert.clone())
+        } else if new_full_text_value != full_text {
             info!("found full_text replacement");
             TextReplacement::Full(new_full_text_value)
         } else if selection.is_some() && new_selection_value != selection.unwrap() {
@@ -235,14 +297,6 @@ impl Executor {
             TextReplacement::Full(new_text_value)
         };
 
-        let status_slot = self
-            .isolate
-            .as_ref()
-            .unwrap()
-            .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
-            .unwrap();
-
-        let status = (*status_slot).borrow().clone();
         (status, replacement)
     }
 
