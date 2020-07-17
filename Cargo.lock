@@ -92,6 +92,7 @@ name = "boop-gtk"
 version = "0.1.0"
 dependencies = [
  "directories",
+ "dirty",
  "env_logger",
  "gdk",
  "gdk-pixbuf",
@@ -192,6 +193,11 @@ dependencies = [
  "redox_users",
  "winapi",
 ]
+
+[[package]]
+name = "dirty"
+version = "0.3.0"
+source = "git+https://github.com/mrbenshef/dirty#590ca4ba757387cf1e576c3522a4f6386fc32f7c"
 
 [[package]]
 name = "either"
@@ -747,8 +753,6 @@ dependencies = [
 [[package]]
 name = "rusty_v8"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da4dd2d680bf9812b3156b44f89fdd7b508c1369fbc69a14150972c6919c84d1"
 dependencies = [
  "bitflags",
  "cargo_gn",

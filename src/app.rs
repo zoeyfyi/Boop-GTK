@@ -7,6 +7,7 @@ use gdk_pixbuf::prelude::*;
 use gtk::prelude::*;
 use sourceview::prelude::*;
 
+use executor::TextReplacement;
 use gtk::{AboutDialog, ApplicationWindow, Builder, Button, ModelButton, Statusbar};
 use std::{cell::RefCell, path::Path, rc::Rc};
 
@@ -177,36 +178,40 @@ impl App {
                 .execute(full_text, selection_text.as_deref());
 
             match replacement {
-                executor::TextReplacement::Full(text) => {
+                TextReplacement::Full(text) => {
                     info!("replacing full text");
                     buffer.set_text(&text);
                 }
-                executor::TextReplacement::Selection(text) => {
+                TextReplacement::Selection(text) => {
                     info!("replacing selection");
                     match &mut buffer.get_selection_bounds() {
                         Some((start, end)) => {
                             buffer.delete(start, end);
                             buffer.insert(start, &text);
-                        },
+                        }
                         None => {
                             error!("tried to do a selection replacement, but no text is selected!");
                         }
                     }
                 }
-                executor::TextReplacement::Insert(insertions) => {
+                TextReplacement::Insert(insertions) => {
                     let insert_text = insertions.join("");
                     info!("inserting {} bytes", insert_text.len());
-                    
+
                     match &mut buffer.get_selection_bounds() {
                         Some((start, end)) => {
                             buffer.delete(start, end);
                             buffer.insert(start, &insert_text);
-                        },
+                        }
                         None => {
-                            let mut insert_point = buffer.get_iter_at_offset(buffer.get_property_cursor_position());
+                            let mut insert_point =
+                                buffer.get_iter_at_offset(buffer.get_property_cursor_position());
                             buffer.insert(&mut insert_point, &insert_text)
                         }
                     }
+                }
+                TextReplacement::None => {
+                    info!("no text to replace");
                 }
             }
 

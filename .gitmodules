@@ -7,3 +7,6 @@
 [submodule "submodules/svg-stroke-to-path"]
 	path = submodules/svg-stroke-to-path
 	url = git@github.com:leifgehrmann/svg-stroke-to-path.git
+[submodule "submodules/rusty_v8"]
+	path = submodules/rusty_v8
+	url = https://github.com/mrbenshef/rusty_v8.git

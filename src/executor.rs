@@ -1,6 +1,7 @@
 extern crate rusty_v8;
 
 use crate::script::Script;
+use dirty::Dirty;
 use rusty_v8 as v8;
 use std::{cell::RefCell, ptr, rc::Rc};
 
@@ -17,11 +18,14 @@ pub struct Executor {
     main_function: *mut v8::Local<'static, v8::Function>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ExecutionStatus {
     pub info: Option<String>,
     pub error: Option<String>,
     insert: Vec<String>,
+    full_text: Dirty<String>,
+    text: Dirty<String>,
+    selection: Dirty<String>,
 }
 
 impl ExecutionStatus {
@@ -29,6 +33,10 @@ impl ExecutionStatus {
         self.info = None;
         self.error = None;
         self.insert.clear();
+        self.full_text.write().clear();
+        Dirty::clear(&mut self.full_text);
+        self.text.write().clear();
+        Dirty::clear(&mut self.text);
     }
 }
 
@@ -37,6 +45,7 @@ pub enum TextReplacement {
     Full(String),
     Selection(String),
     Insert(Vec<String>),
+    None,
 }
 
 impl Executor {
@@ -74,11 +83,8 @@ impl Executor {
             *self.context,
         )));
 
-        let status_slot: Rc<RefCell<ExecutionStatus>> = Rc::new(RefCell::new(ExecutionStatus {
-            info: None,
-            error: None,
-            insert: Vec::new(),
-        }));
+        let status_slot: Rc<RefCell<ExecutionStatus>> =
+            Rc::new(RefCell::new(ExecutionStatus::default()));
         self.isolate.as_mut().unwrap().set_slot(status_slot);
         // self.handle_scope().set_slot(status_slot);
 
@@ -110,14 +116,24 @@ impl Executor {
             self.initalize_v8();
         }
 
-        // reset execution status
-        self.isolate
-            .as_ref()
-            .unwrap()
-            .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
-            .unwrap()
-            .borrow_mut()
-            .reset();
+        // setup execution status
+        {
+            let isolate = self.isolate.as_ref().unwrap();
+
+            let slot = isolate
+                .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
+                .unwrap();
+
+            let mut status = slot.borrow_mut();
+
+            status.reset();
+            *status.full_text.write() = full_text.to_string();
+            status.full_text.clear();
+            *status.text.write() = selection.unwrap_or(full_text).to_string();
+            status.text.clear();
+            *status.selection.write() = selection.unwrap_or("").to_string();
+            status.selection.clear();
+        }
 
         // create postInfo and postError functions
         let post_info = v8::Function::new(
@@ -192,6 +208,110 @@ impl Executor {
         )
         .unwrap();
 
+        let full_text_getter = |scope: &mut v8::HandleScope,
+                                _key: v8::Local<v8::Name>,
+                                _args: v8::PropertyCallbackArguments,
+                                mut rv: v8::ReturnValue| {
+            let full_text = scope
+                .get_slot::<Rc<RefCell<ExecutionStatus>>>()
+                .unwrap()
+                .borrow()
+                .full_text
+                .read()
+                .clone();
+
+            rv.set(v8::String::new(scope, &full_text).unwrap().into());
+        };
+
+        let full_text_setter =
+            |scope: &mut v8::HandleScope,
+             _key: v8::Local<v8::Name>,
+             value: v8::Local<v8::Value>,
+             _args: v8::PropertyCallbackArguments| {
+                let new_value = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
+
+                info!("setting full_text ({} bytes)", new_value.len());
+
+                let slot = scope
+                    .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
+                    .unwrap();
+
+                let mut slot = slot.borrow_mut();
+
+                let full_text = slot.full_text.write();
+
+                *full_text = new_value;
+            };
+
+        let text_getter = |scope: &mut v8::HandleScope,
+                           _key: v8::Local<v8::Name>,
+                           _args: v8::PropertyCallbackArguments,
+                           mut rv: v8::ReturnValue| {
+            let text = scope
+                .get_slot::<Rc<RefCell<ExecutionStatus>>>()
+                .unwrap()
+                .borrow()
+                .text
+                .read()
+                .clone();
+
+            rv.set(v8::String::new(scope, &text).unwrap().into());
+        };
+
+        let text_setter = |scope: &mut v8::HandleScope,
+                           _key: v8::Local<v8::Name>,
+                           value: v8::Local<v8::Value>,
+                           _args: v8::PropertyCallbackArguments| {
+            let new_value = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
+
+            info!("setting text ({} bytes)", new_value.len());
+
+            let slot = scope
+                .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
+                .unwrap();
+
+            let mut slot = slot.borrow_mut();
+
+            let text = slot.text.write();
+
+            *text = new_value;
+        };
+
+        let selection_getter = |scope: &mut v8::HandleScope,
+                                _key: v8::Local<v8::Name>,
+                                _args: v8::PropertyCallbackArguments,
+                                mut rv: v8::ReturnValue| {
+            let selection = scope
+                .get_slot::<Rc<RefCell<ExecutionStatus>>>()
+                .unwrap()
+                .borrow()
+                .selection
+                .read()
+                .clone();
+
+            rv.set(v8::String::new(scope, &selection).unwrap().into());
+        };
+
+        let selection_setter =
+            |scope: &mut v8::HandleScope,
+             _key: v8::Local<v8::Name>,
+             value: v8::Local<v8::Value>,
+             _args: v8::PropertyCallbackArguments| {
+                let new_value = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
+
+                info!("setting selection ({} bytes)", new_value.len());
+
+                let slot = scope
+                    .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
+                    .unwrap();
+
+                let mut slot = slot.borrow_mut();
+
+                let selection = slot.selection.write();
+
+                *selection = new_value;
+            };
+
         // prepare payload
         let payload = v8::Object::new(&mut *self.scope);
 
@@ -202,66 +322,41 @@ impl Executor {
         let key_post_error = v8::String::new(&mut *self.scope, "postError").unwrap();
         let key_insert = v8::String::new(&mut *self.scope, "insert").unwrap();
 
-        {
-            // fullText
-            let payload_full_text = v8::String::new(&mut *self.scope, full_text).unwrap();
-            payload.set(
-                &mut *self.scope,
-                key_full_text.into(),
-                payload_full_text.into(),
-            );
+        // full_text
+        payload.set_accessor_with_setter(
+            &mut *self.scope,
+            key_full_text.into(),
+            full_text_getter,
+            full_text_setter,
+        );
 
-            // text
-            let payload_text =
-                v8::String::new(&mut *self.scope, selection.unwrap_or(full_text)).unwrap();
-            payload.set(&mut *self.scope, key_text.into(), payload_text.into());
+        // text
+        payload.set_accessor_with_setter(
+            &mut *self.scope,
+            key_text.into(),
+            text_getter,
+            text_setter,
+        );
 
-            // selection
-            let payload_selection =
-                v8::String::new(&mut *self.scope, selection.unwrap_or("")).unwrap();
-            payload.set(
-                &mut *self.scope,
-                key_selection.into(),
-                payload_selection.into(),
-            );
+        // selection
+        payload.set_accessor_with_setter(
+            &mut *self.scope,
+            key_selection.into(),
+            selection_getter,
+            selection_setter,
+        );
 
-            // postInfo
-            payload.set(&mut *self.scope, key_post_info.into(), post_info.into());
+        // postInfo
+        payload.set(&mut *self.scope, key_post_info.into(), post_info.into());
 
-            // postError
-            payload.set(&mut *self.scope, key_post_error.into(), post_error.into());
+        // postError
+        payload.set(&mut *self.scope, key_post_error.into(), post_error.into());
 
-            // insert
-            payload.set(&mut *self.scope, key_insert.into(), insert.into());
-        }
+        // insert
+        payload.set(&mut *self.scope, key_insert.into(), insert.into());
 
         // call main
         { &mut *self.main_function }.call(&mut *self.scope, payload.into(), &[payload.into()]);
-
-        // extract result
-        // TODO(mrbenshef): it would be better to use accessors/interseptors, so we don't have to
-        // compare potentially very large strings. however, I can't figure out how to do this
-        // without static RwLock's
-        // NOTE(mrbenshef): doesn't seem like there is a way to create a setter on an object with
-        // rusty_v8, so this might have to do for now.
-        let new_text_value = payload
-            .get(&mut *self.scope, key_text.into())
-            .unwrap()
-            .to_string(&mut *self.scope)
-            .unwrap()
-            .to_rust_string_lossy(&mut *self.scope);
-        let new_full_text_value = payload
-            .get(&mut *self.scope, key_full_text.into())
-            .unwrap()
-            .to_string(&mut *self.scope)
-            .unwrap()
-            .to_rust_string_lossy(&mut *self.scope);
-        let new_selection_value = payload
-            .get(&mut *self.scope, key_selection.into())
-            .unwrap()
-            .to_string(&mut *self.scope)
-            .unwrap()
-            .to_rust_string_lossy(&mut *self.scope);
 
         let status_slot = self
             .isolate
@@ -283,18 +378,20 @@ impl Executor {
         let replacement = if !status.insert.is_empty() {
             info!("found insertion");
             TextReplacement::Insert(status.insert.clone())
-        } else if new_full_text_value != full_text {
+        } else if status.full_text.dirty() {
             info!("found full_text replacement");
-            TextReplacement::Full(new_full_text_value)
-        } else if selection.is_some() && new_selection_value != selection.unwrap() {
+            TextReplacement::Full(status.full_text.read().clone())
+        } else if status.selection.dirty() {
             info!("found selection replacement");
-            TextReplacement::Selection(new_selection_value)
-        } else if selection.is_some() {
+            TextReplacement::Selection(status.selection.read().clone())
+        } else if selection.is_some() && status.text.dirty() {
             info!("found text (with selection) replacement");
-            TextReplacement::Selection(new_text_value)
-        } else {
+            TextReplacement::Selection(status.text.read().clone())
+        } else if status.text.dirty() {
             info!("found text (without selection) replacement");
-            TextReplacement::Full(new_text_value)
+            TextReplacement::Full(status.text.read().clone())
+        } else {
+            TextReplacement::None
         };
 
         (status, replacement)
