@@ -197,7 +197,7 @@ dependencies = [
 [[package]]
 name = "dirty"
 version = "0.3.0"
-source = "git+https://github.com/mrbenshef/dirty#590ca4ba757387cf1e576c3522a4f6386fc32f7c"
+source = "git+https://github.com/mrbenshef/dirty#f750e2839237da3adcf96f4f2919731246a878a7"
 
 [[package]]
 name = "either"

@@ -174,10 +174,17 @@ impl App {
                 .get_selection_bounds()
                 .map(|(start, end)| buffer.get_text(&start, &end, false).unwrap().to_string());
 
-            let (status, replacement) = self.scripts.borrow_mut()[script_id as usize]
+            let status = self.scripts.borrow_mut()[script_id as usize]
                 .execute(full_text, selection_text.as_deref());
 
-            match replacement {
+            // TODO: how to handle multiple messages?
+            if let Some(error) = status.error() {
+                self.status_bar.push(self.context_id, &error);
+            } else if let Some(info) = status.info() {
+                self.status_bar.push(self.context_id, &info);
+            }
+
+            match status.to_replacement() {
                 TextReplacement::Full(text) => {
                     info!("replacing full text");
                     buffer.set_text(&text);
@@ -213,13 +220,6 @@ impl App {
                 TextReplacement::None => {
                     info!("no text to replace");
                 }
-            }
-
-            // TODO: how to handle multiple messages?
-            if let Some(error) = status.error {
-                self.status_bar.push(self.context_id, &error);
-            } else if let Some(info) = status.info {
-                self.status_bar.push(self.context_id, &info);
             }
         }
 

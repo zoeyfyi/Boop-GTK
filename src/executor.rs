@@ -20,8 +20,12 @@ pub struct Executor {
 
 #[derive(Clone, Debug, Default)]
 pub struct ExecutionStatus {
-    pub info: Option<String>,
-    pub error: Option<String>,
+    // true if text was selected when execution began
+    is_text_selected: bool,
+
+    info: Option<String>,
+    error: Option<String>,
+
     insert: Vec<String>,
     full_text: Dirty<String>,
     text: Dirty<String>,
@@ -37,6 +41,45 @@ impl ExecutionStatus {
         Dirty::clear(&mut self.full_text);
         self.text.write().clear();
         Dirty::clear(&mut self.text);
+    }
+
+    pub fn info(&self) -> Option<&String> {
+        self.info.as_ref()
+    }
+
+    pub fn error(&self) -> Option<&String> {
+        self.error.as_ref()
+    }
+
+    pub fn to_replacement(self) -> TextReplacement {
+        // not quite sure what the correct behaviour here should be
+        // right now the order of presidence is:
+        // 0. insertion
+        // 1. fullText
+        // 2. selection
+        // 3. text (with select)
+        // 4. text (without selection)
+        // TODO: move into ExecutionStatus
+        let replacement = if !self.insert.is_empty() {
+            info!("found insertion");
+            TextReplacement::Insert(self.insert)
+        } else if self.full_text.dirty() {
+            info!("found full_text replacement");
+            TextReplacement::Full(self.full_text.unwrap())
+        } else if self.selection.dirty() {
+            info!("found selection replacement");
+            TextReplacement::Selection(self.selection.unwrap())
+        } else if self.is_text_selected && self.text.dirty() {
+            info!("found text (with selection) replacement");
+            TextReplacement::Selection(self.text.unwrap())
+        } else if self.text.dirty() {
+            info!("found text (without selection) replacement");
+            TextReplacement::Full(self.text.unwrap())
+        } else {
+            TextReplacement::None
+        };
+
+        replacement
     }
 }
 
@@ -111,7 +154,7 @@ impl Executor {
         &mut self,
         full_text: &str,
         selection: Option<&str>,
-    ) -> (ExecutionStatus, TextReplacement) {
+    ) -> ExecutionStatus {
         if !self.is_v8_initalized {
             self.initalize_v8();
         }
@@ -366,42 +409,10 @@ impl Executor {
             .unwrap();
 
         let status = (*status_slot).borrow().clone();
-
-        // not quite sure what the correct behaviour here should be
-        // right now the order of presidence is:
-        // 0. insertion
-        // 1. fullText
-        // 2. selection
-        // 3. text (with select)
-        // 4. text (without selection)
-        // TODO: move into ExecutionStatus
-        let replacement = if !status.insert.is_empty() {
-            info!("found insertion");
-            TextReplacement::Insert(status.insert.clone())
-        } else if status.full_text.dirty() {
-            info!("found full_text replacement");
-            TextReplacement::Full(status.full_text.read().clone())
-        } else if status.selection.dirty() {
-            info!("found selection replacement");
-            TextReplacement::Selection(status.selection.read().clone())
-        } else if selection.is_some() && status.text.dirty() {
-            info!("found text (with selection) replacement");
-            TextReplacement::Selection(status.text.read().clone())
-        } else if status.text.dirty() {
-            info!("found text (without selection) replacement");
-            TextReplacement::Full(status.text.read().clone())
-        } else {
-            TextReplacement::None
-        };
-
-        (status, replacement)
+        status
     }
 
-    pub fn execute(
-        &mut self,
-        full_text: &str,
-        selection: Option<&str>,
-    ) -> (ExecutionStatus, TextReplacement) {
+    pub fn execute(&mut self, full_text: &str, selection: Option<&str>) -> ExecutionStatus {
         unsafe { self.internal_execute(full_text, selection) }
     }
 }
