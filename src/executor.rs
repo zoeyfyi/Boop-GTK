@@ -1,9 +1,42 @@
-extern crate rusty_v8;
-
 use crate::{script::Script, Scripts, PROJECT_DIRS};
 use dirty::Dirty;
 use rusty_v8 as v8;
+use simple_error::SimpleError;
 use std::{cell::RefCell, fs::File, io::Read, ptr, rc::Rc};
+
+static BOOP_WRAPPER_START: &str = "
+/***********************************
+*     Start of Boop's wrapper      *
+***********************************/
+            
+(function() {
+    var module = {
+        exports: {}
+    };
+            
+    const moduleWrapper = (function (exports, module) {
+
+/***********************************
+*      End of Boop's wrapper      *
+***********************************/
+
+";
+
+static BOOP_WRAPPER_END: &str = "
+            
+/***********************************
+*     Start of Boop's wrapper      *
+***********************************/
+            
+    }).apply(module.exports, [module.exports, module]);
+
+    return module.exports;
+})();
+            
+/***********************************
+*      End of Boop's wrapper      *
+***********************************/
+";
 
 pub struct Executor {
     // v8
@@ -108,6 +141,41 @@ impl Executor {
         &self.script
     }
 
+    // load source code from internal files or external filesystem depending on the path
+    fn load_raw_source(path: String) -> Result<String, SimpleError> {
+        if path.starts_with("@boop/") {
+            // script is internal
+
+            let internal_path = path.replace("@boop/", "lib/");
+            info!("found internal script, real path: #BINARY#/{}", internal_path);
+
+            let raw_source = String::from_utf8(
+                Scripts::get(&internal_path)
+                    .ok_or_else(|| {
+                        SimpleError::new(format!("no internal script with path \"{}\"", path))
+                    })?
+                    .to_vec(),
+            )
+            .map_err(|e| SimpleError::with("problem with file encoding", e))?;
+
+            return Ok(raw_source);
+        }
+
+        let mut external_path = PROJECT_DIRS.config_dir().to_path_buf();
+        external_path.push("scripts");
+        external_path.push(&path);
+
+        info!("found external script, real path: {}", external_path.display());
+
+        let mut raw_source = String::new();
+        File::open(external_path)
+            .map_err(|e| SimpleError::with(&format!("could not open \"{}\"", path), e))?
+            .read_to_string(&mut raw_source)
+            .map_err(|e| SimpleError::with("problem reading file", e))?;
+
+        Ok(raw_source)
+    }
+
     fn global_require(
         scope: &mut v8::HandleScope,
         args: v8::FunctionCallbackArguments,
@@ -128,65 +196,23 @@ impl Executor {
             path.push_str(".js");
         }
 
-        let raw_source = if path.starts_with("@boop/") {
-            let internal_path = path.replace("@boop/", "lib/");
-            info!("internal script, real path: {}", internal_path);
-            String::from_utf8(Scripts::get(&internal_path).unwrap().to_vec()).unwrap()
-        } else {
-            let mut external_path = PROJECT_DIRS.config_dir().to_path_buf();
-            external_path.push("scripts");
-            external_path.push(path);
+        match Executor::load_raw_source(path) {
+            Ok(raw_source) => {
+                let source = format!("{}{}{}", BOOP_WRAPPER_START, raw_source, BOOP_WRAPPER_END);
 
-            info!("external script, real path: {}", external_path.display());
+                let code = v8::String::new(scope, &source).unwrap();
+                let compiled_script = v8::Script::compile(scope, code, None).unwrap();
+                let export = compiled_script.run(scope).unwrap();
 
-            let mut raw_source = String::new();
-            File::open(external_path)
-                .unwrap()
-                .read_to_string(&mut raw_source)
-                .unwrap();
-            raw_source
-        };
-
-        let source = format!(
-            "
-            /***********************************
-            *     Start of Boop's wrapper      *
-            ***********************************/
-                        
-            (function() {{
-                var module = {{
-                    exports: {{}}
-                }};
-                        
-                const moduleWrapper = (function (exports, module) {{
-            
-            /***********************************
-            *      End of Boop's wrapper      *
-            ***********************************/
-            
-            {}
-                        
-            /***********************************
-            *     Start of Boop's wrapper      *
-            ***********************************/
-                        
-                }}).apply(module.exports, [module.exports, module]);
-            
-                return module.exports;
-            }})();
-                        
-            /***********************************
-            *      End of Boop's wrapper      *
-            ***********************************/
-            ",
-            raw_source
-        );
-
-        let code = v8::String::new(scope, &source).unwrap();
-        let compiled_script = v8::Script::compile(scope, code, None).unwrap();
-        let export = compiled_script.run(scope).unwrap();
-
-        rv.set(export);
+                rv.set(export);
+            }
+            Err(e) => {
+                warn!("problem requiring script, {}", e);
+                
+                let undefined = v8::undefined(scope).into();
+                rv.set(undefined)
+            }
+        }
     }
 
     unsafe fn initalize_v8(&mut self) {

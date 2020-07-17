@@ -11,13 +11,12 @@ extern crate gtk;
 extern crate pango;
 extern crate sourceview;
 
+extern crate directories;
 extern crate libc;
 extern crate rust_embed;
 extern crate rusty_v8;
-
 extern crate serde;
-
-extern crate directories;
+extern crate simple_error;
 
 #[macro_use]
 extern crate log;
