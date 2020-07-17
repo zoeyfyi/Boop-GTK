@@ -1,9 +1,9 @@
 extern crate rusty_v8;
 
-use crate::script::Script;
+use crate::{script::Script, Scripts, PROJECT_DIRS};
 use dirty::Dirty;
 use rusty_v8 as v8;
-use std::{cell::RefCell, ptr, rc::Rc};
+use std::{cell::RefCell, fs::File, io::Read, ptr, rc::Rc};
 
 pub struct Executor {
     // v8
@@ -108,6 +108,87 @@ impl Executor {
         &self.script
     }
 
+    fn global_require(
+        scope: &mut v8::HandleScope,
+        args: v8::FunctionCallbackArguments,
+        mut rv: v8::ReturnValue,
+    ) {
+        let mut path = args
+            .get(0)
+            .to_string(scope)
+            .unwrap()
+            .to_rust_string_lossy(scope);
+
+        // TODO: handle problems loading file
+
+        info!("loading {}", path);
+
+        // append extension
+        if !path.ends_with(".js") {
+            path.push_str(".js");
+        }
+
+        let raw_source = if path.starts_with("@boop/") {
+            let internal_path = path.replace("@boop/", "lib/");
+            info!("internal script, real path: {}", internal_path);
+            String::from_utf8(Scripts::get(&internal_path).unwrap().to_vec()).unwrap()
+        } else {
+            let mut external_path = PROJECT_DIRS.config_dir().to_path_buf();
+            external_path.push("scripts");
+            external_path.push(path);
+
+            info!("external script, real path: {}", external_path.display());
+
+            let mut raw_source = String::new();
+            File::open(external_path)
+                .unwrap()
+                .read_to_string(&mut raw_source)
+                .unwrap();
+            raw_source
+        };
+
+        let source = format!(
+            "
+            /***********************************
+            *     Start of Boop's wrapper      *
+            ***********************************/
+                        
+            (function() {{
+                var module = {{
+                    exports: {{}}
+                }};
+                        
+                const moduleWrapper = (function (exports, module) {{
+            
+            /***********************************
+            *      End of Boop's wrapper      *
+            ***********************************/
+            
+            {}
+                        
+            /***********************************
+            *     Start of Boop's wrapper      *
+            ***********************************/
+                        
+                }}).apply(module.exports, [module.exports, module]);
+            
+                return module.exports;
+            }})();
+                        
+            /***********************************
+            *      End of Boop's wrapper      *
+            ***********************************/
+            ",
+            raw_source
+        );
+
+        let code = v8::String::new(scope, &source).unwrap();
+        let compiled_script = v8::Script::compile(scope, code, None).unwrap();
+        let export = compiled_script.run(scope).unwrap();
+
+        rv.set(export);
+    }
+
     unsafe fn initalize_v8(&mut self) {
         assert!(!self.is_v8_initalized);
         assert!(self.isolate.is_null());
@@ -129,7 +210,17 @@ impl Executor {
         let status_slot: Rc<RefCell<ExecutionStatus>> =
             Rc::new(RefCell::new(ExecutionStatus::default()));
         self.isolate.as_mut().unwrap().set_slot(status_slot);
-        // self.handle_scope().set_slot(status_slot);
+
+        // add require to global scope
+        let require = v8::Function::new(&mut *self.scope, Executor::global_require).unwrap();
+
+        let key_require = v8::String::new(&mut *self.scope, "require").unwrap();
+
+        (&mut *self.context).global(&mut *self.scope).set(
+            &mut *self.scope,
+            key_require.into(),
+            require.into(),
+        );
 
         // complile and run script
         let code = v8::String::new(&mut *self.scope, self.script.source()).unwrap();
@@ -178,7 +269,6 @@ impl Executor {
             status.selection.clear();
         }
 
-        // create postInfo and postError functions
         let post_info = v8::Function::new(
             &mut *self.scope,
             |scope: &mut v8::HandleScope,
@@ -435,6 +525,7 @@ impl Drop for Executor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::script::ParseScriptError;
     use std::{borrow::Cow, sync::Mutex};
 
     lazy_static! {
@@ -484,8 +575,11 @@ mod tests {
         );
 
         for i in 1..10 {
-            let (_, replacement) = executor.execute("", None);
-            assert_eq!(TextReplacement::Full(i.to_string()), replacement);
+            let status = executor.execute("", None);
+            assert_eq!(
+                TextReplacement::Full(i.to_string()),
+                status.to_replacement()
+            );
         }
     }
 
@@ -500,15 +594,26 @@ mod tests {
         struct Scripts;
 
         for file in Scripts::iter() {
+            println!("testing {}", file);
+
             let source: Cow<'static, [u8]> = Scripts::get(&file).unwrap();
             let script_source = String::from_utf8(source.to_vec()).unwrap();
-            let script =
-                Script::from_source(script_source).expect(&format!("Could not parse {}", file));
-            let mut executor = Executor::new(script);
-            executor.execute(
-                "foobar ♈ ♉ ♊ ♋ ♌ ♍ ♎ ♏ ♐ ♑ ♒ ♓ 😁 😝 😋 😄",
-                None,
-            );
+
+            match Script::from_source(script_source) {
+                Ok(script) => {
+                    let mut executor = Executor::new(script);
+                    executor.execute(
+                        "foobar ♈ ♉ ♊ ♋ ♌ ♍ ♎ ♏ ♐ ♑ ♒ ♓ 😁 😝 😋 😄",
+                        None,
+                    );
+                }
+                Err(e) => match e {
+                    ParseScriptError::NoMetadata => {
+                        assert!(file.starts_with("lib/")); // only library files should fail
+                    }
+                    ParseScriptError::InvalidMetadata(_) => assert!(false),
+                },
+            }
         }
     }
 }
