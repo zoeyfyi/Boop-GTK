@@ -33,7 +33,7 @@ sublime_fuzzy = "0.6.0"
 shrinkwraprs = "0.3.0"
 pango = "0.8.0"
 directories = "3.0"
-log = "0.4.0"
+log = "0.4.11"
 env_logger = "0.7.1"
 open = "1.4.0"
 dirty = { git = "https://github.com/mrbenshef/dirty" }
