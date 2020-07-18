@@ -7,6 +7,7 @@ use gdk_pixbuf::prelude::*;
 use gtk::prelude::*;
 use sourceview::prelude::*;
 
+use executor::TextReplacement;
 use gtk::{AboutDialog, ApplicationWindow, Builder, Button, ModelButton, Statusbar};
 use std::{cell::RefCell, path::Path, rc::Rc};
 
@@ -173,27 +174,52 @@ impl App {
                 .get_selection_bounds()
                 .map(|(start, end)| buffer.get_text(&start, &end, false).unwrap().to_string());
 
-            let (status, replacement) = self.scripts.borrow_mut()[script_id as usize]
+            let status = self.scripts.borrow_mut()[script_id as usize]
                 .execute(full_text, selection_text.as_deref());
 
-            match replacement {
-                executor::TextReplacement::Full(text) => {
+            // TODO: how to handle multiple messages?
+            if let Some(error) = status.error() {
+                self.status_bar.push(self.context_id, &error);
+            } else if let Some(info) = status.info() {
+                self.status_bar.push(self.context_id, &info);
+            }
+
+            match status.to_replacement() {
+                TextReplacement::Full(text) => {
                     info!("replacing full text");
                     buffer.set_text(&text);
                 }
-                executor::TextReplacement::Selection(text) => {
+                TextReplacement::Selection(text) => {
                     info!("replacing selection");
-                    let (start, end) = &mut buffer.get_selection_bounds().unwrap();
-                    buffer.delete(start, end);
-                    buffer.insert(start, &text);
+                    match &mut buffer.get_selection_bounds() {
+                        Some((start, end)) => {
+                            buffer.delete(start, end);
+                            buffer.insert(start, &text);
+                        }
+                        None => {
+                            error!("tried to do a selection replacement, but no text is selected!");
+                        }
+                    }
                 }
-            }
+                TextReplacement::Insert(insertions) => {
+                    let insert_text = insertions.join("");
+                    info!("inserting {} bytes", insert_text.len());
 
-            // TODO: how to handle multiple messages?
-            if let Some(error) = status.error {
-                self.status_bar.push(self.context_id, &error);
-            } else if let Some(info) = status.info {
-                self.status_bar.push(self.context_id, &info);
+                    match &mut buffer.get_selection_bounds() {
+                        Some((start, end)) => {
+                            buffer.delete(start, end);
+                            buffer.insert(start, &insert_text);
+                        }
+                        None => {
+                            let mut insert_point =
+                                buffer.get_iter_at_offset(buffer.get_property_cursor_position());
+                            buffer.insert(&mut insert_point, &insert_text)
+                        }
+                    }
+                }
+                TextReplacement::None => {
+                    info!("no text to replace");
+                }
             }
         }
 

@@ -92,6 +92,7 @@ name = "boop-gtk"
 version = "0.1.0"
 dependencies = [
  "directories",
+ "dirty",
  "env_logger",
  "gdk",
  "gdk-pixbuf",
@@ -109,6 +110,7 @@ dependencies = [
  "serde",
  "serde_jsonrc",
  "shrinkwraprs",
+ "simple-error",
  "sourceview",
  "sublime_fuzzy",
 ]
@@ -192,6 +194,11 @@ dependencies = [
  "redox_users",
  "winapi",
 ]
+
+[[package]]
+name = "dirty"
+version = "0.3.0"
+source = "git+https://github.com/mrbenshef/dirty#f750e2839237da3adcf96f4f2919731246a878a7"
 
 [[package]]
 name = "either"
@@ -746,9 +753,9 @@ dependencies = [
 
 [[package]]
 name = "rusty_v8"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da4dd2d680bf9812b3156b44f89fdd7b508c1369fbc69a14150972c6919c84d1"
+checksum = "390f2a21e9855f0cf6113a076cabdfd880b13c055391d61474d5eebf2c1ed491"
 dependencies = [
  "bitflags",
  "cargo_gn",
@@ -815,6 +822,12 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "simple-error"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "339844c9af2d844b9230bb28e8f819a7790cbf20a29b5cbd2b59916a03a1ef51"
 
 [[package]]
 name = "slab"

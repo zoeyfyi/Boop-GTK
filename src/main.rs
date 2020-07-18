@@ -1,5 +1,4 @@
 #[macro_use]
-#[cfg(test)]
 extern crate lazy_static;
 #[macro_use]
 extern crate shrinkwraprs;
@@ -12,20 +11,19 @@ extern crate gtk;
 extern crate pango;
 extern crate sourceview;
 
+extern crate directories;
 extern crate libc;
 extern crate rust_embed;
 extern crate rusty_v8;
-
 extern crate serde;
-
-extern crate directories;
+extern crate simple_error;
 
 #[macro_use]
 extern crate log;
 
 mod executor;
 mod script;
-use script::{ParseScriptError, Script};
+use script::Script;
 mod app;
 mod command_pallete;
 
@@ -55,6 +53,12 @@ use std::{
     io::prelude::*,
     rc::Rc,
 };
+
+lazy_static! {
+    static ref PROJECT_DIRS: directories::ProjectDirs =
+        ProjectDirs::from("uk.co", "mrbenshef", "boop-gtk")
+            .expect("Unable to find a configuration location for your platform");
+}
 
 const SEARCH_CONFIG: ScoreConfig = ScoreConfig {
     bonus_consecutive: 12,
@@ -93,23 +97,19 @@ impl Display for LoadScriptError {
 #[derive(Debug)]
 enum ScriptError {
     LoadError(LoadScriptError),
-    ParseError(ParseScriptError),
 }
 
 impl Display for ScriptError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ScriptError::LoadError(e) => write!(f, "{}", e),
-            ScriptError::ParseError(e) => write!(f, "{}", e),
         }
     }
 }
 
 impl Error for ScriptError {}
 
-fn load_user_scripts(
-    config_dir: &Path,
-) -> Result<Vec<Result<Script, ParseScriptError>>, LoadScriptError> {
+fn load_user_scripts(config_dir: &Path) -> Result<Vec<Script>, LoadScriptError> {
     let scripts_dir: PathBuf = config_dir.join("scripts");
 
     fs::create_dir_all(&scripts_dir).map_err(|_| LoadScriptError::FailedToCreateScriptDirectory)?;
@@ -118,15 +118,16 @@ fn load_user_scripts(
         fs::read_dir(&scripts_dir).map_err(|_| LoadScriptError::FailedToReadScriptDirectory)?;
 
     Ok(paths
-        .filter_map(|f| f.ok())
+        .filter_map(Result::ok)
         .map(|f| f.path())
         .filter(|path| path.is_file())
         .filter_map(|path| fs::read_to_string(path).ok())
         .map(Script::from_source)
+        .filter_map(Result::ok)
         .collect())
 }
 
-fn load_internal_scripts<'a>() -> Vec<Script> {
+fn load_internal_scripts() -> Vec<Script> {
     let mut scripts: Vec<Script> = Vec::with_capacity(Scripts::iter().count());
 
     // scripts are internal, so we can unwrap "safely"
@@ -134,9 +135,12 @@ fn load_internal_scripts<'a>() -> Vec<Script> {
         let file: Cow<'_, str> = file;
         let source: Cow<'static, [u8]> = Scripts::get(&file).unwrap();
         let script_source = String::from_utf8(source.to_vec()).unwrap();
-        scripts.push(Script::from_source(script_source).unwrap());
+        if let Ok(script) = Script::from_source(script_source) {
+            scripts.push(script);
+        }
     }
 
+    info!("found {} internal scripts", scripts.len());
     scripts
 }
 
@@ -144,13 +148,8 @@ fn load_all_scripts(config_dir: &Path) -> (Vec<Script>, Option<ScriptError>) {
     let mut scripts = load_internal_scripts();
 
     match load_user_scripts(&config_dir) {
-        Ok(user_scripts) => {
-            for script in user_scripts {
-                match script {
-                    Ok(script) => scripts.push(script),
-                    Err(e) => return (scripts, Some(ScriptError::ParseError(e))),
-                };
-            }
+        Ok(mut user_scripts) => {
+            scripts.append(&mut user_scripts);
         }
         Err(e) => return (scripts, Some(ScriptError::LoadError(e))),
     }
@@ -166,11 +165,7 @@ fn main() -> Result<(), ()> {
 
     env_logger::init();
 
-    let config_dir = ProjectDirs::from("uk.co", "mrbenshef", "boop-gtk")
-        .expect("Unable to find a configuration location for your platform")
-        .config_dir()
-        .to_path_buf();
-
+    let config_dir = PROJECT_DIRS.config_dir().to_path_buf();
     if !config_dir.exists() {
         info!("config directory does not exist, attempting to create it");
         match fs::create_dir_all(&config_dir) {
