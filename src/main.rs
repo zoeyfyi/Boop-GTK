@@ -2,6 +2,9 @@
 extern crate lazy_static;
 #[macro_use]
 extern crate shrinkwraprs;
+#[macro_use]
+extern crate gladis_proc_macro;
+extern crate gladis;
 
 extern crate gdk;
 extern crate gdk_pixbuf;
@@ -254,9 +257,6 @@ fn main() -> Result<(), ()> {
         icon_theme.append_search_path(&icons_path);
         icon_theme.prepend_search_path(&icons_path);
 
-        let builder = gtk::Builder::new_from_string(include_str!("../ui/boop-gtk.glade"));
-        builder.set_application(application);
-
         let (mut scripts, script_error) = load_all_scripts(&config_dir);
 
         // sort alphabetically and assign id's
@@ -270,7 +270,7 @@ fn main() -> Result<(), ()> {
             scripts.into_iter().map(Executor::new).collect(),
         ));
 
-        let app = App::from_builder(builder, &config_dir, scripts);
+        let app = App::new(&config_dir, scripts);
         app.set_application(Some(application));
         app.show_all();
 
