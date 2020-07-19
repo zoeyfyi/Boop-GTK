@@ -1,11 +1,12 @@
 param (
-    [bool]$archive = $true
+    [bool]$archive = $true,
+    [string]$build = "release"
 )
 
 mkdir boop-gtk.windows
 
 # Binary
-robocopy ..\target\release boop-gtk.windows boop-gtk.exe
+robocopy ..\target\$build boop-gtk.windows boop-gtk.exe
 
 # DLL's
 $dlls = @(
