@@ -62,7 +62,7 @@ jobs:
       working-directory: C:\gtk-build\github\gvsbuild
     # build
     - name: build
-      run: cargo build --release --all-features
+      run: .\windows\build.ps1; cargo build --release --all-features
       env:
         RUSTFLAGS: -L C:\gtk-build\gtk\x64\release\lib
     # download icons from MSYS since gcsbuild icons are broken
@@ -92,7 +92,7 @@ jobs:
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: GTK development librarys
-      run: brew install gtk+3 gtksourceview3
+      run: brew install gtk+3 gtksourceview3 pkg-config
     - name: build
       run: cargo build --release --all-features 
     - name: rename output

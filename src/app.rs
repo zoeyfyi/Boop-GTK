@@ -3,19 +3,20 @@ use crate::{
     executor::{self, Executor},
     gtk::ButtonExt,
 };
-use gdk_pixbuf::prelude::*;
+use gdk_pixbuf::{prelude::*, PixbufLoader};
+use gladis::Gladis;
 use gtk::prelude::*;
 use sourceview::prelude::*;
 
 use executor::TextReplacement;
-use gtk::{AboutDialog, ApplicationWindow, Builder, Button, ModelButton, Statusbar};
+use gtk::{AboutDialog, ApplicationWindow, Button, ModelButton, Statusbar};
 use std::{cell::RefCell, path::Path, rc::Rc};
 
 const HEADER_BUTTON_GET_STARTED: &str = "Press Ctrl+Shift+P to get started";
 const HEADER_BUTTON_CHOOSE_ACTION: &str = "Select an action";
 
-#[derive(Clone, Shrinkwrap)]
-pub struct App {
+#[derive(Gladis, Clone, Shrinkwrap)]
+pub struct AppWidgets {
     #[shrinkwrap(main_field)]
     window: ApplicationWindow,
 
@@ -28,30 +29,21 @@ pub struct App {
     about_button: ModelButton,
 
     about_dialog: AboutDialog,
+}
+
+#[derive(Clone, Shrinkwrap)]
+pub struct App {
+    #[shrinkwrap(main_field)]
+    widgets: AppWidgets,
 
     context_id: u32,
     scripts: Rc<RefCell<Vec<Executor>>>,
 }
 
 impl App {
-    pub fn from_builder(
-        builder: Builder,
-        config_dir: &Path,
-        scripts: Rc<RefCell<Vec<Executor>>>,
-    ) -> Self {
+    pub fn new(config_dir: &Path, scripts: Rc<RefCell<Vec<Executor>>>) -> Self {
         let mut app = App {
-            window: builder.get_object("window").unwrap(),
-
-            header_button: builder.get_object("header_button").unwrap(),
-            source_view: builder.get_object("source_view").unwrap(),
-            status_bar: builder.get_object("status_bar").unwrap(),
-
-            config_directory_button: builder.get_object("config_directory_button").unwrap(),
-            more_scripts_button: builder.get_object("more_scripts_button").unwrap(),
-            about_button: builder.get_object("about_button").unwrap(),
-
-            about_dialog: builder.get_object("about_dialog").unwrap(),
-
+            widgets: AppWidgets::from_string(include_str!("../ui/boop-gtk.glade")),
             context_id: 0,
             scripts,
         };
@@ -59,7 +51,7 @@ impl App {
         app.context_id = app.status_bar.get_context_id("script execution");
         app.header_button.set_label(HEADER_BUTTON_GET_STARTED);
         app.about_dialog.set_logo({
-            let loader = gdk_pixbuf::PixbufLoader::new_with_type("png").unwrap();
+            let loader = PixbufLoader::with_type("png").unwrap();
             loader.write(include_bytes!("../ui/boop-gtk.png")).unwrap();
             loader.close().unwrap();
             loader.get_pixbuf().as_ref()
@@ -157,9 +149,13 @@ impl App {
         self.header_button.set_label(HEADER_BUTTON_CHOOSE_ACTION);
 
         if let gtk::ResponseType::Other(script_id) = dialog.run() {
-            let script = self.scripts.borrow()[script_id as usize].script().clone();
-
-            info!("executing {}", script.metadata().name);
+            info!(
+                "executing {}",
+                self.scripts.borrow()[script_id as usize]
+                    .script()
+                    .metadata()
+                    .name
+            );
 
             self.status_bar.remove_all(self.context_id);
 
@@ -168,14 +164,13 @@ impl App {
             let buffer_text = buffer
                 .get_text(&buffer.get_start_iter(), &buffer.get_end_iter(), false)
                 .unwrap();
-            let full_text = buffer_text.as_str();
 
             let selection_text = buffer
                 .get_selection_bounds()
                 .map(|(start, end)| buffer.get_text(&start, &end, false).unwrap().to_string());
 
             let status = self.scripts.borrow_mut()[script_id as usize]
-                .execute(full_text, selection_text.as_deref());
+                .execute(buffer_text.as_str(), selection_text.as_deref());
 
             // TODO: how to handle multiple messages?
             if let Some(error) = status.error() {
@@ -184,7 +179,7 @@ impl App {
                 self.status_bar.push(self.context_id, &info);
             }
 
-            match status.to_replacement() {
+            match status.into_replacement() {
                 TextReplacement::Full(text) => {
                     info!("replacing full text");
                     buffer.set_text(&text);
@@ -225,6 +220,6 @@ impl App {
 
         self.header_button.set_label(HEADER_BUTTON_GET_STARTED);
 
-        dialog.destroy();
+        dialog.close();
     }
 }

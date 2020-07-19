@@ -2,6 +2,9 @@
 extern crate lazy_static;
 #[macro_use]
 extern crate shrinkwraprs;
+#[macro_use]
+extern crate gladis_proc_macro;
+extern crate gladis;
 
 extern crate gdk;
 extern crate gdk_pixbuf;
@@ -140,12 +143,13 @@ fn load_internal_scripts() -> Vec<Script> {
         }
     }
 
-    info!("found {} internal scripts", scripts.len());
     scripts
 }
 
 fn load_all_scripts(config_dir: &Path) -> (Vec<Script>, Option<ScriptError>) {
     let mut scripts = load_internal_scripts();
+
+    let internal_script_count = scripts.len();
 
     match load_user_scripts(&config_dir) {
         Ok(mut user_scripts) => {
@@ -154,17 +158,17 @@ fn load_all_scripts(config_dir: &Path) -> (Vec<Script>, Option<ScriptError>) {
         Err(e) => return (scripts, Some(ScriptError::LoadError(e))),
     }
 
+    info!(
+        "found {} scripts ({} internal scripts)",
+        scripts.len(),
+        internal_script_count,
+    );
+
     (scripts, None)
 }
 
-fn main() -> Result<(), ()> {
-    info!(
-        "found {} pixbuf loaders",
-        gdk_pixbuf::Pixbuf::get_formats().len()
-    );
-
-    env_logger::init();
-
+// extract files stored in binary to the config directory
+fn extract_files() {
     let config_dir = PROJECT_DIRS.config_dir().to_path_buf();
     if !config_dir.exists() {
         info!("config directory does not exist, attempting to create it");
@@ -182,8 +186,6 @@ fn main() -> Result<(), ()> {
         path
     };
 
-    info!("lang file path: {}", lang_file_path.display());
-
     if !lang_file_path.exists() {
         info!(
             "language file does not exist, creating a new one at: {}",
@@ -196,7 +198,7 @@ fn main() -> Result<(), ()> {
     }
 
     let icons_path = {
-        let mut path = config_dir.clone();
+        let mut path = config_dir;
         path.push("icons");
         path
     };
@@ -214,20 +216,20 @@ fn main() -> Result<(), ()> {
                     path
                 };
 
-                info!("icon: {}", icon_path.display());
+                if icon_path.exists() {
+                    continue;
+                }
 
-                if !icon_path.exists() {
-                    match File::create(icon_path) {
-                        Ok(mut file) => {
-                            let icon_data: Cow<'static, [u8]> = Icons::get(&icon).unwrap();
-                            match file.write_all(&icon_data) {
-                                Ok(()) => info!("written {}", icon),
-                                Err(err) => error!("error writing {}, {}", icon, err),
-                            }
+                match File::create(&icon_path) {
+                    Ok(mut file) => {
+                        let icon_data: Cow<'static, [u8]> = Icons::get(&icon).unwrap();
+                        match file.write_all(&icon_data) {
+                            Ok(()) => info!("written {} ({})", icon, icon_path.display()),
+                            Err(err) => error!("error writing {}, {}", icon, err),
                         }
-                        Err(err) => {
-                            error!("error creating file for {}, {}", icon, err);
-                        }
+                    }
+                    Err(err) => {
+                        error!("error creating file for {}, {}", icon, err);
                     }
                 }
             }
@@ -236,12 +238,38 @@ fn main() -> Result<(), ()> {
             error!("failed to create icon directory: {}", err);
         }
     }
+}
+
+fn main() {
+    env_logger::init();
+
+    debug!(
+        "found {} pixbuf loaders",
+        gdk_pixbuf::Pixbuf::get_formats().len()
+    );
+
+    extract_files();
 
     // initalize V8
     let platform = v8::new_default_platform().unwrap();
     v8::V8::initialize_platform(platform);
     v8::V8::initialize();
     info!("V8 initialized");
+
+    let config_dir = PROJECT_DIRS.config_dir().to_path_buf();
+
+    let (mut scripts, script_error) = load_all_scripts(&config_dir);
+
+    // sort alphabetically and assign id's
+    scripts.sort_by_cached_key(|s| s.metadata().name.clone());
+    for (i, script) in scripts.iter_mut().enumerate() {
+        script.id = i as u32;
+    }
+
+    // TODO(mrbenshef): merge executor and script
+    let scripts: Rc<RefCell<Vec<Executor>>> = Rc::new(RefCell::new(
+        scripts.into_iter().map(Executor::new).collect(),
+    ));
 
     // needed on windows
     sourceview::View::static_type();
@@ -250,31 +278,21 @@ fn main() -> Result<(), ()> {
         .expect("failed to initialize GTK application");
 
     application.connect_activate(move |application| {
+        // add icon path to search path
+        let icons_path = {
+            let mut path = config_dir.clone();
+            path.push("icons");
+            path
+        };
         let icon_theme = gtk::IconTheme::get_default().unwrap();
         icon_theme.append_search_path(&icons_path);
         icon_theme.prepend_search_path(&icons_path);
 
-        let builder = gtk::Builder::new_from_string(include_str!("../ui/boop-gtk.glade"));
-        builder.set_application(application);
-
-        let (mut scripts, script_error) = load_all_scripts(&config_dir);
-
-        // sort alphabetically and assign id's
-        scripts.sort_by_cached_key(|s| s.metadata().name.clone());
-        for (i, script) in scripts.iter_mut().enumerate() {
-            script.id = i as u32;
-        }
-
-        // TODO(mrbenshef): merge executor and script
-        let scripts: Rc<RefCell<Vec<Executor>>> = Rc::new(RefCell::new(
-            scripts.into_iter().map(Executor::new).collect(),
-        ));
-
-        let app = App::from_builder(builder, &config_dir, scripts);
+        let app = App::new(&config_dir, scripts.clone());
         app.set_application(Some(application));
         app.show_all();
 
-        if let Some(error) = script_error {
+        if let Some(error) = &script_error {
             app.push_error(error);
         }
 
@@ -290,6 +308,4 @@ fn main() -> Result<(), ()> {
     });
 
     application.run(&[]);
-
-    Ok(())
 }

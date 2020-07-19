@@ -72,7 +72,7 @@ jobs:
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     # deps
     - name: GTK development librarys
-      run: brew install gtk+3 gtksourceview3
+      run: brew install gtk+3 gtksourceview3 pkg-config
     # build
     - name: build
       run: cargo build
@@ -132,12 +132,12 @@ jobs:
       if: steps.cache.outputs.cache-hit != 'true'
     # build
     - name: build
-      run: cargo build
+      run: .\windows\build.ps1; cargo build
       env:
         RUSTFLAGS: -L C:\gtk-build\gtk\x64\release\lib
     # test
     - name: test
-      run: cargo test -- --nocapture
+      run: .\windows\build.ps1; cargo test -- --nocapture
       env:
         RUSTFLAGS: -L C:\gtk-build\gtk\x64\release\lib
     # copy lib files for cacheing

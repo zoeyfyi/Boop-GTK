@@ -7,3 +7,4 @@ repo
 flatpak/generated-sources.json
 windows/*
 !windows/make-bundle.ps1
+!windows/build.ps1
