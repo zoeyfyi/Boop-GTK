@@ -84,7 +84,7 @@ impl ExecutionStatus {
         self.error.as_ref()
     }
 
-    pub fn to_replacement(self) -> TextReplacement {
+    pub fn into_replacement(self) -> TextReplacement {
         // not quite sure what the correct behaviour here should be
         // right now the order of presidence is:
         // 0. insertion
@@ -93,7 +93,7 @@ impl ExecutionStatus {
         // 3. text (with select)
         // 4. text (without selection)
         // TODO: move into ExecutionStatus
-        let replacement = if !self.insert.is_empty() {
+        if !self.insert.is_empty() {
             info!("found insertion");
             TextReplacement::Insert(self.insert)
         } else if self.full_text.dirty() {
@@ -110,9 +110,7 @@ impl ExecutionStatus {
             TextReplacement::Full(self.text.unwrap())
         } else {
             TextReplacement::None
-        };
-
-        replacement
+        }
     }
 }
 
@@ -428,7 +426,7 @@ impl Executor {
 
         let key_require = v8::String::new(&mut *self.scope, "require").unwrap();
 
-        (&mut *self.context).global(&mut *self.scope).set(
+        (&*self.context).global(&mut *self.scope).set(
             &mut *self.scope,
             key_require.into(),
             require.into(),
@@ -530,8 +528,9 @@ impl Executor {
             .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
             .unwrap();
 
-        let status = (*status_slot).borrow().clone();
-        status
+        let status = (status_slot).borrow();
+
+        status.clone()
     }
 
     pub fn execute(&mut self, full_text: &str, selection: Option<&str>) -> ExecutionStatus {
@@ -610,7 +609,7 @@ mod tests {
             let status = executor.execute("", None);
             assert_eq!(
                 TextReplacement::Full(i.to_string()),
-                status.to_replacement()
+                status.into_replacement()
             );
         }
     }

@@ -176,7 +176,7 @@ impl App {
                 self.status_bar.push(self.context_id, &info);
             }
 
-            match status.to_replacement() {
+            match status.into_replacement() {
                 TextReplacement::Full(text) => {
                     info!("replacing full text");
                     buffer.set_text(&text);

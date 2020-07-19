@@ -198,7 +198,7 @@ fn extract_files() {
     }
 
     let icons_path = {
-        let mut path = config_dir.clone();
+        let mut path = config_dir;
         path.push("icons");
         path
     };
