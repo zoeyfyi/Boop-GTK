@@ -6,17 +6,24 @@ use gtk::{Dialog, Entry, TreePath, TreeView, Window};
 use shrinkwraprs::Shrinkwrap;
 use sublime_fuzzy::FuzzySearch;
 
-use crate::script::Script;
 use crate::{executor::Executor, SEARCH_CONFIG};
 use glib::Type;
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 const ICON_COLUMN: u32 = 0;
 const TEXT_COLUMN: u32 = 1;
 const ID_COLUMN: u32 = 2;
+const SCORE_COLUMN: u32 = 3;
+const VISIBLE_COLUMN: u32 = 4;
 
-const COLUMNS: [u32; 3] = [ICON_COLUMN, TEXT_COLUMN, ID_COLUMN];
-const COLUMN_TYPES: [Type; 3] = [Type::String, Type::String, Type::U64];
+const COLUMNS: [u32; 5] = [
+    ICON_COLUMN,
+    TEXT_COLUMN,
+    ID_COLUMN,
+    SCORE_COLUMN,
+    VISIBLE_COLUMN,
+];
+const COLUMN_TYPES: [Type; 5] = [Type::String, Type::String, Type::U64, Type::I64, Type::Bool];
 
 #[derive(Shrinkwrap, Gladis)]
 pub struct CommandPalleteDialogWidgets {
@@ -50,6 +57,14 @@ impl CommandPalleteDialog {
         {
             let store = gtk::ListStore::new(&COLUMN_TYPES);
 
+            store.set_sort_column_id(
+                gtk::SortColumn::Index(SCORE_COLUMN),
+                gtk::SortType::Descending,
+            );
+
+            let filtered_store = gtk::TreeModelFilter::new(&store, None);
+            filtered_store.set_visible_column(VISIBLE_COLUMN as i32);
+
             // icon column
             {
                 let renderer = gtk::CellRendererPixbuf::new();
@@ -79,11 +94,25 @@ impl CommandPalleteDialog {
                     .append_column(&column);
             }
 
+            #[cfg(debug_assertions)]
+            {
+                for c in &[ID_COLUMN, SCORE_COLUMN] {
+                    let renderer = gtk::CellRendererText::new();
+
+                    let column = gtk::TreeViewColumn::new();
+                    column.pack_start(&renderer, false);
+                    column.add_attribute(&renderer, "markup", *c as i32);
+
+                    command_pallete_dialog
+                        .dialog_tree_view
+                        .append_column(&column);
+                }
+            }
+
             for script in scripts.borrow().iter() {
                 let mut icon_name = script.script().metadata().icon.to_lowercase();
                 icon_name.insert_str(0, "boop-gtk-");
                 icon_name.push_str("-symbolic");
-                debug!("icon: {}", icon_name);
 
                 let entry_text = format!(
                     "<b>{}</b>\n<span size=\"smaller\">{}</span>",
@@ -91,13 +120,16 @@ impl CommandPalleteDialog {
                     script.script().metadata().description.to_string()
                 );
 
-                let values: [&dyn ToValue; 3] = [&icon_name, &entry_text, &script.script().id];
+                let id = script.script().id;
+
+                let values: [&dyn ToValue; 5] =
+                    [&icon_name, &entry_text, &id, &(-(id as i64)), &true];
                 store.set(&store.append(), &COLUMNS, &values);
             }
 
             command_pallete_dialog
                 .dialog_tree_view
-                .set_model(Some(&store));
+                .set_model(Some(&filtered_store));
         }
 
         // select first row
@@ -129,7 +161,7 @@ impl CommandPalleteDialog {
     }
 
     fn on_key_press(key: &EventKey, dialog_tree_view: &TreeView, dialog: &Dialog) -> Inhibit {
-        let model: gtk::ListStore = dialog_tree_view.get_model().unwrap().downcast().unwrap();
+        let model: gtk::TreeModelFilter = dialog_tree_view.get_model().unwrap().downcast().unwrap();
         let result_count: i32 = model.iter_n_children(None);
 
         let key = key.get_keyval();
@@ -169,7 +201,7 @@ impl CommandPalleteDialog {
     }
 
     fn on_click(dialog_tree_view: &TreeView, dialog: &Dialog) {
-        let model: gtk::ListStore = dialog_tree_view.get_model().unwrap().downcast().unwrap();
+        let model: gtk::TreeModelFilter = dialog_tree_view.get_model().unwrap().downcast().unwrap();
 
         if let (Some(path), _) = dialog_tree_view.get_cursor() {
             let value = model.get_value(&model.get_iter(&path).unwrap(), ID_COLUMN as i32);
@@ -183,60 +215,66 @@ impl CommandPalleteDialog {
         dialog_tree_view: &TreeView,
         scripts: Rc<RefCell<Vec<Executor>>>,
     ) {
-        let model: gtk::ListStore = dialog_tree_view.get_model().unwrap().downcast().unwrap();
-        model.clear();
+        let filter_store: gtk::TreeModelFilter =
+            dialog_tree_view.get_model().unwrap().downcast().unwrap();
+        let store: gtk::ListStore = filter_store.get_model().unwrap().downcast().unwrap();
+
+        // stop sorting
+        // otherwise updating rows will trigger a sort making iterating over all rows difficult
+        store.set_unsorted();
 
         let searchbar_text = searchbar.get_text().to_owned();
 
-        let search_results: Vec<Script> = if searchbar_text.is_empty() {
-            scripts
-                .borrow()
-                .iter()
-                .map(|s| s.script())
-                .cloned()
-                .collect()
-        } else {
-            let mut scored_scripts = scripts
-                .borrow()
-                .iter()
-                .map(|script| {
-                    let mut search =
-                        FuzzySearch::new(&searchbar_text, &script.script().metadata().name, true);
-                    search.set_score_config(SEARCH_CONFIG);
+        // score each script using search text
+        let script_to_score = scripts
+            .borrow()
+            .iter()
+            .map(|script| {
+                let mut search =
+                    FuzzySearch::new(&searchbar_text, &script.script().metadata().name, true);
+                search.set_score_config(SEARCH_CONFIG);
 
-                    let score = search.best_match().map(|m| m.score()).unwrap_or(0);
-                    (script.script().clone(), score)
-                })
-                .filter(|(_, score)| *score > 0)
-                .collect::<Vec<(Script, isize)>>();
+                let score = search.best_match().map(|m| m.score()).unwrap_or(-1000);
+                (script.script().id as u64, score)
+            })
+            .collect::<HashMap<u64, isize>>();
 
-            scored_scripts.sort_by_key(|(_, score)| *score);
+        let script_count = store.iter_n_children(None);
+        for i in 0..script_count {
+            let mut path = gtk::TreePath::new();
+            path.append_index(i);
 
-            scored_scripts
-                .into_iter()
-                .map(|(script, _)| script)
-                .collect()
-        };
+            let iter = store.get_iter(&path).unwrap();
 
-        for script in &search_results {
-            let mut icon_name = script.metadata().icon.to_lowercase();
-            icon_name.insert_str(0, "boop-gtk-");
-            icon_name.push_str("-symbolic");
-            debug!("icon: {}", icon_name);
+            let script_id: u64 = store
+                .get_value(&iter, ID_COLUMN as i32)
+                .get()
+                .unwrap()
+                .unwrap();
 
-            let entry_text = format!(
-                "<b>{}</b>\n<span size=\"smaller\">{}</span>",
-                script.metadata().name.to_string(),
-                script.metadata().description.to_string()
-            );
+            let score = if searchbar_text.is_empty() {
+                -(script_id as i64) // alphabetical sort
+            } else {
+                script_to_score[&script_id] as i64
+            };
 
-            let values: [&dyn ToValue; 3] = [&icon_name, &entry_text, &script.id];
-            model.set(&model.append(), &COLUMNS, &values);
+            let is_visible = if searchbar_text.is_empty() {
+                true
+            } else {
+                score > 0
+            };
+
+            let values: [&dyn ToValue; 2] = [&score, &is_visible];
+            store.set(&iter, &[SCORE_COLUMN, VISIBLE_COLUMN], &values);
         }
+
+        // start sorting again
+        store.set_sort_column_id(
+            gtk::SortColumn::Index(SCORE_COLUMN),
+            gtk::SortType::Descending,
+        );
 
         // reset selection to first row
         dialog_tree_view.set_cursor(&TreePath::new_first(), gtk::NONE_TREE_VIEW_COLUMN, false);
-
-        dialog_tree_view.show_all();
     }
 }
