@@ -28,7 +28,7 @@ const COLUMN_TYPES: [Type; 5] = [Type::String, Type::String, Type::U64, Type::I6
 const DIALOG_WIDTH: i32 = 300;
 const ICON_COLUMN_PADDING: i32 = 8;
 const ICON_COLUMN_WIDTH: i32 = ICON_COLUMN_PADDING + 32 + ICON_COLUMN_PADDING; // IconSize::Dnd = 32
-const TEXT_COLUMN_WIDTH: i32 = DIALOG_WIDTH - ICON_COLUMN_WIDTH; 
+const TEXT_COLUMN_WIDTH: i32 = DIALOG_WIDTH - ICON_COLUMN_WIDTH;
 
 #[derive(Shrinkwrap, Gladis)]
 pub struct CommandPalleteDialogWidgets {
