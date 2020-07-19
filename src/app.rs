@@ -149,9 +149,13 @@ impl App {
         self.header_button.set_label(HEADER_BUTTON_CHOOSE_ACTION);
 
         if let gtk::ResponseType::Other(script_id) = dialog.run() {
-            let script = self.scripts.borrow()[script_id as usize].script().clone();
-
-            info!("executing {}", script.metadata().name);
+            info!(
+                "executing {}",
+                self.scripts.borrow()[script_id as usize]
+                    .script()
+                    .metadata()
+                    .name
+            );
 
             self.status_bar.remove_all(self.context_id);
 
@@ -160,14 +164,13 @@ impl App {
             let buffer_text = buffer
                 .get_text(&buffer.get_start_iter(), &buffer.get_end_iter(), false)
                 .unwrap();
-            let full_text = buffer_text.as_str();
 
             let selection_text = buffer
                 .get_selection_bounds()
                 .map(|(start, end)| buffer.get_text(&start, &end, false).unwrap().to_string());
 
             let status = self.scripts.borrow_mut()[script_id as usize]
-                .execute(full_text, selection_text.as_deref());
+                .execute(buffer_text.as_str(), selection_text.as_deref());
 
             // TODO: how to handle multiple messages?
             if let Some(error) = status.error() {

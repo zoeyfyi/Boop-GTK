@@ -191,8 +191,6 @@ impl Executor {
             .unwrap()
             .to_rust_string_lossy(scope);
 
-        // TODO: handle problems loading file
-
         info!("loading {}", path);
 
         // append extension
