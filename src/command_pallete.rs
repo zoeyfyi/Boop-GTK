@@ -89,13 +89,12 @@ impl CommandPalleteDialog {
             {
                 let renderer = gtk::CellRendererText::new();
                 renderer.set_property_wrap_mode(pango::WrapMode::Word);
-                renderer.set_property_wrap_width(TEXT_COLUMN_WIDTH);
+                renderer.set_property_wrap_width(TEXT_COLUMN_WIDTH - 8); // -8 to account for padding
 
                 let column = gtk::TreeViewColumn::new();
                 column.pack_start(&renderer, true);
                 column.set_sizing(gtk::TreeViewColumnSizing::Autosize);
                 column.set_max_width(TEXT_COLUMN_WIDTH);
-
                 column.add_attribute(&renderer, "markup", TEXT_COLUMN as i32);
 
                 command_pallete_dialog
