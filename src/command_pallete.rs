@@ -25,6 +25,11 @@ const COLUMNS: [u32; 5] = [
 ];
 const COLUMN_TYPES: [Type; 5] = [Type::String, Type::String, Type::U64, Type::I64, Type::Bool];
 
+const DIALOG_WIDTH: i32 = 300;
+const ICON_COLUMN_PADDING: i32 = 8;
+const ICON_COLUMN_WIDTH: i32 = ICON_COLUMN_PADDING + 32 + ICON_COLUMN_PADDING; // IconSize::Dnd = 32
+const TEXT_COLUMN_WIDTH: i32 = DIALOG_WIDTH - ICON_COLUMN_WIDTH;
+
 #[derive(Shrinkwrap, Gladis)]
 pub struct CommandPalleteDialogWidgets {
     #[shrinkwrap(main_field)]
@@ -68,7 +73,7 @@ impl CommandPalleteDialog {
             // icon column
             {
                 let renderer = gtk::CellRendererPixbuf::new();
-                renderer.set_padding(8, 8);
+                renderer.set_padding(ICON_COLUMN_PADDING, ICON_COLUMN_PADDING);
                 renderer.set_property_stock_size(gtk::IconSize::Dnd);
 
                 let column = gtk::TreeViewColumn::new();
@@ -84,9 +89,13 @@ impl CommandPalleteDialog {
             {
                 let renderer = gtk::CellRendererText::new();
                 renderer.set_property_wrap_mode(pango::WrapMode::Word);
+                renderer.set_property_wrap_width(TEXT_COLUMN_WIDTH);
 
                 let column = gtk::TreeViewColumn::new();
                 column.pack_start(&renderer, true);
+                column.set_sizing(gtk::TreeViewColumnSizing::Autosize);
+                column.set_max_width(TEXT_COLUMN_WIDTH);
+
                 column.add_attribute(&renderer, "markup", TEXT_COLUMN as i32);
 
                 command_pallete_dialog

@@ -1,7 +1,12 @@
+param (
+    [bool]$archive = $true,
+    [string]$build = "release"
+)
+
 mkdir boop-gtk.windows
 
 # Binary
-robocopy ..\target\release boop-gtk.windows boop-gtk.exe
+robocopy ..\target\$build boop-gtk.windows boop-gtk.exe
 
 # DLL's
 $dlls = @(
@@ -13,7 +18,7 @@ $dlls = @(
     "pangoft2-1.0-0.dll",     "fontconfig.dll",         "gtk-3-vs16.dll",
     "pangowin32-1.0-0.dll",   "freetype.dll",           "gtksourceview-3.0.dll",
     "fribidi-0.dll",          "iconv.dll",              "gdbus.exe",
-    "intl.dll"
+    "intl.dll",               "croco-0.6.dll",          "rsvg-2.0.dll"
 )
 robocopy C:\gtk-build\gtk\x64\release\bin boop-gtk.windows $dlls
 
@@ -25,11 +30,13 @@ robocopy C:\gtk-build\gtk\x64\release\share\gtksourceview-3.0 boop-gtk.windows\s
 robocopy C:\msys64\mingw64\share\icons boop-gtk.windows\share\icons /E
 
 # Create archive
-try {
-    Compress-Archive -Force -Path boop-gtk.windows\* -DestinationPath boop-gtk.windows.zip
-} catch {
-    "Failed to create archive"
-    $_
+if ($archive) {
+    try {
+        Compress-Archive -Force -Path boop-gtk.windows\* -DestinationPath boop-gtk.windows.zip
+    } catch {
+        "Failed to create archive"
+        $_
+    }
 }
 
 # supress robocopy non-zero success
