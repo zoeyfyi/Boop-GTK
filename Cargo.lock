@@ -95,10 +95,10 @@ dependencies = [
 
 [[package]]
 name = "boop-gtk"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "directories",
- "dirty",
+ "dirty2",
  "env_logger",
  "gdk",
  "gdk-pixbuf",
@@ -205,9 +205,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "dirty"
-version = "0.3.0"
-source = "git+https://github.com/mrbenshef/dirty#f750e2839237da3adcf96f4f2919731246a878a7"
+name = "dirty2"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9cc5120256e70bfa12b040167f0db09542c485ef72a3eb407ead0cfaff40209d"
 
 [[package]]
 name = "either"

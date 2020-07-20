@@ -1,5 +1,5 @@
 use crate::{script::Script, Scripts, PROJECT_DIRS};
-use dirty::Dirty;
+use dirty2::Dirty;
 use rusty_v8 as v8;
 use simple_error::SimpleError;
 use std::{cell::RefCell, fs::File, io::Read, ptr, rc::Rc};
