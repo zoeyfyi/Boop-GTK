@@ -18,7 +18,8 @@ $dlls = @(
     "pangoft2-1.0-0.dll",     "fontconfig.dll",         "gtk-3-vs16.dll",
     "pangowin32-1.0-0.dll",   "freetype.dll",           "gtksourceview-3.0.dll",
     "fribidi-0.dll",          "iconv.dll",              "gdbus.exe",
-    "intl.dll",               "croco-0.6.dll",          "rsvg-2.0.dll"
+    "intl.dll",               "croco-0.6.dll",          "rsvg-2.0.dll",
+    "zlib1.dll"
 )
 robocopy C:\gtk-build\gtk\x64\release\bin boop-gtk.windows $dlls
 
