@@ -81,7 +81,7 @@ impl App {
             let status_bar = app.status_bar.clone();
             app.more_scripts_button.connect_clicked(move |_| {
                 if let Err(open_err) =
-                    open::that("https://github.com/IvanMathy/Boop/tree/main/Scripts")
+                    open::that("https://boop.okat.best/scripts/")
                 {
                     error!("could not launch website: {}", open_err);
                     App::push_error_(status_bar.clone(), context_id, "failed to launch website");
