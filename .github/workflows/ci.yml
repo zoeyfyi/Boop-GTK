@@ -134,12 +134,16 @@ jobs:
       run: echo "::add-path::C:\gtk-build\gtk\x64\release\bin"
     # build
     - name: build
-      run: ${Env:GTKSOURCEVIEW_3.0_NO_PKG_CONFIG} = 1; ${Env:SYSTEM_DEPS_GTKSOURCEVIEW_3.0_LIB} = "gtksourceview-3.0"; cargo build
+      run: cargo build
+      env:
+        GTKSOURCEVIEW_3.0_NO_PKG_CONFIG: 1
+        SYSTEM_DEPS_GTKSOURCEVIEW_3.0_LIB: gtksourceview-3.0
     # test
     - name: test
-      run: .\windows\build.ps1; cargo test -- --nocapture
+      run: cargo test -- --nocapture
       env:
-        RUSTFLAGS: -L C:\gtk-build\gtk\x64\release\lib
+        GTKSOURCEVIEW_3.0_NO_PKG_CONFIG: 1
+        SYSTEM_DEPS_GTKSOURCEVIEW_3.0_LIB: gtksourceview-3.0
     # copy lib files for cacheing
     - name: make release folder
       run: mkdir release
