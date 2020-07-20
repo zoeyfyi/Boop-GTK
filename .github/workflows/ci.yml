@@ -131,7 +131,7 @@ jobs:
       working-directory: C:\gtk-build\github\gvsbuild
       if: steps.cache.outputs.cache-hit != 'true'
     - name: Add gvsbuild bin directory to Path
-      run: ::add-path::C:\gtk-build\gtk\x64\release\bin
+      run: echo "::add-path::C:\gtk-build\gtk\x64\release\bin"
     # build
     - name: build
       run: ${Env:GTKSOURCEVIEW_3.0_NO_PKG_CONFIG} = 1; ${Env:SYSTEM_DEPS_GTKSOURCEVIEW_3.0_LIB} = "gtksourceview-3.0"; cargo build
