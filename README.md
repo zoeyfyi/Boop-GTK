@@ -8,6 +8,7 @@
 <p align="center">Port of <a href="https://github.com/IvanMathy"><b>@IvanMathy</b></a>'s <a href="https://github.com/IvanMathy/Boop">Boop</a> to GTK</p>
 
 ![Continuous integration](https://github.com/mrbenshef/Boop-GTK/workflows/Continuous%20integration/badge.svg)
+![Release](https://github.com/mrbenshef/Boop-GTK/workflows/Release/badge.svg?branch=release)
 ![Crates.io](https://img.shields.io/crates/v/boop-gtk)
 
 ### Get Boop-GTK
@@ -38,10 +39,6 @@ cargo build
 
 ```powershell
 git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
-
-cd C:\gtk-build\github\gvsbuild
-
-python .\build.py build -p=x64 --vs-ver=16 --msys-dir=C:\msys64 -k --enable-gi --py-wheel --py-egg gtk3 gdk-pixbuf gtksourceview3
-
-$Env:RUSTFLAGS = "-L C:\gtk-build\gtk\x64\release\lib"; cargo build
+cd C:\gtk-build\github\gvsbuild; python .\build.py build -p=x64 --vs-ver=16 --msys-dir=C:\msys64 -k --enable-gi --py-wheel --py-egg gtk3 gdk-pixbuf gtksourceview3
+$Env:GTKSOURCEVIEW_3.0_NO_PKG_CONFIG=1; $Env:SYSTEM_DEPS_GTKSOURCEVIEW_3.0_LIB="gtksourceview-3.0"; cargo build
 ```

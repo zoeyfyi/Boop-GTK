@@ -1,55 +1,80 @@
-use gdk::{enums::key, EventKey};
+use gdk::{keys, EventKey};
 use gio::prelude::*;
+use gladis::Gladis;
 use gtk::prelude::*;
-use gtk::{Dialog, Entry, TreeView, Window};
+use gtk::{Dialog, Entry, TreePath, TreeView, Window};
 use shrinkwraprs::Shrinkwrap;
 use sublime_fuzzy::FuzzySearch;
 
-use crate::script::Script;
 use crate::{executor::Executor, SEARCH_CONFIG};
 use glib::Type;
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 const ICON_COLUMN: u32 = 0;
 const TEXT_COLUMN: u32 = 1;
 const ID_COLUMN: u32 = 2;
+const SCORE_COLUMN: u32 = 3;
+const VISIBLE_COLUMN: u32 = 4;
 
-const COLUMNS: [u32; 3] = [ICON_COLUMN, TEXT_COLUMN, ID_COLUMN];
-const COLUMN_TYPES: [Type; 3] = [Type::String, Type::String, Type::U64];
+const COLUMNS: [u32; 5] = [
+    ICON_COLUMN,
+    TEXT_COLUMN,
+    ID_COLUMN,
+    SCORE_COLUMN,
+    VISIBLE_COLUMN,
+];
+const COLUMN_TYPES: [Type; 5] = [Type::String, Type::String, Type::U64, Type::I64, Type::Bool];
 
-#[derive(Shrinkwrap)]
-pub struct CommandPalleteDialog {
+const DIALOG_WIDTH: i32 = 300;
+const ICON_COLUMN_PADDING: i32 = 8;
+const ICON_COLUMN_WIDTH: i32 = ICON_COLUMN_PADDING + 32 + ICON_COLUMN_PADDING; // IconSize::Dnd = 32
+const TEXT_COLUMN_WIDTH: i32 = DIALOG_WIDTH - ICON_COLUMN_WIDTH;
+
+#[derive(Shrinkwrap, Gladis)]
+pub struct CommandPalleteDialogWidgets {
     #[shrinkwrap(main_field)]
     dialog: Dialog,
     dialog_tree_view: TreeView,
     search_bar: Entry,
+}
+
+#[derive(Shrinkwrap)]
+pub struct CommandPalleteDialog {
+    #[shrinkwrap(main_field)]
+    widgets: CommandPalleteDialogWidgets,
+
     scripts: Rc<RefCell<Vec<Executor>>>,
 }
 
 impl CommandPalleteDialog {
     pub fn new<P: IsA<Window>>(window: &P, scripts: Rc<RefCell<Vec<Executor>>>) -> Self {
-        let dialog_glade = include_str!("../ui/command-pallete.glade");
-        let builder = gtk::Builder::new_from_string(dialog_glade);
+        let widgets =
+            CommandPalleteDialogWidgets::from_string(include_str!("../ui/command-pallete.glade"));
 
         let command_pallete_dialog = CommandPalleteDialog {
-            dialog: builder.get_object("dialog").unwrap(),
-            dialog_tree_view: builder.get_object("dialog_tree_view").unwrap(),
-            search_bar: builder.get_object("search_bar").unwrap(),
+            widgets,
             scripts: scripts.clone(),
         };
 
-        command_pallete_dialog
-            .dialog
-            .set_transient_for(Some(window));
+        command_pallete_dialog.set_transient_for(Some(window));
 
         // create list store
         {
             let store = gtk::ListStore::new(&COLUMN_TYPES);
 
+            store.set_sort_column_id(
+                gtk::SortColumn::Index(SCORE_COLUMN),
+                gtk::SortType::Descending,
+            );
+
+            let filtered_store = gtk::TreeModelFilter::new(&store, None);
+            filtered_store.set_visible_column(VISIBLE_COLUMN as i32);
+
             // icon column
             {
                 let renderer = gtk::CellRendererPixbuf::new();
-                renderer.set_padding(8, 0);
+                renderer.set_padding(ICON_COLUMN_PADDING, ICON_COLUMN_PADDING);
+                renderer.set_property_stock_size(gtk::IconSize::Dnd);
 
                 let column = gtk::TreeViewColumn::new();
                 column.pack_start(&renderer, false);
@@ -64,9 +89,12 @@ impl CommandPalleteDialog {
             {
                 let renderer = gtk::CellRendererText::new();
                 renderer.set_property_wrap_mode(pango::WrapMode::Word);
+                renderer.set_property_wrap_width(TEXT_COLUMN_WIDTH - 8); // -8 to account for padding
 
                 let column = gtk::TreeViewColumn::new();
                 column.pack_start(&renderer, true);
+                column.set_sizing(gtk::TreeViewColumnSizing::Autosize);
+                column.set_max_width(TEXT_COLUMN_WIDTH);
                 column.add_attribute(&renderer, "markup", TEXT_COLUMN as i32);
 
                 command_pallete_dialog
@@ -74,20 +102,25 @@ impl CommandPalleteDialog {
                     .append_column(&column);
             }
 
+            #[cfg(debug_assertions)]
+            {
+                for c in &[ID_COLUMN, SCORE_COLUMN] {
+                    let renderer = gtk::CellRendererText::new();
+
+                    let column = gtk::TreeViewColumn::new();
+                    column.pack_start(&renderer, false);
+                    column.add_attribute(&renderer, "markup", *c as i32);
+
+                    command_pallete_dialog
+                        .dialog_tree_view
+                        .append_column(&column);
+                }
+            }
+
             for script in scripts.borrow().iter() {
-                let icon_name = String::from(match script.script().metadata().icon.as_str() {
-                    "broom" => "draw-eraser",
-                    "counter" => "cm_markplus",
-                    "fingerprint" => "auth-fingerprint-symbolic",
-                    "flip" => "object-flip-verical",
-                    "html" => "format-text-code",
-                    "link" => "edit-link",
-                    "metamorphose" => "shapes",
-                    "quote" => "format-text-blockquote",
-                    "table" => "table",
-                    "watch" => "view-calendar-time-spent",
-                    _ => "fcitx-remind-active",
-                });
+                let mut icon_name = script.script().metadata().icon.to_lowercase();
+                icon_name.insert_str(0, "boop-gtk-");
+                icon_name.push_str("-symbolic");
 
                 let entry_text = format!(
                     "<b>{}</b>\n<span size=\"smaller\">{}</span>",
@@ -95,18 +128,21 @@ impl CommandPalleteDialog {
                     script.script().metadata().description.to_string()
                 );
 
-                let values: [&dyn ToValue; 3] = [&icon_name, &entry_text, &script.script().id];
+                let id = script.script().id;
+
+                let values: [&dyn ToValue; 5] =
+                    [&icon_name, &entry_text, &id, &(-(id as i64)), &true];
                 store.set(&store.append(), &COLUMNS, &values);
             }
 
             command_pallete_dialog
                 .dialog_tree_view
-                .set_model(Some(&store));
+                .set_model(Some(&filtered_store));
         }
 
         // select first row
         command_pallete_dialog.dialog_tree_view.set_cursor(
-            &gtk::TreePath::new_first(),
+            &TreePath::new_first(),
             gtk::NONE_TREE_VIEW_COLUMN,
             false,
         );
@@ -133,26 +169,25 @@ impl CommandPalleteDialog {
     }
 
     fn on_key_press(key: &EventKey, dialog_tree_view: &TreeView, dialog: &Dialog) -> Inhibit {
-        let model: gtk::ListStore = dialog_tree_view.get_model().unwrap().downcast().unwrap();
+        let model: gtk::TreeModelFilter = dialog_tree_view.get_model().unwrap().downcast().unwrap();
         let result_count: i32 = model.iter_n_children(None);
 
         let key = key.get_keyval();
-
-        if key == key::Up || key == key::Down {
+        if key == keys::constants::Up || key == keys::constants::Down {
             if let (Some(mut path), _) = dialog_tree_view.get_cursor() {
                 let index: i32 = path.get_indices()[0];
 
                 match key {
-                    key::Up => {
+                    keys::constants::Up => {
                         if index == 0 {
-                            path = gtk::TreePath::new_from_indicesv(&[result_count - 1]);
+                            path = TreePath::from_indicesv(&[result_count - 1]);
                         } else {
                             path.prev();
                         }
                     }
-                    key::Down => {
+                    keys::constants::Down => {
                         if index >= result_count - 1 {
-                            path = gtk::TreePath::new_first();
+                            path = TreePath::new_first();
                         } else {
                             path.next();
                         }
@@ -164,17 +199,17 @@ impl CommandPalleteDialog {
             }
 
             return Inhibit(true);
-        } else if key == key::Return {
+        } else if key == keys::constants::Return {
             CommandPalleteDialog::on_click(dialog_tree_view, dialog);
-        } else if key == key::Escape {
-            dialog.destroy();
+        } else if key == keys::constants::Escape {
+            dialog.close();
         }
 
         Inhibit(false)
     }
 
     fn on_click(dialog_tree_view: &TreeView, dialog: &Dialog) {
-        let model: gtk::ListStore = dialog_tree_view.get_model().unwrap().downcast().unwrap();
+        let model: gtk::TreeModelFilter = dialog_tree_view.get_model().unwrap().downcast().unwrap();
 
         if let (Some(path), _) = dialog_tree_view.get_cursor() {
             let value = model.get_value(&model.get_iter(&path).unwrap(), ID_COLUMN as i32);
@@ -188,76 +223,66 @@ impl CommandPalleteDialog {
         dialog_tree_view: &TreeView,
         scripts: Rc<RefCell<Vec<Executor>>>,
     ) {
-        let model: gtk::ListStore = dialog_tree_view.get_model().unwrap().downcast().unwrap();
-        model.clear();
+        let filter_store: gtk::TreeModelFilter =
+            dialog_tree_view.get_model().unwrap().downcast().unwrap();
+        let store: gtk::ListStore = filter_store.get_model().unwrap().downcast().unwrap();
 
-        let searchbar_text = searchbar
-            .get_text()
-            .map(|s| s.to_string())
-            .unwrap_or_else(String::new);
+        // stop sorting
+        // otherwise updating rows will trigger a sort making iterating over all rows difficult
+        store.set_unsorted();
 
-        let search_results: Vec<Script> = if searchbar_text.is_empty() {
-            scripts
-                .borrow()
-                .iter()
-                .map(|s| s.script())
-                .cloned()
-                .collect()
-        } else {
-            let mut scored_scripts = scripts
-                .borrow()
-                .iter()
-                .map(|script| {
-                    let mut search =
-                        FuzzySearch::new(&searchbar_text, &script.script().metadata().name, true);
-                    search.set_score_config(SEARCH_CONFIG);
+        let searchbar_text = searchbar.get_text().to_owned();
 
-                    let score = search.best_match().map(|m| m.score()).unwrap_or(0);
-                    (script.script().clone(), score)
-                })
-                .filter(|(_, score)| *score > 0)
-                .collect::<Vec<(Script, isize)>>();
+        // score each script using search text
+        let script_to_score = scripts
+            .borrow()
+            .iter()
+            .map(|script| {
+                let mut search =
+                    FuzzySearch::new(&searchbar_text, &script.script().metadata().name, true);
+                search.set_score_config(SEARCH_CONFIG);
 
-            scored_scripts.sort_by_key(|(_, score)| *score);
+                let score = search.best_match().map(|m| m.score()).unwrap_or(-1000);
+                (script.script().id as u64, score)
+            })
+            .collect::<HashMap<u64, isize>>();
 
-            scored_scripts
-                .into_iter()
-                .map(|(script, _)| script)
-                .collect()
-        };
+        let script_count = store.iter_n_children(None);
+        for i in 0..script_count {
+            let mut path = gtk::TreePath::new();
+            path.append_index(i);
 
-        for script in &search_results {
-            let icon_name = String::from(match script.metadata().icon.as_str() {
-                "broom" => "draw-eraser",
-                "counter" => "cm_markplus",
-                "fingerprint" => "auth-fingerprint-symbolic",
-                "flip" => "object-flip-verical",
-                "html" => "format-text-code",
-                "link" => "edit-link",
-                "metamorphose" => "shapes",
-                "quote" => "format-text-blockquote",
-                "table" => "table",
-                "watch" => "view-calendar-time-spent",
-                _ => "fcitx-remind-active",
-            });
+            let iter = store.get_iter(&path).unwrap();
 
-            let entry_text = format!(
-                "<b>{}</b>\n<span size=\"smaller\">{}</span>",
-                script.metadata().name.to_string(),
-                script.metadata().description.to_string()
-            );
+            let script_id: u64 = store
+                .get_value(&iter, ID_COLUMN as i32)
+                .get()
+                .unwrap()
+                .unwrap();
 
-            let values: [&dyn ToValue; 3] = [&icon_name, &entry_text, &script.id];
-            model.set(&model.append(), &COLUMNS, &values);
+            let score = if searchbar_text.is_empty() {
+                -(script_id as i64) // alphabetical sort
+            } else {
+                script_to_score[&script_id] as i64
+            };
+
+            let is_visible = if searchbar_text.is_empty() {
+                true
+            } else {
+                score > 0
+            };
+
+            let values: [&dyn ToValue; 2] = [&score, &is_visible];
+            store.set(&iter, &[SCORE_COLUMN, VISIBLE_COLUMN], &values);
         }
 
-        // reset selection to first row
-        dialog_tree_view.set_cursor(
-            &gtk::TreePath::new_first(),
-            gtk::NONE_TREE_VIEW_COLUMN,
-            false,
+        // start sorting again
+        store.set_sort_column_id(
+            gtk::SortColumn::Index(SCORE_COLUMN),
+            gtk::SortType::Descending,
         );
 
-        dialog_tree_view.show_all();
+        // reset selection to first row
+        dialog_tree_view.set_cursor(&TreePath::new_first(), gtk::NONE_TREE_VIEW_COLUMN, false);
     }
 }
