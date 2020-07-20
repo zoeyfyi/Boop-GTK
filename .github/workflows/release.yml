@@ -49,7 +49,7 @@ jobs:
           ~/.cargo/git
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-    # if there was a cache miss, clone
+    # clone gvsbuild
     - name: gvsbuild
       run: git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
     # remove git's bin, there are conflicting cygwin dll's
@@ -62,9 +62,10 @@ jobs:
       working-directory: C:\gtk-build\github\gvsbuild
     # build
     - name: build
-      run: .\windows\build.ps1; cargo build --release --all-features
+      run: cargo build --release --all-features
       env:
-        RUSTFLAGS: -L C:\gtk-build\gtk\x64\release\lib
+        GTKSOURCEVIEW_3.0_NO_PKG_CONFIG: 1
+        SYSTEM_DEPS_GTKSOURCEVIEW_3.0_LIB: gtksourceview-3.0
     # download icons from MSYS since gcsbuild icons are broken
     - name: download icons
       run: C:\msys64\usr\bin\bash.exe -lc "pacman -S --noconfirm mingw-w64-x86_64-adwaita-icon-theme"
