@@ -103,18 +103,18 @@ jobs:
     - uses: actions/cache@v2
       id: cache
       with:
-        path: lib\**
-        key: ${{ runner.os }}-gvsbuild-${{ hashFiles('**/commit.txt') }}
-    - name: make library directory
-      run: mkdir C:\gtk-build\gtk\x64\release\lib
+        path: release\**
+        key: ${{ runner.os }}-gvsbuild--${{ hashFiles('**/commit.txt') }}
+    - name: make release directory
+      run: mkdir C:\gtk-build\gtk\x64\release
       shell: cmd
       if: steps.cache.outputs.cache-hit == 'true'
-    - name: move lib files
-      run: xcopy /e /i lib C:\gtk-build\gtk\x64\release\lib
+    - name: move release files
+      run: xcopy /e /i release C:\gtk-build\gtk\x64\release
       shell: cmd
       if: steps.cache.outputs.cache-hit == 'true'
     - name: debug tree
-      run: tree C:\gtk-build\gtk\x64\release\lib
+      run: tree C:\gtk-build\gtk\x64\release
       shell: cmd
       if: steps.cache.outputs.cache-hit == 'true'
     # if there was a cache miss, clone
@@ -130,23 +130,27 @@ jobs:
       run: python .\build.py build -p=x64 --vs-ver=16 --msys-dir=C:\msys64 -k --enable-gi --py-wheel --py-egg gtk3 gdk-pixbuf gtksourceview3
       working-directory: C:\gtk-build\github\gvsbuild
       if: steps.cache.outputs.cache-hit != 'true'
+    - name: Add gvsbuild bin directory to Path
+      run: echo "::add-path::C:\gtk-build\gtk\x64\release\bin"
     # build
     - name: build
-      run: .\windows\build.ps1; cargo build
+      run: cargo build
       env:
-        RUSTFLAGS: -L C:\gtk-build\gtk\x64\release\lib
+        GTKSOURCEVIEW_3.0_NO_PKG_CONFIG: 1
+        SYSTEM_DEPS_GTKSOURCEVIEW_3.0_LIB: gtksourceview-3.0
     # test
     - name: test
-      run: .\windows\build.ps1; cargo test -- --nocapture
+      run: cargo test -- --nocapture
       env:
-        RUSTFLAGS: -L C:\gtk-build\gtk\x64\release\lib
+        GTKSOURCEVIEW_3.0_NO_PKG_CONFIG: 1
+        SYSTEM_DEPS_GTKSOURCEVIEW_3.0_LIB: gtksourceview-3.0
     # copy lib files for cacheing
-    - name: make lib folder
-      run: mkdir lib
+    - name: make release folder
+      run: mkdir release
       shell: cmd
       if: steps.cache.outputs.cache-hit != 'true'
-    - name: move lib files
-      run: xcopy /e /i C:\gtk-build\gtk\x64\release\lib %cd%\lib
+    - name: move release files
+      run: xcopy /e /i C:\gtk-build\gtk\x64\release %cd%\release
       shell: cmd
       if: steps.cache.outputs.cache-hit != 'true'
     
