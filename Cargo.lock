@@ -434,9 +434,9 @@ dependencies = [
 
 [[package]]
 name = "gladis"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e16fa70c78ccb08f9d765eda82e5e017363d93ce715559413b3e211a708125ae"
+checksum = "15339ada61f19cde3c1e5c7f3b05feb6502187b70e0629e4abc12c3ddcd0d326"
 dependencies = [
  "gtk",
 ]
