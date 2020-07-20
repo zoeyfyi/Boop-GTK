@@ -60,6 +60,8 @@ jobs:
     - name: GTK development librarys
       run: python .\build.py build -p=x64 --vs-ver=16 --msys-dir=C:\msys64 -k --enable-gi --py-wheel --py-egg gtk3 gdk-pixbuf gtksourceview3
       working-directory: C:\gtk-build\github\gvsbuild
+    - name: Add gvsbuild bin directory to Path
+      run: echo "::add-path::C:\gtk-build\gtk\x64\release\bin"
     # build
     - name: build
       run: cargo build --release --all-features
