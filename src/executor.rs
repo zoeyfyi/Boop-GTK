@@ -684,8 +684,41 @@ mod tests {
                     ParseScriptError::NoMetadata => {
                         assert!(file.starts_with("lib/")); // only library files should fail
                     }
-                    ParseScriptError::InvalidMetadata(_) => assert!(false),
+                    ParseScriptError::InvalidMetadata(e) => panic!(e),
                 },
+            }
+        }
+    }
+
+    #[test]
+    fn test_extra_scripts() {
+        let _guard = setup();
+
+        use rust_embed::RustEmbed;
+
+        #[derive(RustEmbed)]
+        #[folder = "submodules/Boop/Scripts/"]
+        struct Scripts;
+
+        for file in Scripts::iter() {
+            if !file.ends_with(".js") {
+                continue; // not a javascript file
+            }
+
+            println!("testing {}", file);
+
+            let source: Cow<'static, [u8]> = Scripts::get(&file).unwrap();
+            let script_source = String::from_utf8(source.to_vec()).unwrap();
+
+            match Script::from_source(script_source) {
+                Ok(script) => {
+                    let mut executor = Executor::new(script);
+                    executor.execute(
+                        "foobar ♈ ♉ ♊ ♋ ♌ ♍ ♎ ♏ ♐ ♑ ♒ ♓ 😁 😝 😋 😄",
+                        None,
+                    );
+                }
+                Err(e) => panic!(e),
             }
         }
     }
