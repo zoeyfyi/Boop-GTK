@@ -188,16 +188,31 @@ impl Executor {
         // complile and run script
         let code = v8::String::new(scope, script.source()).unwrap();
         let compiled_script = v8::Script::compile(scope, code, None).unwrap();
-        compiled_script.run(scope).unwrap();
+
+        let tc_scope = &mut v8::TryCatch::new(scope);
+        let result = compiled_script.run(tc_scope);
+
+        if result.is_none() {
+            assert!(tc_scope.has_caught());
+            let exception = tc_scope.exception().unwrap();
+
+            error!(
+                "<<JS EXCEPTION>> {}",
+                exception
+                    .to_string(tc_scope)
+                    .unwrap()
+                    .to_rust_string_lossy(tc_scope),
+            );
+        }
 
         // extract main function
-        let main_key = v8::String::new(scope, "main").unwrap();
+        let main_key = v8::String::new(tc_scope, "main").unwrap();
         let main_function =
-            v8::Local::<v8::Function>::try_from(global.get(scope, main_key.into()).unwrap())
+            v8::Local::<v8::Function>::try_from(global.get(tc_scope, main_key.into()).unwrap())
                 .unwrap();
-        let main_function = v8::Global::new(scope, main_function);
+        let main_function = v8::Global::new(tc_scope, main_function);
 
-        (scope.escape(context), main_function)
+        (tc_scope.escape(context), main_function)
     }
 
     fn initialize_isolate(&mut self) {
@@ -313,11 +328,22 @@ impl Executor {
                 payload.set(scope, insert_key.into(), insert_val.into());
             }
 
-            state_slot.main_function.as_ref().unwrap().get(scope).call(
-                scope,
-                payload.into(),
-                &[payload.into()],
-            );
+            let main_function = state_slot.main_function.as_ref().unwrap().get(scope);
+            let tc_scope = &mut v8::TryCatch::new(scope);
+            let result = main_function.call(tc_scope, payload.into(), &[payload.into()]);
+
+            if result.is_none() {
+                assert!(tc_scope.has_caught());
+                let exception = tc_scope.exception().unwrap();
+
+                error!(
+                    "<<JS EXCEPTION>> {}",
+                    exception
+                        .to_string(tc_scope)
+                        .unwrap()
+                        .to_rust_string_lossy(tc_scope),
+                );
+            }
         }
 
         // extract execution status
@@ -359,9 +385,25 @@ impl Executor {
 
                 let code = v8::String::new(scope, &source).unwrap();
                 let compiled_script = v8::Script::compile(scope, code, None).unwrap();
-                let export = compiled_script.run(scope).unwrap();
 
-                rv.set(export);
+                let tc_scope = &mut v8::TryCatch::new(scope);
+                let export = compiled_script.run(tc_scope);
+
+                match export {
+                    Some(export) => rv.set(export),
+                    None => {
+                        assert!(tc_scope.has_caught());
+                        let exception = tc_scope.exception().unwrap();
+
+                        error!(
+                            "<<JS EXCEPTION>> {}",
+                            exception
+                                .to_string(tc_scope)
+                                .unwrap()
+                                .to_rust_string_lossy(tc_scope),
+                        );
+                    }
+                }
             }
             Err(e) => {
                 warn!("problem requiring script, {}", e);
