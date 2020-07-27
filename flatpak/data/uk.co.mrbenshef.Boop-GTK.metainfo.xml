@@ -17,6 +17,14 @@
   <url type="homepage">https://boop-gtk.mrbenshef.co.uk/</url>
   <content_rating type="oars-1.0" />
   <releases>
+    <release version="0.2.1" date="2020-07-28">
+      <description>
+        <ul>
+          <li>Fix JWT decoder script (see https://github.com/IvanMathy/Boop/releases/tag/1.2.1).</li>
+          <li>Remove unsafe Rust sections</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.0" date="2020-07-20">
       <description>
         <ul>
