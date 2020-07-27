@@ -43,11 +43,11 @@ pub struct CommandPalleteDialog {
     #[shrinkwrap(main_field)]
     widgets: CommandPalleteDialogWidgets,
 
-    scripts: Rc<RefCell<Vec<Executor<'static>>>>,
+    scripts: Rc<RefCell<Vec<Executor>>>,
 }
 
 impl CommandPalleteDialog {
-    pub fn new<P: IsA<Window>>(window: &P, scripts: Rc<RefCell<Vec<Executor<'static>>>>) -> Self {
+    pub fn new<P: IsA<Window>>(window: &P, scripts: Rc<RefCell<Vec<Executor>>>) -> Self {
         let widgets =
             CommandPalleteDialogWidgets::from_string(include_str!("../ui/command-pallete.glade"));
 

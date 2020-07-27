@@ -2,7 +2,7 @@ use crate::{script::Script, Scripts, PROJECT_DIRS};
 use dirty2::Dirty;
 use rusty_v8 as v8;
 use simple_error::SimpleError;
-use std::{cell::RefCell, fs::File, io::Read, marker::PhantomData, ptr, rc::Rc};
+use std::{cell::RefCell, convert::TryFrom, fs::File, io::Read, rc::Rc};
 
 static BOOP_WRAPPER_START: &str = "
 /***********************************
@@ -38,18 +38,14 @@ static BOOP_WRAPPER_END: &str = "
 ***********************************/
 ";
 
-pub struct Executor<'a> {
-    // v8
-    is_v8_initalized: bool,
-    isolate: *mut v8::OwnedIsolate,
-    handle_scope: *mut v8::HandleScope<'static, ()>,
-    context: *mut v8::Local<'static, v8::Context>,
-    scope: *mut v8::ContextScope<'static, v8::HandleScope<'static, v8::Context>>,
-    phantom: PhantomData<&'a ()>,
-
-    // script
+pub struct Executor {
+    isolate: Option<v8::OwnedIsolate>,
     script: Script,
-    main_function: *mut v8::Local<'static, v8::Function>,
+}
+
+struct ExecutorState {
+    global_context: Option<v8::Global<v8::Context>>,
+    main_function: Option<v8::Global<v8::Function>>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -123,17 +119,11 @@ pub enum TextReplacement {
     None,
 }
 
-impl<'a> Executor<'a> {
+impl Executor {
     pub fn new(script: Script) -> Self {
         Executor {
-            is_v8_initalized: false,
-            isolate: ptr::null_mut(),
-            handle_scope: ptr::null_mut(),
-            context: ptr::null_mut(),
-            scope: ptr::null_mut(),
-            phantom: PhantomData,
+            isolate: None,
             script,
-            main_function: ptr::null_mut(),
         }
     }
 
@@ -180,6 +170,169 @@ impl<'a> Executor<'a> {
             .map_err(|e| SimpleError::with("problem reading file", e))?;
 
         Ok(raw_source)
+    }
+
+    fn initialize_context<'s>(
+        script: &Script,
+        scope: &mut v8::HandleScope<'s, ()>,
+    ) -> (v8::Local<'s, v8::Context>, v8::Global<v8::Function>) {
+        let scope = &mut v8::EscapableHandleScope::new(scope);
+        let context = v8::Context::new(scope);
+        let global = context.global(scope);
+        let scope = &mut v8::ContextScope::new(scope, context);
+
+        let require_key = v8::String::new(scope, "require").unwrap();
+        let require_val = v8::Function::new(scope, Executor::global_require).unwrap();
+        global.set(scope, require_key.into(), require_val.into());
+
+        // complile and run script
+        let code = v8::String::new(scope, script.source()).unwrap();
+        let compiled_script = v8::Script::compile(scope, code, None).unwrap();
+        compiled_script.run(scope).unwrap();
+
+        // extract main function
+        let main_key = v8::String::new(scope, "main").unwrap();
+        let main_function =
+            v8::Local::<v8::Function>::try_from(global.get(scope, main_key.into()).unwrap())
+                .unwrap();
+        let main_function = v8::Global::new(scope, main_function);
+
+        (scope.escape(context), main_function)
+    }
+
+    fn initialize_isolate(&mut self) {
+        assert!(self.isolate.is_none());
+
+        info!("initalizing isolate for {}", self.script().metadata().name);
+
+        // set up execution context
+        let mut isolate = v8::Isolate::new(Default::default());
+        let (global_context, main_function) = {
+            let scope = &mut v8::HandleScope::new(&mut isolate);
+            // let context = v8::Context::new(scope);
+            let (context, main_function) = Executor::initialize_context(&self.script, scope);
+            (v8::Global::new(scope, context), main_function)
+        };
+
+        // set status slot, stores execution infomation
+        let status_slot: Rc<RefCell<ExecutionStatus>> =
+            Rc::new(RefCell::new(ExecutionStatus::default()));
+        isolate.set_slot(status_slot);
+
+        // set state slot, stores v8 details
+        let state_slot: Rc<RefCell<ExecutorState>> = Rc::new(RefCell::new(ExecutorState {
+            global_context: Some(global_context),
+            main_function: Some(main_function),
+        }));
+        isolate.set_slot(state_slot);
+
+        self.isolate = Some(isolate);
+    }
+
+    pub fn execute(&mut self, full_text: &str, selection: Option<&str>) -> ExecutionStatus {
+        if self.isolate.is_none() {
+            self.initialize_isolate();
+        }
+
+        // setup execution status
+        {
+            let isolate = self.isolate.as_ref().unwrap();
+
+            let status_slot = isolate
+                .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
+                .unwrap();
+
+            let mut status = status_slot.borrow_mut();
+
+            status.reset();
+            *status.full_text.write() = full_text.to_string();
+            status.full_text.clear();
+            *status.text.write() = selection.unwrap_or(full_text).to_string();
+            status.text.clear();
+            *status.selection.write() = selection.unwrap_or("").to_string();
+            status.selection.clear();
+        }
+
+        // prepare payload and execute main
+        // TODO: use ObjectTemplate, problem: rusty_v8 doesn't have set_accessor_with_setter or even set_accessor for
+        // object templates
+        {
+            let isolate = self.isolate.as_mut().unwrap();
+
+            let state_slot = isolate
+                .get_slot_mut::<Rc<RefCell<ExecutorState>>>()
+                .unwrap()
+                .clone();
+            let state_slot = state_slot.borrow();
+
+            let context = state_slot.global_context.as_ref().unwrap();
+            let scope = &mut v8::HandleScope::with_context(isolate, context);
+
+            // payload is the object passed into function main
+            let payload = v8::Object::new(scope);
+
+            // getter/setters: full_text, text, selection
+            {
+                let full_text_key = v8::String::new(scope, "fullText").unwrap();
+                let text_key = v8::String::new(scope, "text").unwrap();
+                let selection_key = v8::String::new(scope, "selection").unwrap();
+
+                payload.set_accessor_with_setter(
+                    scope,
+                    full_text_key.into(),
+                    Executor::payload_full_text_getter,
+                    Executor::payload_full_text_setter,
+                );
+                payload.set_accessor_with_setter(
+                    scope,
+                    text_key.into(),
+                    Executor::payload_text_getter,
+                    Executor::payload_text_setter,
+                );
+                payload.set_accessor_with_setter(
+                    scope,
+                    selection_key.into(),
+                    Executor::payload_selection_getter,
+                    Executor::payload_selection_setter,
+                );
+            }
+
+            // functions: post_info, post_error, insert
+            {
+                let post_info_key = v8::String::new(scope, "postInfo").unwrap();
+                let post_error_key = v8::String::new(scope, "postError").unwrap();
+                let insert_key = v8::String::new(scope, "insert").unwrap();
+
+                let post_info_val = v8::Function::new(scope, Executor::payload_post_info).unwrap();
+                let post_error_val =
+                    v8::Function::new(scope, Executor::payload_post_error).unwrap();
+                let insert_val = v8::Function::new(scope, Executor::payload_insert).unwrap();
+
+                payload.set(scope, post_info_key.into(), post_info_val.into());
+                payload.set(scope, post_error_key.into(), post_error_val.into());
+                payload.set(scope, insert_key.into(), insert_val.into());
+            }
+
+            state_slot.main_function.as_ref().unwrap().get(scope).call(
+                scope,
+                payload.into(),
+                &[payload.into()],
+            );
+        }
+
+        // extract execution status
+        {
+            let status_slot = self
+                .isolate
+                .as_ref()
+                .unwrap()
+                .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
+                .unwrap();
+
+            let status = (status_slot).borrow();
+
+            status.clone()
+        }
     }
 
     fn global_require(
@@ -397,159 +550,6 @@ impl<'a> Executor<'a> {
         let selection = slot.selection.write();
 
         *selection = new_value;
-    }
-
-    unsafe fn initalize_v8(&mut self) {
-        assert!(!self.is_v8_initalized);
-        assert!(self.isolate.is_null());
-        assert!(self.handle_scope.is_null());
-        assert!(self.context.is_null());
-        assert!(self.scope.is_null());
-
-        info!("initalizing isolate for {}", self.script().metadata().name);
-
-        // set up execution context
-        self.isolate = Box::into_raw(Box::new(v8::Isolate::new(Default::default())));
-        self.handle_scope = Box::into_raw(Box::new(v8::HandleScope::new(&mut *self.isolate)));
-        self.context = Box::into_raw(Box::new(v8::Context::new(&mut *self.handle_scope)));
-        self.scope = Box::into_raw(Box::new(v8::ContextScope::new(
-            &mut *self.handle_scope,
-            *self.context,
-        )));
-
-        let status_slot: Rc<RefCell<ExecutionStatus>> =
-            Rc::new(RefCell::new(ExecutionStatus::default()));
-        self.isolate.as_mut().unwrap().set_slot(status_slot);
-
-        // add require to global scope
-        let require = v8::Function::new(&mut *self.scope, Executor::global_require).unwrap();
-
-        let key_require = v8::String::new(&mut *self.scope, "require").unwrap();
-
-        (&*self.context).global(&mut *self.scope).set(
-            &mut *self.scope,
-            key_require.into(),
-            require.into(),
-        );
-
-        // complile and run script
-        let code = v8::String::new(&mut *self.scope, self.script.source()).unwrap();
-        let compiled_script = v8::Script::compile(&mut *self.scope, code, None).unwrap();
-        compiled_script.run(&mut *self.scope).unwrap();
-
-        // extract main function
-        let function_name = v8::String::new(&mut *self.scope, "main").unwrap();
-        self.main_function = {
-            Box::into_raw(Box::new(v8::Local::cast(
-                (*self.context)
-                    .global(&mut *self.scope)
-                    .get(&mut *self.scope, function_name.into())
-                    .unwrap(),
-            )))
-        };
-
-        self.is_v8_initalized = true;
-    }
-
-    unsafe fn internal_execute(
-        &mut self,
-        full_text: &str,
-        selection: Option<&str>,
-    ) -> ExecutionStatus {
-        if !self.is_v8_initalized {
-            self.initalize_v8();
-        }
-
-        // setup execution status
-        {
-            let isolate = self.isolate.as_ref().unwrap();
-
-            let slot = isolate
-                .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
-                .unwrap();
-
-            let mut status = slot.borrow_mut();
-
-            status.reset();
-            *status.full_text.write() = full_text.to_string();
-            status.full_text.clear();
-            *status.text.write() = selection.unwrap_or(full_text).to_string();
-            status.text.clear();
-            *status.selection.write() = selection.unwrap_or("").to_string();
-            status.selection.clear();
-        }
-
-        // prepare payload
-        // TODO: use ObjectTemplate, problem: rusty_v8 doesn't have set_accessor_with_setter or even set_accessor for
-        // object templates
-        let payload = v8::Object::new(&mut *self.scope);
-
-        let key_full_text = v8::String::new(&mut *self.scope, "fullText").unwrap();
-        let key_text = v8::String::new(&mut *self.scope, "text").unwrap();
-        let key_selection = v8::String::new(&mut *self.scope, "selection").unwrap();
-        let key_post_info = v8::String::new(&mut *self.scope, "postInfo").unwrap();
-        let key_post_error = v8::String::new(&mut *self.scope, "postError").unwrap();
-        let key_insert = v8::String::new(&mut *self.scope, "insert").unwrap();
-
-        let post_info = v8::Function::new(&mut *self.scope, Executor::payload_post_info).unwrap();
-        let post_error = v8::Function::new(&mut *self.scope, Executor::payload_post_error).unwrap();
-        let insert = v8::Function::new(&mut *self.scope, Executor::payload_insert).unwrap();
-
-        payload.set_accessor_with_setter(
-            &mut *self.scope,
-            key_full_text.into(),
-            Executor::payload_full_text_getter,
-            Executor::payload_full_text_setter,
-        );
-        payload.set_accessor_with_setter(
-            &mut *self.scope,
-            key_text.into(),
-            Executor::payload_text_getter,
-            Executor::payload_text_setter,
-        );
-        payload.set_accessor_with_setter(
-            &mut *self.scope,
-            key_selection.into(),
-            Executor::payload_selection_getter,
-            Executor::payload_selection_setter,
-        );
-
-        payload.set(&mut *self.scope, key_post_info.into(), post_info.into());
-        payload.set(&mut *self.scope, key_post_error.into(), post_error.into());
-        payload.set(&mut *self.scope, key_insert.into(), insert.into());
-
-        // call main
-        { &mut *self.main_function }.call(&mut *self.scope, payload.into(), &[payload.into()]);
-
-        let status_slot = self
-            .isolate
-            .as_ref()
-            .unwrap()
-            .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
-            .unwrap();
-
-        let status = (status_slot).borrow();
-
-        status.clone()
-    }
-
-    pub fn execute(&mut self, full_text: &str, selection: Option<&str>) -> ExecutionStatus {
-        unsafe { self.internal_execute(full_text, selection) }
-    }
-}
-
-impl<'a> Drop for Executor<'a> {
-    fn drop(&mut self) {
-        if !self.is_v8_initalized {
-            return;
-        }
-
-        unsafe {
-            Box::from_raw(self.scope);
-            Box::from_raw(self.context);
-            Box::from_raw(self.handle_scope);
-            Box::from_raw(self.isolate);
-        }
     }
 }
 
