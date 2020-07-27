@@ -2,7 +2,7 @@ use crate::{script::Script, Scripts, PROJECT_DIRS};
 use dirty2::Dirty;
 use rusty_v8 as v8;
 use simple_error::SimpleError;
-use std::{cell::RefCell, fs::File, io::Read, ptr, rc::Rc};
+use std::{cell::RefCell, fs::File, io::Read, marker::PhantomData, ptr, rc::Rc};
 
 static BOOP_WRAPPER_START: &str = "
 /***********************************
@@ -38,13 +38,14 @@ static BOOP_WRAPPER_END: &str = "
 ***********************************/
 ";
 
-pub struct Executor {
+pub struct Executor<'a> {
     // v8
     is_v8_initalized: bool,
     isolate: *mut v8::OwnedIsolate,
     handle_scope: *mut v8::HandleScope<'static, ()>,
     context: *mut v8::Local<'static, v8::Context>,
     scope: *mut v8::ContextScope<'static, v8::HandleScope<'static, v8::Context>>,
+    phantom: PhantomData<&'a ()>,
 
     // script
     script: Script,
@@ -122,7 +123,7 @@ pub enum TextReplacement {
     None,
 }
 
-impl Executor {
+impl<'a> Executor<'a> {
     pub fn new(script: Script) -> Self {
         Executor {
             is_v8_initalized: false,
@@ -130,6 +131,7 @@ impl Executor {
             handle_scope: ptr::null_mut(),
             context: ptr::null_mut(),
             scope: ptr::null_mut(),
+            phantom: PhantomData,
             script,
             main_function: ptr::null_mut(),
         }
@@ -536,7 +538,7 @@ impl Executor {
     }
 }
 
-impl Drop for Executor {
+impl<'a> Drop for Executor<'a> {
     fn drop(&mut self) {
         if !self.is_v8_initalized {
             return;

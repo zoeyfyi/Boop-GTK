@@ -37,11 +37,11 @@ pub struct App {
     widgets: AppWidgets,
 
     context_id: u32,
-    scripts: Rc<RefCell<Vec<Executor>>>,
+    scripts: Rc<RefCell<Vec<Executor<'static>>>>,
 }
 
 impl App {
-    pub fn new(config_dir: &Path, scripts: Rc<RefCell<Vec<Executor>>>) -> Self {
+    pub fn new(config_dir: &Path, scripts: Rc<RefCell<Vec<Executor<'static>>>>) -> Self {
         let mut app = App {
             widgets: AppWidgets::from_string(include_str!("../ui/boop-gtk.glade")),
             context_id: 0,
