@@ -149,6 +149,28 @@ jobs:
         name: boop-gtk.flatpak
         path: ./boop-gtk.flatpak
 
+  release-cargo:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
+    # cache cargo
+    - uses: actions/cache@v2
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - name: GTK development librarys
+      run: sudo apt-get update -y && sudo apt-get install -y libgtk-3-dev libgtksourceview-3.0-dev
+    - name: cargo login
+      run: cargo login ${{ secrets.CRATES }}
+    - name: cargo publish
+      run: cargo publish
+
   release:
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' # don't do a release for pull requests into release, just upload artifacts to test

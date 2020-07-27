@@ -28,9 +28,9 @@ pub struct Metadata {
     pub api: u32,
     pub name: String,
     pub description: String,
-    pub author: String,
+    pub author: Option<String>,
     pub icon: String,
-    pub tags: String,
+    pub tags: Option<String>,
 }
 
 impl Script {
