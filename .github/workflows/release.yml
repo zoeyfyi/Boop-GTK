@@ -30,7 +30,7 @@ jobs:
       run: cargo build --release --all-features 
     - name: rename output
       run: mv target/release/boop-gtk ./boop-gtk.linux.amd64
-    - uses: actions/upload-artifact@2.1.0
+    - uses: actions/upload-artifact@v2.1.1
       with:
         name: boop-gtk.linux.amd64
         path: ./boop-gtk.linux.amd64
@@ -75,7 +75,7 @@ jobs:
     - name: create bundle
       run: cd windows && ./make-bundle.ps1
     # upload
-    - uses: actions/upload-artifact@2.1.0
+    - uses: actions/upload-artifact@v2.1.1
       with:
         name: boop-gtk.windows.zip
         path: ./windows/boop-gtk.windows.zip
@@ -100,7 +100,7 @@ jobs:
       run: cargo build --release --all-features 
     - name: rename output
       run: mv target/release/boop-gtk ./boop-gtk.macos
-    - uses: actions/upload-artifact@2.1.0
+    - uses: actions/upload-artifact@v2.1.1
       with:
         name: boop-gtk.macos
         path: ./boop-gtk.macos
@@ -115,7 +115,7 @@ jobs:
       id: snapcraft
     - name: rename output
       run: mv ${{ steps.snapcraft.outputs.snap }} ./boop-gtk.snap
-    - uses: actions/upload-artifact@2.1.0
+    - uses: actions/upload-artifact@v2.1.1
       with:
         name: boop-gtk.snap
         path: ./boop-gtk.snap
@@ -144,7 +144,7 @@ jobs:
       run: sudo flatpak-builder --repo=repo build-dir flatpak/uk.co.mrbenshef.Boop-GTK.json
     - name: Flatpak build bundle
       run: flatpak build-bundle ./repo boop-gtk.flatpak uk.co.mrbenshef.Boop-GTK
-    - uses: actions/upload-artifact@2.1.0
+    - uses: actions/upload-artifact@v2.1.1
       with:
         name: boop-gtk.flatpak
         path: ./boop-gtk.flatpak
