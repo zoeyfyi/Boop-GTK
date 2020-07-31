@@ -25,7 +25,7 @@ gdk = "0.13"
 gdk-pixbuf = "0.9"
 pango = "0.9"
 gladis = "0.2"
-gladis_proc_macro = "0.2"
+gladis_proc_macro = "0.4"
 rust-embed = { version = "5.6.0", features = ["debug-embed"] }
 rusty_v8 = "0.7"
 libc = "0.2.74"

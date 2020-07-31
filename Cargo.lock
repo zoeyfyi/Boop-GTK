@@ -444,11 +444,10 @@ dependencies = [
 
 [[package]]
 name = "gladis_proc_macro"
-version = "0.2.1"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2f073e5b8ca826a28185a6b5fb27032223afafbdef144839eb0f32588bfe88f"
+checksum = "908d518052267c3b59f7b13bfb9f2a73e72b179f7f15677676251df84869d3dd"
 dependencies = [
- "gladis",
  "quote",
  "syn",
 ]
