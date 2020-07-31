@@ -103,8 +103,8 @@ dependencies = [
  "gdk",
  "gdk-pixbuf",
  "gio",
- "gladis",
- "gladis_proc_macro",
+ "gladis 0.4.0",
+ "gladis_proc_macro 0.2.1",
  "glib",
  "gtk",
  "lazy_static",
@@ -443,12 +443,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "gladis"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "71d94b02d8b31a5cb962f26cebfd6afd7a43275802d69160848ad9d3a4433140"
+dependencies = [
+ "gladis_proc_macro 0.4.0",
+ "gtk",
+]
+
+[[package]]
 name = "gladis_proc_macro"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2f073e5b8ca826a28185a6b5fb27032223afafbdef144839eb0f32588bfe88f"
 dependencies = [
- "gladis",
+ "gladis 0.2.1",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "gladis_proc_macro"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "908d518052267c3b59f7b13bfb9f2a73e72b179f7f15677676251df84869d3dd"
+dependencies = [
  "quote",
  "syn",
 ]
