@@ -6,7 +6,6 @@ use simple_error::{bail, SimpleError};
 use std::{fmt, thread};
 
 pub struct Script {
-    pub id: u32,
     pub metadata: Metadata,
     source: String,
     channel: Option<ExecutorChannel>,
@@ -61,7 +60,6 @@ impl Script {
         Ok(Script {
             metadata,
             source,
-            id: 0,
             channel: None,
         })
     }

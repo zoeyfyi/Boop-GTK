@@ -240,6 +240,62 @@ fn extract_files() {
     }
 }
 
+// fn watch_scripts_folder(scripts: Rc<RefCell<Vec<Script>>>) {
+//     use notify::{RecommendedWatcher, RecursiveMode, Result, Watcher};
+
+//     trace!("watch_scripts_folder");
+
+//     // watch for changes to script folder
+//     let watcher: Result<RecommendedWatcher, _> = Watcher::new_immediate(move |res| match res {
+//         Ok(event) => {
+//             let event: notify::Event = event;
+
+//             for file in event.paths {
+//                 if !file.ends_with(".js") {
+//                     break; // only intrested in js files
+//                 }
+
+//                 // remove scripts that where deleted
+//                 scripts
+//                     .get_mut()
+//                     .drain_filter(|script| script.path == file);
+
+//                 if !file.exists() {
+//                     break;
+//                 }
+
+//                 match Script::from_path(file) {
+//                     Ok(script) => scripts.get_mut().unwrap().push(Executor::new(script)),
+//                     Err(e) => {
+//                         error!("error parsing {}: {}", file.display(), e);
+//                     }
+//                 }
+//             }
+//         }
+//         Err(e) => error!("watch error: {:?}", e),
+//     });
+
+//     // configure and start watcher
+//     match watcher {
+//         Ok(mut watcher) => {
+//             let mut config_dir = PROJECT_DIRS.config_dir().to_path_buf();
+//             config_dir.push("scripts");
+
+//             info!("watching {}", config_dir.display());
+
+//             loop {
+//                 if let Err(watch_error) = watcher.watch(&config_dir, RecursiveMode::Recursive) {
+//                     error!("watch start error: {}", watch_error);
+//                     break;
+//                 }
+//             }
+//         }
+//         Err(watcher_error) => {
+//             error!("couldn't create watcher: {}", watcher_error);
+//         }
+//     }
+// }
+
 fn main() {
     env_logger::init();
 
@@ -260,11 +316,8 @@ fn main() {
 
     let (mut scripts, script_error) = load_all_scripts(&config_dir);
 
-    // sort alphabetically and assign id's
+    // sort alphabetically
     scripts.sort_by_cached_key(|s| s.metadata.name.clone());
-    for (i, script) in scripts.iter_mut().enumerate() {
-        script.id = i as u32;
-    }
 
     // TODO(mrbenshef): merge executor and script
     let scripts: Rc<RefCell<Vec<Script>>> = Rc::new(RefCell::new(scripts));

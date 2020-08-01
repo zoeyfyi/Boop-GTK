@@ -118,7 +118,7 @@ impl CommandPalleteDialog {
                 }
             }
 
-            for script in scripts.borrow().iter() {
+            for (index, script) in scripts.borrow().iter().enumerate() {
                 let mut icon_name = script.metadata.icon.to_lowercase();
                 icon_name.insert_str(0, "boop-gtk-");
                 icon_name.push_str("-symbolic");
@@ -129,10 +129,13 @@ impl CommandPalleteDialog {
                     script.metadata.description.to_string()
                 );
 
-                let id = script.id;
-
-                let values: [&dyn ToValue; 5] =
-                    [&icon_name, &entry_text, &id, &(-(id as i64)), &true];
+                let values: [&dyn ToValue; 5] = [
+                    &icon_name,
+                    &entry_text,
+                    &(index as u64),
+                    &(-(index as i64)),
+                    &true,
+                ];
                 store.set(&store.append(), &COLUMNS, &values);
             }
 
@@ -238,12 +241,13 @@ impl CommandPalleteDialog {
         let script_to_score = scripts
             .borrow()
             .iter()
-            .map(|script| {
+            .enumerate()
+            .map(|(index, script)| {
                 let mut search = FuzzySearch::new(&searchbar_text, &script.metadata.name, true);
                 search.set_score_config(SEARCH_CONFIG);
 
                 let score = search.best_match().map(|m| m.score()).unwrap_or(-1000);
-                (script.id as u64, score)
+                (index as u64, score)
             })
             .collect::<HashMap<u64, isize>>();
 
