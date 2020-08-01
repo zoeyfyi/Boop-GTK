@@ -39,7 +39,7 @@ static BOOP_WRAPPER_END: &str = "
 ";
 
 pub struct Executor {
-    isolate: Option<v8::OwnedIsolate>,
+    isolate: v8::OwnedIsolate,
 }
 
 struct ExecutorState {
@@ -120,11 +120,30 @@ pub enum TextReplacement {
 
 impl Executor {
     pub fn new(source: &str) -> Self {
-        let mut executor = Executor { isolate: None };
+        info!("initalizing isolate");
 
-        executor.initialize_isolate(source);
+        // set up execution context
+        let mut isolate = v8::Isolate::new(Default::default());
+        let (global_context, main_function) = {
+            let scope = &mut v8::HandleScope::new(&mut isolate);
+            // let context = v8::Context::new(scope);
+            let (context, main_function) = Executor::initialize_context(source, scope);
+            (v8::Global::new(scope, context), main_function)
+        };
 
-        executor
+        // set status slot, stores execution infomation
+        let status_slot: Rc<RefCell<ExecutionStatus>> =
+            Rc::new(RefCell::new(ExecutionStatus::default()));
+        isolate.set_slot(status_slot);
+
+        // set state slot, stores v8 details
+        let state_slot: Rc<RefCell<ExecutorState>> = Rc::new(RefCell::new(ExecutorState {
+            global_context: Some(global_context),
+            main_function: Some(main_function),
+        }));
+        isolate.set_slot(state_slot);
+
+        Executor { isolate }
     }
 
     // load source code from internal files or external filesystem depending on the path
@@ -211,43 +230,11 @@ impl Executor {
         (tc_scope.escape(context), main_function)
     }
 
-    fn initialize_isolate(&mut self, script: &str) {
-        assert!(self.isolate.is_none());
-
-        info!("initalizing isolate");
-
-        // set up execution context
-        let mut isolate = v8::Isolate::new(Default::default());
-        let (global_context, main_function) = {
-            let scope = &mut v8::HandleScope::new(&mut isolate);
-            // let context = v8::Context::new(scope);
-            let (context, main_function) = Executor::initialize_context(script, scope);
-            (v8::Global::new(scope, context), main_function)
-        };
-
-        // set status slot, stores execution infomation
-        let status_slot: Rc<RefCell<ExecutionStatus>> =
-            Rc::new(RefCell::new(ExecutionStatus::default()));
-        isolate.set_slot(status_slot);
-
-        // set state slot, stores v8 details
-        let state_slot: Rc<RefCell<ExecutorState>> = Rc::new(RefCell::new(ExecutorState {
-            global_context: Some(global_context),
-            main_function: Some(main_function),
-        }));
-        isolate.set_slot(state_slot);
-
-        self.isolate = Some(isolate);
-    }
-
     pub fn execute(&mut self, full_text: &str, selection: Option<&str>) -> ExecutionStatus {
-        assert!(self.isolate.is_some());
-
         // setup execution status
         {
-            let isolate = self.isolate.as_ref().unwrap();
-
-            let status_slot = isolate
+            let status_slot = self
+                .isolate
                 .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
                 .unwrap();
 
@@ -266,16 +253,15 @@ impl Executor {
         // TODO: use ObjectTemplate, problem: rusty_v8 doesn't have set_accessor_with_setter or even set_accessor for
         // object templates
         {
-            let isolate = self.isolate.as_mut().unwrap();
-
-            let state_slot = isolate
+            let state_slot = self
+                .isolate
                 .get_slot_mut::<Rc<RefCell<ExecutorState>>>()
                 .unwrap()
                 .clone();
             let state_slot = state_slot.borrow();
 
             let context = state_slot.global_context.as_ref().unwrap();
-            let scope = &mut v8::HandleScope::with_context(isolate, context);
+            let scope = &mut v8::HandleScope::with_context(&mut self.isolate, context);
 
             // payload is the object passed into function main
             let payload = v8::Object::new(scope);
@@ -344,8 +330,6 @@ impl Executor {
         {
             let status_slot = self
                 .isolate
-                .as_ref()
-                .unwrap()
                 .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
                 .unwrap();
 
