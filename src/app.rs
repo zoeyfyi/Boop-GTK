@@ -43,7 +43,7 @@ pub struct App {
 impl App {
     pub fn new(config_dir: &Path, scripts: Rc<RefCell<Vec<Executor>>>) -> Self {
         let mut app = App {
-            widgets: AppWidgets::from_string(include_str!("../ui/boop-gtk.glade")),
+            widgets: AppWidgets::from_string(include_str!("../ui/boop-gtk.glade")).unwrap(),
             context_id: 0,
             scripts,
         };
