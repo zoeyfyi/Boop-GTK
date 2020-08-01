@@ -4,7 +4,6 @@
 extern crate lazy_static;
 #[macro_use]
 extern crate shrinkwraprs;
-#[macro_use]
 extern crate gladis_proc_macro;
 extern crate gladis;
 
@@ -17,7 +16,6 @@ extern crate pango;
 extern crate sourceview;
 
 extern crate directories;
-extern crate libc;
 extern crate rust_embed;
 extern crate rusty_v8;
 extern crate serde;
