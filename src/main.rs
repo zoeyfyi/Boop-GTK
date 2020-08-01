@@ -4,8 +4,8 @@
 extern crate lazy_static;
 #[macro_use]
 extern crate shrinkwraprs;
-extern crate gladis_proc_macro;
 extern crate gladis;
+extern crate gladis_proc_macro;
 
 extern crate gdk;
 extern crate gdk_pixbuf;
