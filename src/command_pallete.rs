@@ -6,7 +6,7 @@ use gtk::{Dialog, Entry, TreePath, TreeView, Window};
 use shrinkwraprs::Shrinkwrap;
 use sublime_fuzzy::FuzzySearch;
 
-use crate::{executor::Executor, SEARCH_CONFIG};
+use crate::{executor::Executor, script::Script, SEARCH_CONFIG};
 use glib::Type;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
@@ -43,11 +43,11 @@ pub struct CommandPalleteDialog {
     #[shrinkwrap(main_field)]
     widgets: CommandPalleteDialogWidgets,
 
-    scripts: Rc<RefCell<Vec<Executor>>>,
+    scripts: Rc<RefCell<Vec<Script>>>,
 }
 
 impl CommandPalleteDialog {
-    pub fn new<P: IsA<Window>>(window: &P, scripts: Rc<RefCell<Vec<Executor>>>) -> Self {
+    pub fn new<P: IsA<Window>>(window: &P, scripts: Rc<RefCell<Vec<Script>>>) -> Self {
         let widgets =
             CommandPalleteDialogWidgets::from_string(include_str!("../ui/command-pallete.glade"))
                 .unwrap();
@@ -119,17 +119,17 @@ impl CommandPalleteDialog {
             }
 
             for script in scripts.borrow().iter() {
-                let mut icon_name = script.script().metadata().icon.to_lowercase();
+                let mut icon_name = script.metadata.icon.to_lowercase();
                 icon_name.insert_str(0, "boop-gtk-");
                 icon_name.push_str("-symbolic");
 
                 let entry_text = format!(
                     "<b>{}</b>\n<span size=\"smaller\">{}</span>",
-                    script.script().metadata().name.to_string(),
-                    script.script().metadata().description.to_string()
+                    script.metadata.name.to_string(),
+                    script.metadata.description.to_string()
                 );
 
-                let id = script.script().id;
+                let id = script.id;
 
                 let values: [&dyn ToValue; 5] =
                     [&icon_name, &entry_text, &id, &(-(id as i64)), &true];
@@ -222,7 +222,7 @@ impl CommandPalleteDialog {
     fn on_changed(
         searchbar: &Entry,
         dialog_tree_view: &TreeView,
-        scripts: Rc<RefCell<Vec<Executor>>>,
+        scripts: Rc<RefCell<Vec<Script>>>,
     ) {
         let filter_store: gtk::TreeModelFilter =
             dialog_tree_view.get_model().unwrap().downcast().unwrap();
@@ -239,12 +239,11 @@ impl CommandPalleteDialog {
             .borrow()
             .iter()
             .map(|script| {
-                let mut search =
-                    FuzzySearch::new(&searchbar_text, &script.script().metadata().name, true);
+                let mut search = FuzzySearch::new(&searchbar_text, &script.metadata.name, true);
                 search.set_score_config(SEARCH_CONFIG);
 
                 let score = search.best_match().map(|m| m.score()).unwrap_or(-1000);
-                (script.script().id as u64, score)
+                (script.id as u64, score)
             })
             .collect::<HashMap<u64, isize>>();
 

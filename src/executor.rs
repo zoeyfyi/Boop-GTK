@@ -40,7 +40,6 @@ static BOOP_WRAPPER_END: &str = "
 
 pub struct Executor {
     isolate: Option<v8::OwnedIsolate>,
-    script: Script,
 }
 
 struct ExecutorState {
@@ -120,15 +119,12 @@ pub enum TextReplacement {
 }
 
 impl Executor {
-    pub fn new(script: Script) -> Self {
-        Executor {
-            isolate: None,
-            script,
-        }
-    }
+    pub fn new(source: &str) -> Self {
+        let mut executor = Executor { isolate: None };
 
-    pub fn script(&self) -> &Script {
-        &self.script
+        executor.initialize_isolate(source);
+
+        executor
     }
 
     // load source code from internal files or external filesystem depending on the path
@@ -173,7 +169,7 @@ impl Executor {
     }
 
     fn initialize_context<'s>(
-        script: &Script,
+        source: &str,
         scope: &mut v8::HandleScope<'s, ()>,
     ) -> (v8::Local<'s, v8::Context>, v8::Global<v8::Function>) {
         let scope = &mut v8::EscapableHandleScope::new(scope);
@@ -186,7 +182,7 @@ impl Executor {
         global.set(scope, require_key.into(), require_val.into());
 
         // complile and run script
-        let code = v8::String::new(scope, script.source()).unwrap();
+        let code = v8::String::new(scope, source).unwrap();
         let compiled_script = v8::Script::compile(scope, code, None).unwrap();
 
         let tc_scope = &mut v8::TryCatch::new(scope);
@@ -215,17 +211,17 @@ impl Executor {
         (tc_scope.escape(context), main_function)
     }
 
-    fn initialize_isolate(&mut self) {
+    fn initialize_isolate(&mut self, script: &str) {
         assert!(self.isolate.is_none());
 
-        info!("initalizing isolate for {}", self.script().metadata().name);
+        info!("initalizing isolate");
 
         // set up execution context
         let mut isolate = v8::Isolate::new(Default::default());
         let (global_context, main_function) = {
             let scope = &mut v8::HandleScope::new(&mut isolate);
             // let context = v8::Context::new(scope);
-            let (context, main_function) = Executor::initialize_context(&self.script, scope);
+            let (context, main_function) = Executor::initialize_context(script, scope);
             (v8::Global::new(scope, context), main_function)
         };
 
@@ -245,9 +241,7 @@ impl Executor {
     }
 
     pub fn execute(&mut self, full_text: &str, selection: Option<&str>) -> ExecutionStatus {
-        if self.isolate.is_none() {
-            self.initialize_isolate();
-        }
+        assert!(self.isolate.is_some());
 
         // setup execution status
         {
@@ -592,134 +586,5 @@ impl Executor {
         let selection = slot.selection.write();
 
         *selection = new_value;
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::script::ParseScriptError;
-    use std::{borrow::Cow, sync::Mutex};
-
-    lazy_static! {
-        static ref INIT_LOCK: Mutex<u32> = Mutex::new(0);
-    }
-
-    #[must_use]
-    struct SetupGuard {}
-
-    fn setup() -> SetupGuard {
-        let mut g = INIT_LOCK.lock().unwrap();
-        *g += 1;
-        if *g == 1 {
-            v8::V8::initialize_platform(v8::new_default_platform().unwrap());
-            v8::V8::initialize();
-        }
-        SetupGuard {}
-    }
-
-    #[test]
-    fn test_retain_execution_context() {
-        let _guard = setup();
-
-        let mut executor = Executor::new(
-            Script::from_source(
-                "
-            /**
-                {
-                    \"api\":1,
-                    \"name\":\"Counter\",
-                    \"description\":\"Counts up\",
-                    \"author\":\"Ben\",
-                    \"icon\":\"html\",
-                    \"tags\":\"count\"
-                }
-            **/
-            
-            let number = 0;
-            
-            function main(state) {
-                number += 1;
-                state.text = number;
-            }"
-                .to_string(),
-            )
-            .unwrap(),
-        );
-
-        for i in 1..10 {
-            let status = executor.execute("", None);
-            assert_eq!(
-                TextReplacement::Full(i.to_string()),
-                status.into_replacement()
-            );
-        }
-    }
-
-    #[test]
-    fn test_builtin_scripts() {
-        let _guard = setup();
-
-        use rust_embed::RustEmbed;
-
-        #[derive(RustEmbed)]
-        #[folder = "submodules/Boop/Boop/Boop/scripts/"]
-        struct Scripts;
-
-        for file in Scripts::iter() {
-            println!("testing {}", file);
-
-            let source: Cow<'static, [u8]> = Scripts::get(&file).unwrap();
-            let script_source = String::from_utf8(source.to_vec()).unwrap();
-
-            match Script::from_source(script_source) {
-                Ok(script) => {
-                    let mut executor = Executor::new(script);
-                    executor.execute(
-                        "foobar ♈ ♉ ♊ ♋ ♌ ♍ ♎ ♏ ♐ ♑ ♒ ♓ 😁 😝 😋 😄",
-                        None,
-                    );
-                }
-                Err(e) => match e {
-                    ParseScriptError::NoMetadata => {
-                        assert!(file.starts_with("lib/")); // only library files should fail
-                    }
-                    ParseScriptError::InvalidMetadata(e) => panic!(e),
-                },
-            }
-        }
-    }
-
-    #[test]
-    fn test_extra_scripts() {
-        let _guard = setup();
-
-        use rust_embed::RustEmbed;
-
-        #[derive(RustEmbed)]
-        #[folder = "submodules/Boop/Scripts/"]
-        struct Scripts;
-
-        for file in Scripts::iter() {
-            if !file.ends_with(".js") {
-                continue; // not a javascript file
-            }
-
-            println!("testing {}", file);
-
-            let source: Cow<'static, [u8]> = Scripts::get(&file).unwrap();
-            let script_source = String::from_utf8(source.to_vec()).unwrap();
-
-            match Script::from_source(script_source) {
-                Ok(script) => {
-                    let mut executor = Executor::new(script);
-                    executor.execute(
-                        "foobar ♈ ♉ ♊ ♋ ♌ ♍ ♎ ♏ ♐ ♑ ♒ ♓ 😁 😝 😋 😄",
-                        None,
-                    );
-                }
-                Err(e) => panic!(e),
-            }
-        }
     }
 }

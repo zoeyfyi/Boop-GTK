@@ -261,15 +261,13 @@ fn main() {
     let (mut scripts, script_error) = load_all_scripts(&config_dir);
 
     // sort alphabetically and assign id's
-    scripts.sort_by_cached_key(|s| s.metadata().name.clone());
+    scripts.sort_by_cached_key(|s| s.metadata.name.clone());
     for (i, script) in scripts.iter_mut().enumerate() {
         script.id = i as u32;
     }
 
     // TODO(mrbenshef): merge executor and script
-    let scripts: Rc<RefCell<Vec<Executor>>> = Rc::new(RefCell::new(
-        scripts.into_iter().map(Executor::new).collect(),
-    ));
+    let scripts: Rc<RefCell<Vec<Script>>> = Rc::new(RefCell::new(scripts));
 
     // needed on windows
     sourceview::View::static_type();

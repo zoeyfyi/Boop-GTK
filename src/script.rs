@@ -1,11 +1,26 @@
+use crate::executor::{ExecutionStatus, Executor};
+use crossbeam::crossbeam_channel::bounded;
+use crossbeam::{Receiver, Sender};
 use serde::Deserialize;
-use std::fmt;
+use simple_error::{bail, SimpleError};
+use std::{fmt, thread};
 
-#[derive(Debug, Clone)]
 pub struct Script {
     pub id: u32,
-    metadata: Metadata,
+    pub metadata: Metadata,
     source: String,
+    channel: Option<ExecutorChannel>,
+}
+
+enum ExecutorJob {
+    Request((String, Option<String>)),
+    Responce(ExecutionStatus),
+}
+
+struct ExecutorChannel {
+    sender: Sender<ExecutorJob>,
+    receiver: Receiver<ExecutorJob>,
+    handle: thread::JoinHandle<()>,
 }
 
 #[derive(Debug)]
@@ -47,14 +62,210 @@ impl Script {
             metadata,
             source,
             id: 0,
+            channel: None,
         })
     }
 
-    pub fn metadata(&self) -> &Metadata {
-        &self.metadata
+    fn init_executor_thread(&mut self) {
+        assert!(self.channel.is_none());
+
+        let (sender, receiver) = bounded(0);
+
+        let handle = {
+            let t_name = self.metadata.name.clone();
+            let t_source = self.source.clone();
+            let (t_sender, t_receiver) = (sender.clone(), receiver.clone());
+            thread::spawn(move || {
+                info!("thread spawned for {}", t_name);
+                let mut executor = Executor::new(&t_source);
+                debug!("executor created");
+
+                loop {
+                    if let ExecutorJob::Request((full_text, selection)) = t_receiver.recv().unwrap()
+                    {
+                        info!(
+                            "request received, full_text: {} bytes, selection: {} bytes",
+                            full_text.len(),
+                            selection.as_ref().map(|s| s.len()).unwrap_or(0),
+                        );
+                        let result = executor.execute(&full_text, selection.as_deref());
+                        t_sender.send(ExecutorJob::Responce(result)).unwrap(); // TODO: handle
+                    }
+                }
+            })
+        };
+
+        self.channel = Some(ExecutorChannel {
+            sender,
+            receiver,
+            handle,
+        });
     }
 
-    pub fn source(&self) -> &str {
-        &self.source
+    pub fn execute(
+        &mut self,
+        full_text: &str,
+        selection: Option<&str>,
+    ) -> Result<ExecutionStatus, SimpleError> {
+        if self.channel.is_none() {
+            self.init_executor_thread();
+        }
+
+        let channel = self.channel.as_ref().unwrap();
+
+        // send request
+        channel
+            .sender
+            .send(ExecutorJob::Request((
+                full_text.to_owned(),
+                selection.map(|s| s.to_owned()),
+            )))
+            .map_err(|e| SimpleError::with("cannot send text to channel", e))?;
+
+        // receive result
+        let result = channel
+            .receiver
+            .recv()
+            .map_err(|e| SimpleError::with("cannot receive result on channel", e))?;
+
+        match result {
+            ExecutorJob::Request(_) => {
+                bail!("expected a responce on channel, but got a request!");
+            }
+            ExecutorJob::Responce(status) => {
+                return Ok(status);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{executor::TextReplacement, script::ParseScriptError};
+    use rusty_v8 as v8;
+    use std::{borrow::Cow, sync::Mutex};
+
+    lazy_static! {
+        static ref INIT_LOCK: Mutex<u32> = Mutex::new(0);
+    }
+
+    #[must_use]
+    struct SetupGuard {}
+
+    fn setup() -> SetupGuard {
+        let mut g = INIT_LOCK.lock().unwrap();
+        *g += 1;
+        if *g == 1 {
+            v8::V8::initialize_platform(v8::new_default_platform().unwrap());
+            v8::V8::initialize();
+        }
+        SetupGuard {}
+    }
+
+    #[test]
+    fn test_retain_execution_context() {
+        let _guard = setup();
+
+        let mut script = Script::from_source(
+            "
+            /**
+                {
+                    \"api\":1,
+                    \"name\":\"Counter\",
+                    \"description\":\"Counts up\",
+                    \"author\":\"Ben\",
+                    \"icon\":\"html\",
+                    \"tags\":\"count\"
+                }
+            **/
+            
+            let number = 0;
+            
+            function main(state) {
+                number += 1;
+                state.text = number;
+            }"
+            .to_string(),
+        )
+        .unwrap();
+
+        for i in 1..10 {
+            let status = script.execute("", None);
+            assert!(status.is_ok());
+            assert_eq!(
+                TextReplacement::Full(i.to_string()),
+                status.unwrap().into_replacement()
+            );
+        }
+    }
+
+    #[test]
+    fn test_builtin_scripts() {
+        let _guard = setup();
+
+        use rust_embed::RustEmbed;
+
+        #[derive(RustEmbed)]
+        #[folder = "submodules/Boop/Boop/Boop/scripts/"]
+        struct Scripts;
+
+        for file in Scripts::iter() {
+            println!("testing {}", file);
+
+            let source: Cow<'static, [u8]> = Scripts::get(&file).unwrap();
+            let script_source = String::from_utf8(source.to_vec()).unwrap();
+
+            match Script::from_source(script_source) {
+                Ok(mut script) => {
+                    script
+                        .execute(
+                            "foobar ♈ ♉ ♊ ♋ ♌ ♍ ♎ ♏ ♐ ♑ ♒ ♓ 😁 😝 😋 😄",
+                            None,
+                        )
+                        .unwrap();
+                }
+                Err(e) => match e {
+                    ParseScriptError::NoMetadata => {
+                        assert!(file.starts_with("lib/")); // only library files should fail
+                    }
+                    ParseScriptError::InvalidMetadata(e) => panic!(e),
+                },
+            }
+        }
+    }
+
+    #[test]
+    fn test_extra_scripts() {
+        let _guard = setup();
+
+        use rust_embed::RustEmbed;
+
+        #[derive(RustEmbed)]
+        #[folder = "submodules/Boop/Scripts/"]
+        struct Scripts;
+
+        for file in Scripts::iter() {
+            if !file.ends_with(".js") {
+                continue; // not a javascript file
+            }
+
+            println!("testing {}", file);
+
+            let source: Cow<'static, [u8]> = Scripts::get(&file).unwrap();
+            let script_source = String::from_utf8(source.to_vec()).unwrap();
+
+            match Script::from_source(script_source) {
+                Ok(mut script) => {
+                    script
+                        .execute(
+                            "foobar ♈ ♉ ♊ ♋ ♌ ♍ ♎ ♏ ♐ ♑ ♒ ♓ 😁 😝 😋 😄",
+                            None,
+                        )
+                        .unwrap();
+                }
+                Err(e) => panic!(e),
+            }
+        }
     }
 }

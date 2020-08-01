@@ -2,6 +2,7 @@ use crate::{
     command_pallete::CommandPalleteDialog,
     executor::{self, Executor},
     gtk::ButtonExt,
+    script::Script,
 };
 use gdk_pixbuf::{prelude::*, PixbufLoader};
 use gladis::Gladis;
@@ -37,11 +38,11 @@ pub struct App {
     widgets: AppWidgets,
 
     context_id: u32,
-    scripts: Rc<RefCell<Vec<Executor>>>,
+    scripts: Rc<RefCell<Vec<Script>>>,
 }
 
 impl App {
-    pub fn new(config_dir: &Path, scripts: Rc<RefCell<Vec<Executor>>>) -> Self {
+    pub fn new(config_dir: &Path, scripts: Rc<RefCell<Vec<Script>>>) -> Self {
         let mut app = App {
             widgets: AppWidgets::from_string(include_str!("../ui/boop-gtk.glade")).unwrap(),
             context_id: 0,
@@ -149,10 +150,7 @@ impl App {
         if let gtk::ResponseType::Other(script_id) = dialog.run() {
             info!(
                 "executing {}",
-                self.scripts.borrow()[script_id as usize]
-                    .script()
-                    .metadata()
-                    .name
+                self.scripts.borrow()[script_id as usize].metadata.name
             );
 
             self.status_bar.remove_all(self.context_id);
@@ -168,7 +166,8 @@ impl App {
                 .map(|(start, end)| buffer.get_text(&start, &end, false).unwrap().to_string());
 
             let status = self.scripts.borrow_mut()[script_id as usize]
-                .execute(buffer_text.as_str(), selection_text.as_deref());
+                .execute(buffer_text.as_str(), selection_text.as_deref())
+                .unwrap(); // TODO: handle result
 
             // TODO: how to handle multiple messages?
             if let Some(error) = status.error() {
