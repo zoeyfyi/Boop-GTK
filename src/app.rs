@@ -11,7 +11,12 @@ use sourceview::prelude::*;
 
 use executor::TextReplacement;
 use gtk::{AboutDialog, ApplicationWindow, Button, ModelButton, Statusbar};
-use std::{cell::RefCell, path::Path, rc::Rc};
+use std::{
+    cell::RefCell,
+    path::Path,
+    rc::Rc,
+    sync::{Arc, RwLock},
+};
 
 const HEADER_BUTTON_GET_STARTED: &str = "Press Ctrl+Shift+P to get started";
 const HEADER_BUTTON_CHOOSE_ACTION: &str = "Select an action";
@@ -38,11 +43,11 @@ pub struct App {
     widgets: AppWidgets,
 
     context_id: u32,
-    scripts: Rc<RefCell<Vec<Script>>>,
+    scripts: Arc<RwLock<Vec<Script>>>,
 }
 
 impl App {
-    pub fn new(config_dir: &Path, scripts: Rc<RefCell<Vec<Script>>>) -> Self {
+    pub fn new(config_dir: &Path, scripts: Arc<RwLock<Vec<Script>>>) -> Self {
         let mut app = App {
             widgets: AppWidgets::from_string(include_str!("../ui/boop-gtk.glade")).unwrap(),
             context_id: 0,
@@ -150,7 +155,9 @@ impl App {
         if let gtk::ResponseType::Other(script_id) = dialog.run() {
             info!(
                 "executing {}",
-                self.scripts.borrow()[script_id as usize].metadata.name
+                self.scripts.read().unwrap()[script_id as usize]
+                    .metadata
+                    .name
             );
 
             self.status_bar.remove_all(self.context_id);
@@ -165,7 +172,7 @@ impl App {
                 .get_selection_bounds()
                 .map(|(start, end)| buffer.get_text(&start, &end, false).unwrap().to_string());
 
-            let status = self.scripts.borrow_mut()[script_id as usize]
+            let status = self.scripts.write().unwrap()[script_id as usize]
                 .execute(buffer_text.as_str(), selection_text.as_deref())
                 .unwrap(); // TODO: handle result
 

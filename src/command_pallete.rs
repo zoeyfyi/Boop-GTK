@@ -8,7 +8,12 @@ use sublime_fuzzy::FuzzySearch;
 
 use crate::{executor::Executor, script::Script, SEARCH_CONFIG};
 use glib::Type;
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    rc::Rc,
+    sync::{Arc, RwLock},
+};
 
 const ICON_COLUMN: u32 = 0;
 const TEXT_COLUMN: u32 = 1;
@@ -43,11 +48,11 @@ pub struct CommandPalleteDialog {
     #[shrinkwrap(main_field)]
     widgets: CommandPalleteDialogWidgets,
 
-    scripts: Rc<RefCell<Vec<Script>>>,
+    scripts: Arc<RwLock<Vec<Script>>>,
 }
 
 impl CommandPalleteDialog {
-    pub fn new<P: IsA<Window>>(window: &P, scripts: Rc<RefCell<Vec<Script>>>) -> Self {
+    pub fn new<P: IsA<Window>>(window: &P, scripts: Arc<RwLock<Vec<Script>>>) -> Self {
         let widgets =
             CommandPalleteDialogWidgets::from_string(include_str!("../ui/command-pallete.glade"))
                 .unwrap();
@@ -118,7 +123,7 @@ impl CommandPalleteDialog {
                 }
             }
 
-            for (index, script) in scripts.borrow().iter().enumerate() {
+            for (index, script) in scripts.read().unwrap().iter().enumerate() {
                 let mut icon_name = script.metadata.icon.to_lowercase();
                 icon_name.insert_str(0, "boop-gtk-");
                 icon_name.push_str("-symbolic");
@@ -225,7 +230,7 @@ impl CommandPalleteDialog {
     fn on_changed(
         searchbar: &Entry,
         dialog_tree_view: &TreeView,
-        scripts: Rc<RefCell<Vec<Script>>>,
+        scripts: Arc<RwLock<Vec<Script>>>,
     ) {
         let filter_store: gtk::TreeModelFilter =
             dialog_tree_view.get_model().unwrap().downcast().unwrap();
@@ -239,7 +244,8 @@ impl CommandPalleteDialog {
 
         // score each script using search text
         let script_to_score = scripts
-            .borrow()
+            .read()
+            .unwrap()
             .iter()
             .enumerate()
             .map(|(index, script)| {

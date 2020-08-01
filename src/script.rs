@@ -3,10 +3,11 @@ use crossbeam::crossbeam_channel::bounded;
 use crossbeam::{Receiver, Sender};
 use serde::Deserialize;
 use simple_error::{bail, SimpleError};
-use std::{fmt, thread};
+use std::{fmt, fs, path::PathBuf, thread};
 
 pub struct Script {
     pub metadata: Metadata,
+    pub path: PathBuf,
     source: String,
     channel: Option<ExecutorChannel>,
 }
@@ -48,7 +49,12 @@ pub struct Metadata {
 }
 
 impl Script {
-    pub fn from_source(source: String) -> Result<Self, ParseScriptError> {
+    pub fn from_file(path: PathBuf) -> Result<Self, ParseScriptError> {
+        let source = fs::read_to_string(path.clone()).unwrap(); // TODO: handle
+        Script::from_source(source, path)
+    }
+
+    pub fn from_source(source: String, path: PathBuf) -> Result<Self, ParseScriptError> {
         let start = source.find("/**").ok_or(ParseScriptError::NoMetadata)?;
         let end = source.find("**/").ok_or(ParseScriptError::NoMetadata)?;
 
@@ -61,6 +67,7 @@ impl Script {
             metadata,
             source,
             channel: None,
+            path,
         })
     }
 
@@ -185,6 +192,7 @@ mod tests {
                 state.text = number;
             }"
             .to_string(),
+            PathBuf::new(),
         )
         .unwrap();
 
@@ -214,7 +222,7 @@ mod tests {
             let source: Cow<'static, [u8]> = Scripts::get(&file).unwrap();
             let script_source = String::from_utf8(source.to_vec()).unwrap();
 
-            match Script::from_source(script_source) {
+            match Script::from_source(script_source, PathBuf::new()) {
                 Ok(mut script) => {
                     script
                         .execute(
@@ -253,7 +261,7 @@ mod tests {
             let source: Cow<'static, [u8]> = Scripts::get(&file).unwrap();
             let script_source = String::from_utf8(source.to_vec()).unwrap();
 
-            match Script::from_source(script_source) {
+            match Script::from_source(script_source, PathBuf::new()) {
                 Ok(mut script) => {
                     script
                         .execute(
