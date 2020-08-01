@@ -11,16 +11,16 @@ pub struct Script {
     source: String,
     channel: Option<ExecutorChannel>,
 }
-
+#[derive(Debug)]
 enum ExecutorJob {
     Request((String, Option<String>)),
     Responce(ExecutionStatus),
+    Kill,
 }
 
 struct ExecutorChannel {
     sender: Sender<ExecutorJob>,
     receiver: Receiver<ExecutorJob>,
-    handle: thread::JoinHandle<()>,
 }
 
 #[derive(Debug)]
@@ -76,7 +76,7 @@ impl Script {
 
         let (sender, receiver) = bounded(0);
 
-        let handle = {
+        {
             let t_name = self.metadata.name.clone();
             let t_source = self.source.clone();
             let (t_sender, t_receiver) = (sender.clone(), receiver.clone());
@@ -86,25 +86,39 @@ impl Script {
                 debug!("executor created");
 
                 loop {
-                    if let ExecutorJob::Request((full_text, selection)) = t_receiver.recv().unwrap()
-                    {
-                        info!(
-                            "request received, full_text: {} bytes, selection: {} bytes",
-                            full_text.len(),
-                            selection.as_ref().map(|s| s.len()).unwrap_or(0),
-                        );
-                        let result = executor.execute(&full_text, selection.as_deref());
-                        t_sender.send(ExecutorJob::Responce(result)).unwrap(); // TODO: handle
+                    match t_receiver.recv().unwrap() {
+                        ExecutorJob::Request((full_text, selection)) => {
+                            info!(
+                                "request received, full_text: {} bytes, selection: {} bytes",
+                                full_text.len(),
+                                selection.as_ref().map(|s| s.len()).unwrap_or(0),
+                            );
+                            let result = executor.execute(&full_text, selection.as_deref());
+                            t_sender.send(ExecutorJob::Responce(result)).unwrap();
+                            // TODO: handle
+                        }
+                        ExecutorJob::Responce(_) => {
+                            warn!("executor thread received a responce on channel");
+                        }
+                        ExecutorJob::Kill => {
+                            info!("killing thread for {}", t_name);
+                            return;
+                        }
                     }
                 }
             })
         };
 
-        self.channel = Some(ExecutorChannel {
-            sender,
-            receiver,
-            handle,
-        });
+        self.channel = Some(ExecutorChannel { sender, receiver });
+    }
+
+    // kills the thread associated with this script, it will be recreated when `execute` is called
+    pub fn kill_thread(&mut self) {
+        if let Some(channel) = &self.channel {
+            channel.sender.send(ExecutorJob::Kill).unwrap();
+        }
+
+        self.channel = None;
     }
 
     pub fn execute(
@@ -133,14 +147,14 @@ impl Script {
             .recv()
             .map_err(|e| SimpleError::with("cannot receive result on channel", e))?;
 
-        match result {
-            ExecutorJob::Request(_) => {
-                bail!("expected a responce on channel, but got a request!");
-            }
-            ExecutorJob::Responce(status) => {
-                return Ok(status);
-            }
+        if let ExecutorJob::Responce(status) = result {
+            return Ok(status);
         }
+
+        bail!(
+            "expected a responce on channel, but got a request: {:?}",
+            result
+        );
     }
 }
 

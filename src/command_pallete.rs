@@ -6,12 +6,10 @@ use gtk::{Dialog, Entry, TreePath, TreeView, Window};
 use shrinkwraprs::Shrinkwrap;
 use sublime_fuzzy::FuzzySearch;
 
-use crate::{executor::Executor, script::Script, SEARCH_CONFIG};
+use crate::{script::Script, SEARCH_CONFIG};
 use glib::Type;
 use std::{
-    cell::RefCell,
     collections::HashMap,
-    rc::Rc,
     sync::{Arc, RwLock},
 };
 

@@ -1,6 +1,6 @@
 use crate::{
     command_pallete::CommandPalleteDialog,
-    executor::{self, Executor},
+    executor::{self},
     gtk::ButtonExt,
     script::Script,
 };
@@ -12,9 +12,7 @@ use sourceview::prelude::*;
 use executor::TextReplacement;
 use gtk::{AboutDialog, ApplicationWindow, Button, ModelButton, Statusbar};
 use std::{
-    cell::RefCell,
     path::Path,
-    rc::Rc,
     sync::{Arc, RwLock},
 };
 
@@ -30,6 +28,7 @@ pub struct AppWidgets {
     source_view: sourceview::View,
     status_bar: Statusbar,
 
+    reset_scripts_button: ModelButton,
     config_directory_button: ModelButton,
     more_scripts_button: ModelButton,
     about_button: ModelButton,
@@ -65,6 +64,16 @@ impl App {
         app.setup_syntax_highlighting(config_dir);
 
         let context_id = app.context_id;
+
+        // reset the state of each script
+        {
+            let scripts = app.scripts.clone();
+            app.reset_scripts_button.connect_clicked(move |_| {
+                for script in scripts.write().unwrap().iter_mut() {
+                    script.kill_thread();
+                }
+            });
+        }
 
         // launch config directory in default file manager
         {

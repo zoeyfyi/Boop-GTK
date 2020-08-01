@@ -48,14 +48,11 @@ use sublime_fuzzy::ScoreConfig;
 
 use app::App;
 use directories::ProjectDirs;
-use executor::Executor;
 use fmt::Display;
 use std::{
-    cell::RefCell,
     error::Error,
     fs::{self, File},
     io::prelude::*,
-    rc::Rc,
     sync::{Arc, RwLock},
     thread,
 };
