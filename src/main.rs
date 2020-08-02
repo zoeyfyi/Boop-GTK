@@ -47,14 +47,13 @@ use sublime_fuzzy::ScoreConfig;
 
 use app::App;
 use directories::ProjectDirs;
-use executor::Executor;
 use fmt::Display;
 use std::{
-    cell::RefCell,
     error::Error,
     fs::{self, File},
     io::prelude::*,
-    rc::Rc,
+    sync::{Arc, RwLock},
+    thread,
 };
 
 lazy_static! {
@@ -124,8 +123,7 @@ fn load_user_scripts(config_dir: &Path) -> Result<Vec<Script>, LoadScriptError> 
         .filter_map(Result::ok)
         .map(|f| f.path())
         .filter(|path| path.is_file())
-        .filter_map(|path| fs::read_to_string(path).ok())
-        .map(Script::from_source)
+        .map(Script::from_file)
         .filter_map(Result::ok)
         .collect())
 }
@@ -138,7 +136,7 @@ fn load_internal_scripts() -> Vec<Script> {
         let file: Cow<'_, str> = file;
         let source: Cow<'static, [u8]> = Scripts::get(&file).unwrap();
         let script_source = String::from_utf8(source.to_vec()).unwrap();
-        if let Ok(script) = Script::from_source(script_source) {
+        if let Ok(script) = Script::from_source(script_source, PathBuf::new()) {
             scripts.push(script);
         }
     }
@@ -240,6 +238,84 @@ fn extract_files() {
     }
 }
 
+fn watch_scripts_folder(scripts: Arc<RwLock<Vec<Script>>>) {
+    use notify::{RecommendedWatcher, RecursiveMode, Result, Watcher};
+
+    trace!("watch_scripts_folder");
+
+    // watch for changes to script folder
+    let watcher: Result<RecommendedWatcher> = Watcher::new_immediate(move |res| {
+        debug!("res: {:?}", res);
+        match res {
+            Ok(event) => {
+                let event: notify::Event = event;
+
+                for file in event.paths {
+                    debug!("file: {}", file.display());
+
+                    match file.extension() {
+                        Some(s) => {
+                            if s == "js" {
+                            } else {
+                                break;
+                            }
+                        }
+                        None => break,
+                    }
+
+                    info!("{} changed, reloading", file.display());
+
+                    // remove scripts, if they where modified we create a new instance bellow
+                    let mut scripts = scripts.write().unwrap();
+                    for i in 0..scripts.len() {
+                        if scripts[i].path == file {
+                            scripts.remove(i);
+                            break;
+                        }
+                    }
+
+                    // .drain_filter(|script| script.path == file);
+
+                    if !file.exists() {
+                        break;
+                    }
+
+                    match Script::from_file(file.clone()) {
+                        Ok(script) => {
+                            scripts.push(script);
+                            scripts.sort_by_key(|s| s.metadata.name.clone());
+                        }
+                        Err(e) => {
+                            error!("error parsing {}: {}", file.display(), e);
+                        }
+                    }
+                }
+            }
+            Err(e) => error!("watch error: {:?}", e),
+        }
+    });
+
+    // configure and start watcher
+    match watcher {
+        Ok(mut watcher) => {
+            let mut config_dir = PROJECT_DIRS.config_dir().to_path_buf();
+            config_dir.push("scripts");
+
+            info!("watching {}", config_dir.display());
+
+            loop {
+                if let Err(watch_error) = watcher.watch(&config_dir, RecursiveMode::Recursive) {
+                    error!("watch start error: {}", watch_error);
+                    break;
+                }
+            }
+        }
+        Err(watcher_error) => {
+            error!("couldn't create watcher: {}", watcher_error);
+        }
+    }
+}
+
 fn main() {
     env_logger::init();
 
@@ -260,16 +336,17 @@ fn main() {
 
     let (mut scripts, script_error) = load_all_scripts(&config_dir);
 
-    // sort alphabetically and assign id's
-    scripts.sort_by_cached_key(|s| s.metadata().name.clone());
-    for (i, script) in scripts.iter_mut().enumerate() {
-        script.id = i as u32;
-    }
+    // sort alphabetically
+    scripts.sort_by_key(|s| s.metadata.name.clone());
 
-    // TODO(mrbenshef): merge executor and script
-    let scripts: Rc<RefCell<Vec<Executor>>> = Rc::new(RefCell::new(
-        scripts.into_iter().map(Executor::new).collect(),
-    ));
+    // watch scripts folder for changes
+    let scripts = Arc::new(RwLock::new(scripts));
+    {
+        let scripts = scripts.clone();
+        thread::spawn(move || {
+            watch_scripts_folder(scripts);
+        });
+    }
 
     // needed on windows
     sourceview::View::static_type();

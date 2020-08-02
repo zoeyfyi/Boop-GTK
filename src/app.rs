@@ -1,7 +1,8 @@
 use crate::{
     command_pallete::CommandPalleteDialog,
-    executor::{self, Executor},
+    executor::{self},
     gtk::ButtonExt,
+    script::Script,
 };
 use gdk_pixbuf::{prelude::*, PixbufLoader};
 use gladis::Gladis;
@@ -10,7 +11,10 @@ use sourceview::prelude::*;
 
 use executor::TextReplacement;
 use gtk::{AboutDialog, ApplicationWindow, Button, ModelButton, Statusbar};
-use std::{cell::RefCell, path::Path, rc::Rc};
+use std::{
+    path::Path,
+    sync::{Arc, RwLock},
+};
 
 const HEADER_BUTTON_GET_STARTED: &str = "Press Ctrl+Shift+P to get started";
 const HEADER_BUTTON_CHOOSE_ACTION: &str = "Select an action";
@@ -24,6 +28,7 @@ pub struct AppWidgets {
     source_view: sourceview::View,
     status_bar: Statusbar,
 
+    reset_scripts_button: ModelButton,
     config_directory_button: ModelButton,
     more_scripts_button: ModelButton,
     about_button: ModelButton,
@@ -37,11 +42,11 @@ pub struct App {
     widgets: AppWidgets,
 
     context_id: u32,
-    scripts: Rc<RefCell<Vec<Executor>>>,
+    scripts: Arc<RwLock<Vec<Script>>>,
 }
 
 impl App {
-    pub fn new(config_dir: &Path, scripts: Rc<RefCell<Vec<Executor>>>) -> Self {
+    pub fn new(config_dir: &Path, scripts: Arc<RwLock<Vec<Script>>>) -> Self {
         let mut app = App {
             widgets: AppWidgets::from_string(include_str!("../ui/boop-gtk.glade")).unwrap(),
             context_id: 0,
@@ -59,6 +64,16 @@ impl App {
         app.setup_syntax_highlighting(config_dir);
 
         let context_id = app.context_id;
+
+        // reset the state of each script
+        {
+            let scripts = app.scripts.clone();
+            app.reset_scripts_button.connect_clicked(move |_| {
+                for script in scripts.write().unwrap().iter_mut() {
+                    script.kill_thread();
+                }
+            });
+        }
 
         // launch config directory in default file manager
         {
@@ -149,9 +164,8 @@ impl App {
         if let gtk::ResponseType::Other(script_id) = dialog.run() {
             info!(
                 "executing {}",
-                self.scripts.borrow()[script_id as usize]
-                    .script()
-                    .metadata()
+                self.scripts.read().unwrap()[script_id as usize]
+                    .metadata
                     .name
             );
 
@@ -167,8 +181,9 @@ impl App {
                 .get_selection_bounds()
                 .map(|(start, end)| buffer.get_text(&start, &end, false).unwrap().to_string());
 
-            let status = self.scripts.borrow_mut()[script_id as usize]
-                .execute(buffer_text.as_str(), selection_text.as_deref());
+            let status = self.scripts.write().unwrap()[script_id as usize]
+                .execute(buffer_text.as_str(), selection_text.as_deref())
+                .unwrap(); // TODO: handle result
 
             // TODO: how to handle multiple messages?
             if let Some(error) = status.error() {
