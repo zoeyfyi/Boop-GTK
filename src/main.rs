@@ -1,5 +1,5 @@
+#![forbid(unsafe_code)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // don't spawn command line on windows
-#[forbid(unsafe_code)]
 
 #[macro_use]
 extern crate lazy_static;
