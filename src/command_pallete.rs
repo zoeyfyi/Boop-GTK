@@ -51,9 +51,10 @@ pub struct CommandPalleteDialog {
 
 impl CommandPalleteDialog {
     pub fn new<P: IsA<Window>>(window: &P, scripts: Arc<RwLock<Vec<Script>>>) -> Self {
-        let widgets =
-            CommandPalleteDialogWidgets::from_string(include_str!("../ui/command-pallete.glade"))
-                .unwrap();
+        let widgets = CommandPalleteDialogWidgets::from_resource(
+            "/co/uk/mrbenshef/Boop-GTK/command-pallete.glade",
+        )
+        .unwrap();
 
         let command_pallete_dialog = CommandPalleteDialog {
             widgets,

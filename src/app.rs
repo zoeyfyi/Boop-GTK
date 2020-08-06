@@ -4,7 +4,7 @@ use crate::{
     gtk::ButtonExt,
     script::Script,
 };
-use gdk_pixbuf::{prelude::*, PixbufLoader};
+use gdk_pixbuf::prelude::*;
 use gladis::Gladis;
 use gtk::prelude::*;
 use sourceview::prelude::*;
@@ -48,19 +48,18 @@ pub struct App {
 impl App {
     pub fn new(config_dir: &Path, scripts: Arc<RwLock<Vec<Script>>>) -> Self {
         let mut app = App {
-            widgets: AppWidgets::from_string(include_str!("../ui/boop-gtk.glade")).unwrap(),
+            widgets: AppWidgets::from_resource("/co/uk/mrbenshef/Boop-GTK/boop-gtk.glade").unwrap(),
             context_id: 0,
             scripts,
         };
 
         app.context_id = app.status_bar.get_context_id("script execution");
         app.header_button.set_label(HEADER_BUTTON_GET_STARTED);
-        app.about_dialog.set_logo({
-            let loader = PixbufLoader::with_type("png").unwrap();
-            loader.write(include_bytes!("../ui/boop-gtk.png")).unwrap();
-            loader.close().unwrap();
-            loader.get_pixbuf().as_ref()
-        });
+        app.about_dialog.set_logo(
+            gdk_pixbuf::Pixbuf::from_resource("/co/uk/mrbenshef/Boop-GTK/boop-gtk.png")
+                .ok()
+                .as_ref(),
+        );
         app.setup_syntax_highlighting(config_dir);
 
         let context_id = app.context_id;

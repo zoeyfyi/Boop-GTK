@@ -51,7 +51,7 @@ use directories::ProjectDirs;
 use fmt::Display;
 use std::{
     error::Error,
-    fs::{self, File},
+    fs,
     io::prelude::*,
     sync::{Arc, RwLock},
     thread,
@@ -73,10 +73,6 @@ const SEARCH_CONFIG: ScoreConfig = ScoreConfig {
 #[derive(RustEmbed)]
 #[folder = "submodules/Boop/Boop/Boop/scripts/"]
 struct Scripts;
-
-#[derive(RustEmbed)]
-#[folder = "ui/icons/"]
-struct Icons;
 
 #[derive(Debug)]
 enum LoadScriptError {
@@ -166,8 +162,8 @@ fn load_all_scripts(config_dir: &Path) -> (Vec<Script>, Option<ScriptError>) {
     (scripts, None)
 }
 
-// extract files stored in binary to the config directory
-fn extract_files() {
+// extract language file, ideally we would use GResource for this but sourceview doesn't support that
+fn extract_language_file() {
     let config_dir = PROJECT_DIRS.config_dir().to_path_buf();
     if !config_dir.exists() {
         info!("config directory does not exist, attempting to create it");
@@ -180,63 +176,15 @@ fn extract_files() {
     info!("configuration directory at: {}", config_dir.display());
 
     let lang_file_path = {
-        let mut path = config_dir.clone();
+        let mut path = config_dir;
         path.push("boop.lang");
         path
     };
 
-    if !lang_file_path.exists() {
-        info!(
-            "language file does not exist, creating a new one at: {}",
-            lang_file_path.display()
-        );
-        let mut file = fs::File::create(&lang_file_path).expect("Could not create language file");
-        file.write_all(include_bytes!("../boop.lang"))
-            .expect("Failed to write language file");
-        info!("language file created at: {}", lang_file_path.display());
-    }
-
-    let icons_path = {
-        let mut path = config_dir;
-        path.push("icons");
-        path
-    };
-
-    // create icons directory
-    match fs::create_dir_all(&icons_path) {
-        Ok(()) => {
-            info!("created icons directory {}", icons_path.display());
-
-            for icon in Icons::iter() {
-                let icon: Cow<str> = icon;
-                let icon_path = {
-                    let mut path = icons_path.clone();
-                    path.push(icon.to_string());
-                    path
-                };
-
-                if icon_path.exists() {
-                    continue;
-                }
-
-                match File::create(&icon_path) {
-                    Ok(mut file) => {
-                        let icon_data: Cow<'static, [u8]> = Icons::get(&icon).unwrap();
-                        match file.write_all(&icon_data) {
-                            Ok(()) => info!("written {} ({})", icon, icon_path.display()),
-                            Err(err) => error!("error writing {}, {}", icon, err),
-                        }
-                    }
-                    Err(err) => {
-                        error!("error creating file for {}, {}", icon, err);
-                    }
-                }
-            }
-        }
-        Err(err) => {
-            error!("failed to create icon directory: {}", err);
-        }
-    }
+    let mut file = fs::File::create(&lang_file_path).expect("Could not create language file");
+    file.write_all(include_bytes!("../boop.lang"))
+        .expect("Failed to write language file");
+    info!("language file written at: {}", lang_file_path.display());
 }
 
 fn watch_scripts_folder(scripts: Arc<RwLock<Vec<Script>>>) {
@@ -325,7 +273,7 @@ fn main() {
         gdk_pixbuf::Pixbuf::get_formats().len()
     );
 
-    extract_files();
+    extract_language_file();
 
     // initalize V8
     let platform = v8::new_default_platform().unwrap();
@@ -356,15 +304,15 @@ fn main() {
         .expect("failed to initialize GTK application");
 
     application.connect_activate(move |application| {
-        // add icon path to search path
-        let icons_path = {
-            let mut path = config_dir.clone();
-            path.push("icons");
-            path
-        };
+        // resources.gresources is created by build.rs
+        // it includes all the files in the resources directory
+        let resource_bytes = include_bytes!("../resources/resources.gresource");
+        let resource_data = glib::Bytes::from(&resource_bytes[..]);
+        gio::resources_register(&gio::Resource::from_data(&resource_data).unwrap());
+
+        // add embedeed icons to theme
         let icon_theme = gtk::IconTheme::get_default().unwrap();
-        icon_theme.append_search_path(&icons_path);
-        icon_theme.prepend_search_path(&icons_path);
+        icon_theme.add_resource_path("/co/uk/mrbenshef/Boop-GTK/icons");
 
         let app = App::new(&config_dir, scripts.clone());
         app.set_application(Some(application));
@@ -378,11 +326,7 @@ fn main() {
         let command_pallete_action = gio::SimpleAction::new("command_pallete", None);
         application.add_action(&command_pallete_action);
         application.set_accels_for_action("app.command_pallete", &["<Primary><Shift>P"]);
-
-        // regisiter handler
-        {
-            command_pallete_action.connect_activate(move |_, _| app.open_command_pallete());
-        }
+        command_pallete_action.connect_activate(move |_, _| app.open_command_pallete());
     });
 
     application.run(&[]);
