@@ -44,8 +44,13 @@ fn main() {
     let mut file = fs::File::create("resources/resources.xml").unwrap();
     file.write_all(xml.as_bytes()).unwrap();
 
-    Command::new("glib-compile-resources")
-        .arg("resources.xml")
+    let mut cmd = if cfg!(target_os = "windows") {
+        Command::new("glib-compile-resources.exe")
+    } else {
+        Command::new("glib-compile-resources")
+    };
+
+    cmd.arg("resources.xml")
         .current_dir("resources")
         .output()
         .expect("failed to compile resources");
