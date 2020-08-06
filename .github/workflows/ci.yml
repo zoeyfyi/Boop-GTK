@@ -132,6 +132,9 @@ jobs:
       if: steps.cache.outputs.cache-hit != 'true'
     - name: Add gvsbuild bin directory to Path
       run: echo "::add-path::C:\gtk-build\gtk\x64\release\bin"
+    # is glib-compile-resources.exe here?
+    - name: test glib-compile-resources.exe
+      run: glib-compile-resources.exe --help
     # build
     - name: build
       run: cargo build
