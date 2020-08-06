@@ -26,7 +26,7 @@ gdk-pixbuf = "0.9"
 pango = "0.9"
 sourceview = "0.9"
 # GTK utils
-gladis = "0.4"
+gladis = { git = "https://github.com/mrbenshef/gladis" }
 gladis_proc_macro = "0.4"
 shrinkwraprs = "0.3.0"
 # V8

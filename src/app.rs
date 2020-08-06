@@ -48,7 +48,8 @@ pub struct App {
 impl App {
     pub fn new(config_dir: &Path, scripts: Arc<RwLock<Vec<Script>>>) -> Self {
         let mut app = App {
-            widgets: AppWidgets::from_resource("/co/uk/mrbenshef/Boop-GTK/boop-gtk.glade").unwrap(),
+            widgets: AppWidgets::from_resource("/co/uk/mrbenshef/Boop-GTK/boop-gtk.glade")
+                .unwrap_or_else(|e| panic!("failed to load boop-gtk.glade: {}", e)),
             context_id: 0,
             scripts,
         };
@@ -68,7 +69,11 @@ impl App {
         {
             let scripts = app.scripts.clone();
             app.reset_scripts_button.connect_clicked(move |_| {
-                for script in scripts.write().unwrap().iter_mut() {
+                for script in scripts
+                    .write()
+                    .expect("scripts lock is poisoned")
+                    .iter_mut()
+                {
                     script.kill_thread();
                 }
             });
@@ -118,7 +123,8 @@ impl App {
     }
 
     fn setup_syntax_highlighting(&self, config_dir: &Path) {
-        let language_manager = sourceview::LanguageManager::get_default().unwrap();
+        let language_manager =
+            sourceview::LanguageManager::get_default().expect("failed to get language manager");
 
         // add config_dir to language manager's search path
         let dirs = language_manager.get_search_path();
@@ -139,9 +145,9 @@ impl App {
         let buffer: sourceview::Buffer = self
             .source_view
             .get_buffer()
-            .unwrap()
+            .expect("failed to get buffer")
             .downcast::<sourceview::Buffer>()
-            .unwrap();
+            .expect("faild to downcast TextBuffer to sourceview Buffer");
         buffer.set_highlight_syntax(true);
         buffer.set_language(boop_language.as_ref());
     }
@@ -163,69 +169,41 @@ impl App {
         if let gtk::ResponseType::Other(script_id) = dialog.run() {
             info!(
                 "executing {}",
-                self.scripts.read().unwrap()[script_id as usize]
+                self.scripts.read().expect("scripts lock is poisoned")[script_id as usize]
                     .metadata
                     .name
             );
 
             self.status_bar.remove_all(self.context_id);
 
-            let buffer = &self.source_view.get_buffer().unwrap();
+            let buffer = &self.source_view.get_buffer().expect("failed to get buffer");
 
             let buffer_text = buffer
                 .get_text(&buffer.get_start_iter(), &buffer.get_end_iter(), false)
-                .unwrap();
+                .expect("failed to get buffer text");
 
             let selection_text = buffer
                 .get_selection_bounds()
-                .map(|(start, end)| buffer.get_text(&start, &end, false).unwrap().to_string());
+                .map(|(start, end)| buffer.get_text(&start, &end, false))
+                .flatten()
+                .map(|s| s.to_string());
 
-            let status = self.scripts.write().unwrap()[script_id as usize]
-                .execute(buffer_text.as_str(), selection_text.as_deref())
-                .unwrap(); // TODO: handle result
+            let status_result = self.scripts.write().expect("scripts lock is poisoned")
+                [script_id as usize]
+                .execute(buffer_text.as_str(), selection_text.as_deref());
 
-            // TODO: how to handle multiple messages?
-            if let Some(error) = status.error() {
-                self.status_bar.push(self.context_id, &error);
-            } else if let Some(info) = status.info() {
-                self.status_bar.push(self.context_id, &info);
-            }
-
-            match status.into_replacement() {
-                TextReplacement::Full(text) => {
-                    info!("replacing full text");
-                    buffer.set_text(&text);
-                }
-                TextReplacement::Selection(text) => {
-                    info!("replacing selection");
-                    match &mut buffer.get_selection_bounds() {
-                        Some((start, end)) => {
-                            buffer.delete(start, end);
-                            buffer.insert(start, &text);
-                        }
-                        None => {
-                            error!("tried to do a selection replacement, but no text is selected!");
-                        }
+            match status_result {
+                Ok(status) => {
+                    // TODO: how to handle multiple messages?
+                    if let Some(error) = status.error() {
+                        self.status_bar.push(self.context_id, &error);
+                    } else if let Some(info) = status.info() {
+                        self.status_bar.push(self.context_id, &info);
                     }
+                    self.do_replacement(status.into_replacement());
                 }
-                TextReplacement::Insert(insertions) => {
-                    let insert_text = insertions.join("");
-                    info!("inserting {} bytes", insert_text.len());
-
-                    match &mut buffer.get_selection_bounds() {
-                        Some((start, end)) => {
-                            buffer.delete(start, end);
-                            buffer.insert(start, &insert_text);
-                        }
-                        None => {
-                            let mut insert_point =
-                                buffer.get_iter_at_offset(buffer.get_property_cursor_position());
-                            buffer.insert(&mut insert_point, &insert_text)
-                        }
-                    }
-                }
-                TextReplacement::None => {
-                    info!("no text to replace");
+                Err(e) => {
+                    self.status_bar.push(self.context_id, e.as_str());
                 }
             }
         }
@@ -233,5 +211,47 @@ impl App {
         self.header_button.set_label(HEADER_BUTTON_GET_STARTED);
 
         dialog.close();
+    }
+
+    fn do_replacement(&self, replacement: TextReplacement) {
+        let buffer = &self.source_view.get_buffer().expect("failed to get buffer");
+
+        match replacement {
+            TextReplacement::Full(text) => {
+                info!("replacing full text");
+                buffer.set_text(&text);
+            }
+            TextReplacement::Selection(text) => {
+                info!("replacing selection");
+                match &mut buffer.get_selection_bounds() {
+                    Some((start, end)) => {
+                        buffer.delete(start, end);
+                        buffer.insert(start, &text);
+                    }
+                    None => {
+                        error!("tried to do a selection replacement, but no text is selected!");
+                    }
+                }
+            }
+            TextReplacement::Insert(insertions) => {
+                let insert_text = insertions.join("");
+                info!("inserting {} bytes", insert_text.len());
+
+                match &mut buffer.get_selection_bounds() {
+                    Some((start, end)) => {
+                        buffer.delete(start, end);
+                        buffer.insert(start, &insert_text);
+                    }
+                    None => {
+                        let mut insert_point =
+                            buffer.get_iter_at_offset(buffer.get_property_cursor_position());
+                        buffer.insert(&mut insert_point, &insert_text)
+                    }
+                }
+            }
+            TextReplacement::None => {
+                info!("no text to replace");
+            }
+        }
     }
 }

@@ -54,7 +54,7 @@ impl CommandPalleteDialog {
         let widgets = CommandPalleteDialogWidgets::from_resource(
             "/co/uk/mrbenshef/Boop-GTK/command-pallete.glade",
         )
-        .unwrap();
+        .unwrap_or_else(|e| panic!("failed to load command-pallete.glade: {}", e));
 
         let command_pallete_dialog = CommandPalleteDialog {
             widgets,
@@ -122,7 +122,12 @@ impl CommandPalleteDialog {
                 }
             }
 
-            for (index, script) in scripts.read().unwrap().iter().enumerate() {
+            for (index, script) in scripts
+                .read()
+                .expect("scripts lock is poisoned")
+                .iter()
+                .enumerate()
+            {
                 let mut icon_name = script.metadata.icon.to_lowercase();
                 icon_name.insert_str(0, "boop-gtk-");
                 icon_name.push_str("-symbolic");
@@ -220,8 +225,16 @@ impl CommandPalleteDialog {
         let model: gtk::TreeModelFilter = dialog_tree_view.get_model().unwrap().downcast().unwrap();
 
         if let (Some(path), _) = dialog_tree_view.get_cursor() {
-            let value = model.get_value(&model.get_iter(&path).unwrap(), ID_COLUMN as i32);
-            let v = value.downcast::<u64>().unwrap().get().unwrap();
+            let value = model.get_value(
+                &model
+                    .get_iter(&path)
+                    .unwrap_or_else(|| panic!("failed to get iter for path: {:?}", path)),
+                ID_COLUMN as i32,
+            );
+            let v = value
+                .downcast::<u64>()
+                .expect("cannot downcast value to u64")
+                .get_some();
             dialog.response(gtk::ResponseType::Other(v as u16));
         }
     }
@@ -244,7 +257,7 @@ impl CommandPalleteDialog {
         // score each script using search text
         let script_to_score = scripts
             .read()
-            .unwrap()
+            .expect("scripts lock is poisoned")
             .iter()
             .enumerate()
             .map(|(index, script)| {
@@ -261,8 +274,11 @@ impl CommandPalleteDialog {
             let mut path = gtk::TreePath::new();
             path.append_index(i);
 
-            let iter = store.get_iter(&path).unwrap();
+            let iter = store
+                .get_iter(&path)
+                .unwrap_or_else(|| panic!("failed to get iter for path: {:?}", path));
 
+            // TODO: use gtk_liststore_item crate
             let script_id: u64 = store
                 .get_value(&iter, ID_COLUMN as i32)
                 .get()

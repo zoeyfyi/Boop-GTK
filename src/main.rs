@@ -131,8 +131,10 @@ fn load_internal_scripts() -> Vec<Script> {
     // scripts are internal, so we can unwrap "safely"
     for file in Scripts::iter() {
         let file: Cow<'_, str> = file;
-        let source: Cow<'static, [u8]> = Scripts::get(&file).unwrap();
-        let script_source = String::from_utf8(source.to_vec()).unwrap();
+        let source: Cow<'static, [u8]> = Scripts::get(&file)
+            .unwrap_or_else(|| panic!("failed to get file: {}", file.to_string()));
+        let script_source = String::from_utf8(source.to_vec())
+            .unwrap_or_else(|e| panic!("{} is not UTF8: {}", file, e));
         if let Ok(script) = Script::from_source(script_source, PathBuf::new()) {
             scripts.push(script);
         }
@@ -215,7 +217,7 @@ fn watch_scripts_folder(scripts: Arc<RwLock<Vec<Script>>>) {
                     info!("{} changed, reloading", file.display());
 
                     // remove scripts, if they where modified we create a new instance bellow
-                    let mut scripts = scripts.write().unwrap();
+                    let mut scripts = scripts.write().expect("script lock is poisoned");
                     for i in 0..scripts.len() {
                         if scripts[i].path == file {
                             scripts.remove(i);
@@ -311,7 +313,7 @@ fn main() {
         gio::resources_register(&gio::Resource::from_data(&resource_data).unwrap());
 
         // add embedeed icons to theme
-        let icon_theme = gtk::IconTheme::get_default().unwrap();
+        let icon_theme = gtk::IconTheme::get_default().expect("failed to get default icon theme");
         icon_theme.add_resource_path("/co/uk/mrbenshef/Boop-GTK/icons");
 
         let app = App::new(&config_dir, scripts.clone());
