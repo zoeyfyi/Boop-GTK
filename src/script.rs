@@ -255,7 +255,7 @@ mod tests {
                     ParseScriptError::NoMetadata => {
                         assert!(file.starts_with("lib/")); // only library files should fail
                     }
-                    ParseScriptError::InvalidMetadata(e) => panic!(e),
+                    e => panic!(e),
                 },
             }
         }
