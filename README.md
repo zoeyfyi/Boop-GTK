@@ -28,6 +28,14 @@ sudo apt-get install -y libgtk-3-dev libgtksourceview-3.0-dev
 cargo build
 ```
 
+#### Snap
+
+```shell
+sudo apt-get install snap snapcraft
+snapcraft snap
+sudo snap install boop-gtk_0.2.1_amd64.snap
+```
+
 #### MacOS
 
 ```shell

@@ -10,3 +10,5 @@ windows/*
 !windows/build.ps1
 resources/resources.gresource
 resources/resources.xml
+/prime
+*.snap
