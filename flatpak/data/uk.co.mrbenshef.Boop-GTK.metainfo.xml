@@ -6,14 +6,14 @@
   <name>Boop-GTK</name>
   <summary>Port of IvanMathy's Boop to GTK, a scriptable scratchpad for developers.</summary>
   <description>
-    <p></p>
+    <p>Paste text, transform it (with user extendible javascipt), move on. Stop pasting sensitive infomation into sketchy sites to format JSON, compute a hash, etc.</p>
   </description>
-  <!-- <screenshots>
+  <screenshots>
     <screenshot type="default">
-      <image>https://gitlab.gnome.org/World/design/contrast/raw/master/data/resources/screenshots/screenshot1.png</image>
+      <image>https://raw.githubusercontent.com/mrbenshef/Boop-GTK/trunk/screenshot.png</image>
       <caption>Main Window</caption>
     </screenshot>
-  </screenshots> -->
+  </screenshots>
   <url type="homepage">https://boop-gtk.mrbenshef.co.uk/</url>
   <content_rating type="oars-1.0" />
   <releases>
