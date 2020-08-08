@@ -127,6 +127,7 @@ dependencies = [
  "simple-error",
  "sourceview",
  "sublime_fuzzy",
+ "winres",
 ]
 
 [[package]]
@@ -1423,6 +1424,15 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
+
+[[package]]
+name = "winres"
+version = "0.1.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ff4fb510bbfe5b8992ff15f77a2e6fe6cf062878f0eda00c0f44963a807ca5dc"
+dependencies = [
+ "toml",
+]
 
 [[package]]
 name = "ws2_32-sys"

@@ -1,3 +1,6 @@
+#[cfg(windows)]
+extern crate winres;
+
 use io::Write;
 use std::{fs, io, process::Command};
 
@@ -55,4 +58,11 @@ fn main() {
         .current_dir("resources")
         .output()
         .expect("failed to compile resources");
+
+    #[cfg(windows)]
+    {
+        let mut res = winres::WindowsResource::new();
+        res.set_icon("wix/boop-gtk.ico");
+        res.compile().unwrap();
+    }
 }

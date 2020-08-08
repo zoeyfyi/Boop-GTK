@@ -59,3 +59,5 @@ features = ["v3_16"]
 version = "0.9"
 features = ["v2_44"]
 
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1"
