@@ -136,7 +136,7 @@ jobs:
     - name: Python TOML
       run: sudo apt-get install python3-toml 
     - name: Generate sources
-      run: bash flatpak/gen-sources.sh
+      run: sudo bash flatpak/gen-sources.sh
     - name: Flatpak
       run: sudo flatpak-builder --repo=repo build-dir flatpak/uk.co.mrbenshef.Boop-GTK.json
     - name: Flatpak build bundle
