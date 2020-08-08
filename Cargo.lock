@@ -101,7 +101,7 @@ dependencies = [
 
 [[package]]
 name = "boop-gtk"
-version = "0.2.1"
+version = "1.0.0"
 dependencies = [
  "crossbeam",
  "directories",

@@ -33,7 +33,7 @@ cargo build
 ```shell
 sudo apt-get install snap snapcraft
 snapcraft snap
-sudo snap install boop-gtk_0.2.1_amd64.snap
+sudo snap install boop-gtk_1.0.0_amd64.snap
 ```
 
 #### MacOS
