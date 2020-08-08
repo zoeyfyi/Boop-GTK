@@ -551,7 +551,8 @@ dependencies = [
 [[package]]
 name = "gladis"
 version = "0.4.0"
-source = "git+https://github.com/mrbenshef/gladis#4b0529f8c36373ca6ef4ed0887cf1eed4c34f814"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "71d94b02d8b31a5cb962f26cebfd6afd7a43275802d69160848ad9d3a4433140"
 dependencies = [
  "gladis_proc_macro",
  "gtk",
@@ -560,7 +561,8 @@ dependencies = [
 [[package]]
 name = "gladis_proc_macro"
 version = "0.4.0"
-source = "git+https://github.com/mrbenshef/gladis#4b0529f8c36373ca6ef4ed0887cf1eed4c34f814"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "908d518052267c3b59f7b13bfb9f2a73e72b179f7f15677676251df84869d3dd"
 dependencies = [
  "quote",
  "syn",

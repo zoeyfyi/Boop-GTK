@@ -54,7 +54,7 @@ impl CommandPalleteDialog {
         let widgets = CommandPalleteDialogWidgets::from_resource(
             "/co/uk/mrbenshef/Boop-GTK/command-pallete.glade",
         )
-        .unwrap_or_else(|e| panic!("failed to load command-pallete.glade: {}", e));
+        .unwrap_or_else(|e| panic!("failed to load command-pallete.glade: {:?}", e)); // TODO: don't debug print once gladis errors implement display
 
         let command_pallete_dialog = CommandPalleteDialog {
             widgets,
