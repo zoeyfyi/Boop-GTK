@@ -216,16 +216,16 @@ Port of @IvanMathy&#39;s Boop to GTK
             <Directory Id='Sourceview' Name='gtksourceview-3.0'>
               <Directory Id='Specs' Name='language-specs'>
                 <Component Id='lang0' Guid='*' Win64='$(var.Win64)'>
-                  <File Id='lang0' Name='def.lang' DiskId='1' Source='C:\Program Files\Boop-GTK\share\gtksourceview-3.0\language-specs\def.lang' KeyPath='yes'/>
+                  <File Id='lang0' Name='def.lang' DiskId='1' Source='C:\gtk-build\gtk\x64\release\share\gtksourceview-3.0\language-specs\def.lang' KeyPath='yes'/>
                 </Component>
                 <Component Id='lang1' Guid='*' Win64='$(var.Win64)'>
-                  <File Id='lang1' Name='language.dtd' DiskId='1' Source='C:\Program Files\Boop-GTK\share\gtksourceview-3.0\language-specs\language.dtd' KeyPath='yes'/>
+                  <File Id='lang1' Name='language.dtd' DiskId='1' Source='C:\gtk-build\gtk\x64\release\share\gtksourceview-3.0\language-specs\language.dtd' KeyPath='yes'/>
                 </Component>
                 <Component Id='lang2' Guid='*' Win64='$(var.Win64)'>
-                  <File Id='lang2' Name='language.rng' DiskId='1' Source='C:\Program Files\Boop-GTK\share\gtksourceview-3.0\language-specs\language.rng' KeyPath='yes'/>
+                  <File Id='lang2' Name='language.rng' DiskId='1' Source='C:\gtk-build\gtk\x64\release\share\gtksourceview-3.0\language-specs\language.rng' KeyPath='yes'/>
                 </Component>
                 <Component Id='lang3' Guid='*' Win64='$(var.Win64)'>
-                  <File Id='lang3' Name='language2.rng' DiskId='1' Source='C:\Program Files\Boop-GTK\share\gtksourceview-3.0\language-specs\language2.rng' KeyPath='yes'/>
+                  <File Id='lang3' Name='language2.rng' DiskId='1' Source='C:\gtk-build\gtk\x64\release\share\gtksourceview-3.0\language-specs\language2.rng' KeyPath='yes'/>
                 </Component>
               </Directory>
             </Directory>
