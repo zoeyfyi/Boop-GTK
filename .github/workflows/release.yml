@@ -62,6 +62,9 @@ jobs:
       working-directory: C:\gtk-build\github\gvsbuild
     - name: Add gvsbuild bin directory to Path
       run: echo "::add-path::C:\gtk-build\gtk\x64\release\bin"
+    # install cargo wix
+    - name: install cargo-wix
+      run: cargo install cargo-wix
     # build installer
     - name: build
       run: cargo wix -v --nocapture -o boop-gtk.windows.msi
