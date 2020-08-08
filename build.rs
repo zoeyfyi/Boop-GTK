@@ -52,7 +52,7 @@ fn main() {
     };
 
     cmd.arg("resources.xml")
-        .current_dir("resources")    
+        .current_dir("resources")
         .output()
         .expect("failed to compile resources");
 }
