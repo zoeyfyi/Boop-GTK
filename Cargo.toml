@@ -1,5 +1,6 @@
 [package]
 name = "boop-gtk"
+build = "build.rs"
 version = "0.2.1"
 authors = ["Ben Sheffield"]
 edition = "2018"
@@ -26,8 +27,8 @@ gdk-pixbuf = "0.9"
 pango = "0.9"
 sourceview = "0.9"
 # GTK utils
-gladis = "0.4"
-gladis_proc_macro = "0.4"
+gladis = { git = "https://github.com/mrbenshef/gladis" }
+gladis_proc_macro = { git = "https://github.com/mrbenshef/gladis" }
 shrinkwraprs = "0.3.0"
 # V8
 rusty_v8 = "0.7"

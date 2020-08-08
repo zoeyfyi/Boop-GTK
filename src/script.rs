@@ -27,6 +27,7 @@ struct ExecutorChannel {
 pub enum ParseScriptError {
     NoMetadata,
     InvalidMetadata(serde_jsonrc::error::Error),
+    FailedToRead(std::io::Error),
 }
 
 impl fmt::Display for ParseScriptError {
@@ -34,6 +35,7 @@ impl fmt::Display for ParseScriptError {
         match self {
             ParseScriptError::NoMetadata => write!(f, "no metadata"),
             ParseScriptError::InvalidMetadata(e) => write!(f, "invalid metadata: {}", e),
+            ParseScriptError::FailedToRead(e) => write!(f, "failed to read script: {}", e),
         }
     }
 }
@@ -50,8 +52,10 @@ pub struct Metadata {
 
 impl Script {
     pub fn from_file(path: PathBuf) -> Result<Self, ParseScriptError> {
-        let source = fs::read_to_string(path.clone()).unwrap(); // TODO: handle
-        Script::from_source(source, path)
+        match fs::read_to_string(path.clone()) {
+            Ok(source) => Script::from_source(source, path),
+            Err(e) => Err(ParseScriptError::FailedToRead(e)),
+        }
     }
 
     pub fn from_source(source: String, path: PathBuf) -> Result<Self, ParseScriptError> {
@@ -86,7 +90,8 @@ impl Script {
                 debug!("executor created");
 
                 loop {
-                    match t_receiver.recv().unwrap() {
+                    match t_receiver.recv().unwrap() // blocks until receive 
+                    {
                         ExecutorJob::Request((full_text, selection)) => {
                             info!(
                                 "request received, full_text: {} bytes, selection: {} bytes",
@@ -94,7 +99,7 @@ impl Script {
                                 selection.as_ref().map(|s| s.len()).unwrap_or(0),
                             );
                             let result = executor.execute(&full_text, selection.as_deref());
-                            t_sender.send(ExecutorJob::Responce(result)).unwrap();
+                            t_sender.send(ExecutorJob::Responce(result)).unwrap(); // blocks until send
                             // TODO: handle
                         }
                         ExecutorJob::Responce(_) => {
@@ -115,7 +120,7 @@ impl Script {
     // kills the thread associated with this script, it will be recreated when `execute` is called
     pub fn kill_thread(&mut self) {
         if let Some(channel) = &self.channel {
-            channel.sender.send(ExecutorJob::Kill).unwrap();
+            channel.sender.send(ExecutorJob::Kill).unwrap(); // blocks until send
         }
 
         self.channel = None;
@@ -129,8 +134,9 @@ impl Script {
         if self.channel.is_none() {
             self.init_executor_thread();
         }
+        assert!(self.channel.is_some());
 
-        let channel = self.channel.as_ref().unwrap();
+        let channel = self.channel.as_ref().expect("channel is none");
 
         // send request
         channel
@@ -249,7 +255,7 @@ mod tests {
                     ParseScriptError::NoMetadata => {
                         assert!(file.starts_with("lib/")); // only library files should fail
                     }
-                    ParseScriptError::InvalidMetadata(e) => panic!(e),
+                    e => panic!(e),
                 },
             }
         }

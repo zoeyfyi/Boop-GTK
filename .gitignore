@@ -8,3 +8,9 @@ flatpak/generated-sources.json
 windows/*
 !windows/make-bundle.ps1
 !windows/build.ps1
+resources/resources.gresource
+resources/resources.xml
+/prime
+*.snap
+/boop-gtk.windows
+boop-gtk.windows.msi

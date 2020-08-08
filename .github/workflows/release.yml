@@ -62,23 +62,17 @@ jobs:
       working-directory: C:\gtk-build\github\gvsbuild
     - name: Add gvsbuild bin directory to Path
       run: echo "::add-path::C:\gtk-build\gtk\x64\release\bin"
-    # build
+    # build installer
     - name: build
-      run: cargo build --release --all-features
+      run: cargo wix -v --nocapture -o boop-gtk.windows.msi
       env:
         GTKSOURCEVIEW_3.0_NO_PKG_CONFIG: 1
         SYSTEM_DEPS_GTKSOURCEVIEW_3.0_LIB: gtksourceview-3.0
-    # download icons from MSYS since gcsbuild icons are broken
-    - name: download icons
-      run: C:\msys64\usr\bin\bash.exe -lc "pacman -S --noconfirm mingw-w64-x86_64-adwaita-icon-theme"
-    # create bundle
-    - name: create bundle
-      run: cd windows && ./make-bundle.ps1
     # upload
     - uses: actions/upload-artifact@2.1.0
       with:
-        name: boop-gtk.windows.zip
-        path: ./windows/boop-gtk.windows.zip
+        name: boop-gtk.windows.msi
+        path: ./boop-gtk.windows.msi
 
   release-macosx:
     runs-on: macos-latest
@@ -195,7 +189,7 @@ jobs:
         path: ./
     - uses: actions/download-artifact@v2
       with:
-        name: boop-gtk.windows.zip
+        name: boop-gtk.windows.msi
         path: ./
     # create a release
     - name: Create Release
@@ -253,6 +247,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-        asset_path: ./boop-gtk.windows.zip
-        asset_name: boop-gtk.windows.zip
-        asset_content_type: application/zip
+        asset_path: ./boop-gtk.windows.msi
+        asset_name: boop-gtk.windows.msi
+        asset_content_type: application/octet-stream

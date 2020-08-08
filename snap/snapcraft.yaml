@@ -1,11 +1,13 @@
 name: boop-gtk
-version: git
+title: Boop-GTK
+version: '0.2.1'
+icon: snap/gui/boop-gtk.png
 summary: Port of IvanMathy's Boop to GTK, a scriptable scratchpad for developers.
 description: |
   Paste text, transform it (with user extendible javascipt), move on. Stop pasting sensitive infomation into sketchy sites to format JSON, compute a hash, etc.
 
 base: core18
-confinement: devmode
+confinement: strict
 
 build-packages:
   - gcc
@@ -16,6 +18,12 @@ parts:
     plugin: rust
     source: .
 
+slots:
+  dbus-daemon:
+    interface: dbus
+    bus: session
+    name: uk.co.mrbenshef.Boop-GTK
+
 apps:
   boop-gtk:
     command: bin/boop-gtk
@@ -25,3 +33,6 @@ apps:
     - desktop-legacy
     - wayland
     - unity7
+    slots:
+    - dbus-daemon
+    common-id: uk.co.mrbenshef.Boop-GTK
