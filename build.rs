@@ -24,6 +24,7 @@ fn add_files(xml: &mut String, folder: &str) {
                 path.path()
                     .display()
                     .to_string()
+                    .replace("\\", "/")
                     .trim_start_matches("resources/")
             ));
         } else if path.file_type().unwrap().is_dir() {
@@ -51,7 +52,7 @@ fn main() {
     };
 
     cmd.arg("resources.xml")
-        .current_dir("resources")
+        .current_dir("resources")    
         .output()
         .expect("failed to compile resources");
 }

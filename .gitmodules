@@ -7,3 +7,6 @@
 [submodule "submodules/svg-stroke-to-path"]
 	path = submodules/svg-stroke-to-path
 	url = https://github.com/leifgehrmann/svg-stroke-to-path.git
+[submodule "submodules/Windows-10-Dark"]
+	path = submodules/Windows-10-Dark
+	url = https://github.com/B00merang-Project/Windows-10-Dark.git

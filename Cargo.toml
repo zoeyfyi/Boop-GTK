@@ -1,5 +1,6 @@
 [package]
 name = "boop-gtk"
+build = "build.rs"
 version = "0.2.1"
 authors = ["Ben Sheffield"]
 edition = "2018"
