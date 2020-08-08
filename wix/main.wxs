@@ -115,6 +115,9 @@ Port of @IvanMathy&#39;s Boop to GTK
             <Component Id='dll16' Guid='*' Win64='$(var.Win64)'>
               <File Id='dll16file' Name='gailutil-3-vs16.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\gailutil-3-vs16.dll' KeyPath='yes'/>
             </Component>
+            <Component Id='exebus' Guid='*' Win64='$(var.Win64)'>
+              <File Id='exebus' Name='gdbus.exe' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\gdbus.exe' KeyPath='yes'/>
+            </Component>
             <Component Id='dll17' Guid='*' Win64='$(var.Win64)'>
               <File Id='dll17file' Name='gettextlib.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\gettextlib.dll' KeyPath='yes'/>
             </Component>
@@ -210,6 +213,23 @@ Port of @IvanMathy&#39;s Boop to GTK
           </Directory>
 
           <Directory Id='Share' Name='share'>
+            <Directory Id='Sourceview' Name='gtksourceview-3.0'>
+              <Directory Id='Specs' Name='language-specs'>
+                <Component Id='lang0' Guid='*' Win64='$(var.Win64)'>
+                  <File Id='lang0' Name='def.lang' DiskId='1' Source='C:\Program Files\Boop-GTK\share\gtksourceview-3.0\language-specs\def.lang' KeyPath='yes'/>
+                </Component>
+                <Component Id='lang1' Guid='*' Win64='$(var.Win64)'>
+                  <File Id='lang1' Name='language.dtd' DiskId='1' Source='C:\Program Files\Boop-GTK\share\gtksourceview-3.0\language-specs\language.dtd' KeyPath='yes'/>
+                </Component>
+                <Component Id='lang2' Guid='*' Win64='$(var.Win64)'>
+                  <File Id='lang2' Name='language.rng' DiskId='1' Source='C:\Program Files\Boop-GTK\share\gtksourceview-3.0\language-specs\language.rng' KeyPath='yes'/>
+                </Component>
+                <Component Id='lang3' Guid='*' Win64='$(var.Win64)'>
+                  <File Id='lang3' Name='language2.rng' DiskId='1' Source='C:\Program Files\Boop-GTK\share\gtksourceview-3.0\language-specs\language2.rng' KeyPath='yes'/>
+                </Component>
+              </Directory>
+            </Directory>
+
             <Directory Id='Icons' Name='icons'>
               <Directory Id='Adwaita' Name='Adwaita'>
 
@@ -348,6 +368,7 @@ Port of @IvanMathy&#39;s Boop to GTK
       <ComponentRef Id='dll14'/>
       <ComponentRef Id='dll15'/>
       <ComponentRef Id='dll16'/>
+      <ComponentRef Id='exebus'/>
       <ComponentRef Id='dll17'/>
       <ComponentRef Id='dll18'/>
       <ComponentRef Id='dll19'/>
@@ -376,6 +397,11 @@ Port of @IvanMathy&#39;s Boop to GTK
       <ComponentRef Id='loadercache'/>
       <ComponentRef Id='libdll0'/>
       <ComponentRef Id='libdll1'/>
+
+      <ComponentRef Id='lang0'/>
+      <ComponentRef Id='lang1'/>
+      <ComponentRef Id='lang2'/>
+      <ComponentRef Id='lang3'/>
 
       <ComponentRef Id='icon0'/>
       <ComponentRef Id='icon1'/>
