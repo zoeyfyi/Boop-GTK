@@ -62,7 +62,7 @@ Port of @IvanMathy&#39;s Boop to GTK
               <Environment Id='PATH' Name='PATH' Value='[Bin]' Permanent='no' Part='last' Action='set' System='yes'/>
             </Component>
             <Component Id='binary0' Guid='*' Win64='$(var.Win64)'>
-              <File Id='exe0' Name='boop-gtk.exe' DiskId='1' Source='target\$(var.Profile)\boop-gtk.exe' KeyPath='yes'/>
+              <File Id='binary0' Name='boop-gtk.exe' DiskId='1' Source='target\$(var.Profile)\boop-gtk.exe' KeyPath='yes'/>
             </Component>
             <Component Id='dll0' Guid='*' Win64='$(var.Win64)'>
               <File Id='dll0file' Name='asprintf.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\asprintf.dll' KeyPath='yes'/>
@@ -214,7 +214,7 @@ Port of @IvanMathy&#39;s Boop to GTK
               <Directory Id='Adwaita' Name='Adwaita'>
 
                 <Directory Id='sixteensixteen' Name='16x16'>
-                  
+
                   <Directory Id='Legacy' Name='legacy'>
                     <Component Id='icon1' Guid='*' Win64='$(var.Win64)'>
                       <File Id='icon1file' Name='document-properties.png' DiskId='1' Source='C:\gtk-build\gtk\x64\release\share\icons\Adwaita\16x16\legacy\document-properties.png' KeyPath='yes'/>
@@ -305,7 +305,21 @@ Port of @IvanMathy&#39;s Boop to GTK
 
         </Directory>
       </Directory>
+
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="Boop-GTK"/>
+      </Directory>
     </Directory>
+
+    <DirectoryRef Id="ApplicationProgramsFolder">
+      <Component Id="ApplicationShortcut" Guid="D8E06AF7-0D37-45EF-870A-FB044256F7DA">
+        <Shortcut Id="ApplicationStartMenuShortcut" Name="Boop-GTK" Description="A scriptable scratchpad for developers" Target="[#binary0]" WorkingDirectory="APPLICATIONFOLDER" Icon="AppIcon">
+          <Icon Id="AppIcon" SourceFile="target\$(var.Profile)\boop-gtk.exe" />
+        </Shortcut>
+        <RemoveFolder Id="CleanUpShortCut" Directory="ApplicationProgramsFolder" On="uninstall"/>
+        <RegistryValue Root="HKCU" Key="Software\mrbenshef\Boop-GTK" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+      </Component>
+    </DirectoryRef>
 
     <Feature Id='Binaries' Title='Application' Description='Installs all binaries, dlls and the license.' Level='1' ConfigurableDirectory='APPLICATIONFOLDER' AllowAdvertise='no' Display='expand' Absent='disallow'>
       <!--
@@ -313,8 +327,9 @@ Port of @IvanMathy&#39;s Boop to GTK
               the license sidecar file from the installer.
             -->
       <ComponentRef Id='License'/>
-
+      
       <ComponentRef Id='binary0'/>
+      <ComponentRef Id='ApplicationShortcut' />
 
       <ComponentRef Id='dll0'/>
       <ComponentRef Id='dll1'/>
@@ -402,6 +417,7 @@ Port of @IvanMathy&#39;s Boop to GTK
     <!--<Property Id='ARPPRODUCTICON' Value='ProductICO' />-->
 
     <Property Id='ARPHELPLINK' Value='https://boop-gtk.mrbenshef.co.uk'/>
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
 
     <UI>
       <UIRef Id='WixUI_FeatureTree'/>
