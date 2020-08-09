@@ -405,7 +405,6 @@ Port of @IvanMathy&#39;s Boop to GTK
       <ComponentRef Id='icon3'/>
       <ComponentRef Id='icon4'/>
 
-      <ComponentRef Id='itc0'/>
       <ComponentRef Id='idx0'/>
       <ComponentRef Id='idx1'/>
 
