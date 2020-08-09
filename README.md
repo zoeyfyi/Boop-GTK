@@ -42,6 +42,21 @@ snapcraft snap
 sudo snap install boop-gtk_0.2.1_amd64.snap
 ```
 
+#### Linux Flatpak
+
+```shell
+sudo add-apt-repository ppa:alexlarsson/flatpak 
+sudo apt-get update 
+sudo apt-get install flatpak
+sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+sudo flatpak install -y flathub org.freedesktop.Platform//19.08 org.freedesktop.Sdk//19.08 org.freedesktop.Sdk.Extension.rust-stable//19.08
+wget https://github.com/flatpak/flatpak-builder/releases/download/1.0.10/flatpak-builder-1.0.10.tar.xz && tar -xvf flatpak-builder-1.0.10.tar.xz && cd flatpak-builder-1.0.10 && ./configure --disable-documentation && make && sudo make install
+sudo apt-get install python3-toml
+bash flatpak/gen-sources.sh
+sudo flatpak-builder --repo=repo build-dir flatpak/uk.co.mrbenshef.Boop-GTK.json
+flatpak build-bundle ./repo boop-gtk.flatpak uk.co.mrbenshef.Boop-GTK
+```
+
 #### MacOS
 
 ```shell
@@ -62,5 +77,7 @@ ${Env:GTKSOURCEVIEW_3.0_NO_PKG_CONFIG}=1; ${Env:SYSTEM_DEPS_GTKSOURCEVIEW_3.0_LI
 #### Windows Installer
 
 ```powershell
+# follow build steps above, then:
+cargo install cargo-wix 
 ${Env:GTKSOURCEVIEW_3.0_NO_PKG_CONFIG}=1; ${Env:SYSTEM_DEPS_GTKSOURCEVIEW_3.0_LIB}="gtksourceview-3.0"; cargo wix -v
 ```
