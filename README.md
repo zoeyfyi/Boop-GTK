@@ -11,6 +11,12 @@
 ![Release](https://github.com/mrbenshef/Boop-GTK/workflows/Release/badge.svg?branch=release)
 ![Crates.io](https://img.shields.io/crates/v/boop-gtk)
 
+### Screenshots
+
+| Linux | Windows |
+| :---: | :---: |
+| ![linux](screenshot.png) | ![windows](windows-screenshot.png) |
+
 ### Get Boop-GTK
 
 - Pre-build binarys, flatpak and snaps on [Github releases](https://github.com/mrbenshef/Boop-GTK/releases)
