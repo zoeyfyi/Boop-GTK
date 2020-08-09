@@ -11,6 +11,18 @@
 ![Release](https://github.com/mrbenshef/Boop-GTK/workflows/Release/badge.svg?branch=release)
 ![Crates.io](https://img.shields.io/crates/v/boop-gtk)
 
+### What is Boop-GTK?
+
+[Boop](https://github.com/IvanMathy) is a simple editor that allows you to execute scripts on the buffer. The idea is that don’t have to paste potentially secret infomation in to shady websites to do some simple transforms, like format json and decoding query strings.
+
+Boop-GTK is a port of Boop to GTK, so users on Linux and Windows can Boop it!
+
+### Features
+
+- All 50+ builtin scripts including "Base64 Encode", "Format JSON", "Hex to RGB" and more
+- 100% script compatability with [Boop](https://github.com/IvanMathy/Boop)
+- Completely crossplatform!
+
 ### Screenshots
 
 | Linux | Windows |
@@ -32,7 +44,7 @@ sudo apt-get install -y libgtk-3-dev libgtksourceview-3.0-dev
 cargo build
 ```
 
-#### Snap
+#### Linux Snap
 
 ```shell
 sudo apt-get install snap snapcraft
