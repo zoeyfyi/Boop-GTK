@@ -261,10 +261,6 @@ Port of @IvanMathy&#39;s Boop to GTK
                   </Directory>
                 </Directory>
 
-                <Component Id='itc0' Guid='*' Win64='$(var.Win64)'>
-                  <File Id='itc0file' Name='icon-theme.cache' DiskId='1' Source='C:\gtk-build\gtk\x64\release\share\icons\Adwaita\icon-theme.cache' KeyPath='yes'/>
-                </Component>
-
                 <Component Id='idx0' Guid='*' Win64='$(var.Win64)'>
                   <File Id='idx0file' Name='index.theme' DiskId='1' Source='C:\gtk-build\gtk\x64\release\share\icons\Adwaita\index.theme' KeyPath='yes'/>
                 </Component>
