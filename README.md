@@ -19,11 +19,9 @@
 
 ### Get Boop-GTK
 
-- Pre-build binarys, flatpak and snaps on [Github releases](https://github.com/mrbenshef/Boop-GTK/releases)
-- Snap Store (soon)
-- Flathub (soon)
-- Package managers (maybe)
-- Compile from source
+| Linux | Windows | MacOS |
+| :--- | :--- | :--- |
+| [boop-gtk.linux.amd64](https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.linux.amd64) </br> [boop-gtk.flatpak](https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.flatpak) </br> [boop-gtk.snap](https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.snap) | [boop-gtk.windows.msi](https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.windows.msi) | You should really use [Boop](https://github.com/IvanMathy/Boop), </br> but if you _really_ want to: </br> [boop-gtk.macos](https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.macos) |
 
 ### Building
 
