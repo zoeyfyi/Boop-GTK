@@ -914,9 +914,9 @@ dependencies = [
 
 [[package]]
 name = "pango"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "460dbe5ad850c46780ba61f142e966beacf5eebb09822830f796c91d7d4fec31"
+checksum = "9937068580bebd8ced19975938573803273ccbcbd598c58d4906efd4ac87c438"
 dependencies = [
  "bitflags",
  "glib",
