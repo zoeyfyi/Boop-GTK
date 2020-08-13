@@ -1,0 +1,487 @@
+<?xml version='1.0' encoding='windows-1252'?>
+<!--
+  Copyright (C) 2017 Christopher R. Field.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!--
+  Please do not remove these pre-processor If-Else blocks. These are used with
+  the `cargo wix` subcommand to automatically determine the installation
+  destination for 32-bit versus 64-bit installers. Removal of these lines will
+  cause installation errors.
+-->
+<?if $(var.Platform) = x64 ?>
+<?define Win64 = "yes" ?>
+<?define PlatformProgramFilesFolder = "ProgramFiles64Folder" ?>
+<?else ?>
+<?define Win64 = "no" ?>
+<?define PlatformProgramFilesFolder = "ProgramFilesFolder" ?>
+<?endif ?>
+
+<Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
+
+  <Product Id='*' Name='Boop-GTK' UpgradeCode='43E49225-F99B-4F1E-A901-A7820F399B1E' Manufacturer='Ben Sheffield' Language='1033' Codepage='1252' Version='$(var.Version)'>
+
+    <Package Id='*' Keywords='Installer' Description='A scriptable scratchpad for developers
+
+Port of @IvanMathy&#39;s Boop to GTK
+' Manufacturer='Ben Sheffield' InstallerVersion='450' Languages='1033' Compressed='yes' InstallScope='perMachine' SummaryCodepage='1252' Platform='$(var.Platform)'/>
+
+    <MajorUpgrade Schedule='afterInstallInitialize' DowngradeErrorMessage='A newer version of [ProductName] is already installed. Setup will now exit.'/>
+
+    <Media Id='1' Cabinet='media1.cab' EmbedCab='yes' DiskPrompt='CD-ROM #1'/>
+    <Property Id='DiskPrompt' Value='Boop-GTK Installation'/>
+
+    <Directory Id='TARGETDIR' Name='SourceDir'>
+      <Directory Id='$(var.PlatformProgramFilesFolder)' Name='PFiles'>
+        <Directory Id='APPLICATIONFOLDER' Name='Boop-GTK'>
+          <!--
+                      Disabling the license sidecar file in the installer is a two step process:
+
+                      1. Comment out or remove the `Component` tag along with its contents.
+                      2. Comment out or remove the `ComponentRef` tag with the "License" Id
+                         attribute value further down in this file.
+                    -->
+          <Component Id='License' Guid='*' Win64='$(var.Win64)'>
+            <File Id='LicenseFile' Name='License.rtf' DiskId='1' Source='wix\License.rtf' KeyPath='yes'/>
+          </Component>
+
+          <Directory Id='Bin' Name='bin'>
+            <Component Id='Path' Guid='B3A699E7-B0BD-41B4-9E58-4A4393C465B6' Win64='$(var.Win64)' KeyPath='yes'>
+              <Environment Id='PATH' Name='PATH' Value='[Bin]' Permanent='no' Part='last' Action='set' System='yes'/>
+            </Component>
+            <Component Id='binary0' Guid='*' Win64='$(var.Win64)'>
+              <File Id='binary0' Name='boop-gtk.exe' DiskId='1' Source='target\$(var.Profile)\boop-gtk.exe' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll0' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll0file' Name='asprintf.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\asprintf.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll1' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll1file' Name='cairo-gobject.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\cairo-gobject.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll2' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll2file' Name='ffi-7.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\ffi-7.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll3' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll3file' Name='fribidi-0.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\fribidi-0.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll4' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll4file' Name='gdk-3-vs16.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\gdk-3-vs16.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll5' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll5file' Name='gettextsrc.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\gettextsrc.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll6' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll6file' Name='gmodule-2.0-0.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\gmodule-2.0-0.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll7' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll7file' Name='gtk-3-vs16.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\gtk-3-vs16.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll8' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll8file' Name='intl.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\intl.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll9' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll9file' Name='libpng16.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\libpng16.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll10' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll10file' Name='pangocairo-1.0-0.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\pangocairo-1.0-0.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll11' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll11file' Name='pkgconf-3.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\pkgconf-3.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll12' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll12file' Name='tiffxx.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\tiffxx.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll13' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll13file' Name='atk-1.0-0.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\atk-1.0-0.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll14' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll14file' Name='croco-0.6.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\croco-0.6.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll15' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll15file' Name='fontconfig.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\fontconfig.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll16' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll16file' Name='gailutil-3-vs16.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\gailutil-3-vs16.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='exebus' Guid='*' Win64='$(var.Win64)'>
+              <File Id='exebus' Name='gdbus.exe' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\gdbus.exe' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll17' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll17file' Name='gettextlib.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\gettextlib.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll18' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll18file' Name='gio-2.0-0.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\gio-2.0-0.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll19' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll19file' Name='gobject-2.0-0.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\gobject-2.0-0.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll20' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll20file' Name='gtksourceview-3.0.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\gtksourceview-3.0.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll21' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll21file' Name='jasper.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\jasper.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll22' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll22file' Name='libxml2.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\libxml2.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll23' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll23file' Name='pangoft2-1.0-0.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\pangoft2-1.0-0.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll24' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll24file' Name='rsvg-2.0.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\rsvg-2.0.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll25' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll25file' Name='turbojpeg.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\turbojpeg.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll26' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll26file' Name='cairo.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\cairo.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll27' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll27file' Name='epoxy-0.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\epoxy-0.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll28' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll28file' Name='freetype.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\freetype.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll29' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll29file' Name='gdk_pixbuf-2.0-0.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\gdk_pixbuf-2.0-0.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll30' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll30file' Name='gettextpo.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\gettextpo.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll31' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll31file' Name='glib-2.0-0.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\glib-2.0-0.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll32' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll32file' Name='gthread-2.0-0.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\gthread-2.0-0.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll33' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll33file' Name='iconv.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\iconv.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll34' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll34file' Name='jpeg62.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\jpeg62.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll35' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll35file' Name='pango-1.0-0.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\pango-1.0-0.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll36' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll36file' Name='pangowin32-1.0-0.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\pangowin32-1.0-0.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll37' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll37file' Name='tiff.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\tiff.dll' KeyPath='yes'/>
+            </Component>
+            <Component Id='dll38' Guid='*' Win64='$(var.Win64)'>
+              <File Id='dll38file' Name='zlib1.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\zlib1.dll' KeyPath='yes'/>
+            </Component>
+          </Directory>
+
+          <Directory Id='Etc' Name='etc'>
+            <Directory Id='Gtk30' Name='gtk-3.0'>
+              <Component Id='Settings' Guid='*' Win64='$(var.Win64)'>
+                <File Id='SettingsFile' Name='settings.ini' DiskId='1' Source='wix\settings.ini' KeyPath='yes'/>
+              </Component>
+            </Directory>
+          </Directory>
+
+          <Directory Id='Lib' Name='lib'>
+            <Directory Id='GdkPixbuf' Name='gdk-pixbuf-2.0'>
+              <Directory Id='GdkPixbufVersion' Name='2.10.0'>
+                <Component Id='loadercache' Guid='*' Win64='$(var.Win64)'>
+                  <File Id='loadercachefile' Name='loaders.cache' DiskId='1' Source='C:\gtk-build\gtk\x64\release\lib\gdk-pixbuf-2.0\2.10.0\loaders.cache' KeyPath='yes'/>
+                </Component>
+                <Directory Id='GdkPixbufLoaders' Name='loaders'>
+                  <Component Id='libdll0' Guid='*' Win64='$(var.Win64)'>
+                    <File Id='libdll0file' Name='libpixbufloader-svg.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\lib\gdk-pixbuf-2.0\2.10.0\loaders\libpixbufloader-svg.dll' KeyPath='yes'/>
+                  </Component>
+                  <Component Id='libdll1' Guid='*' Win64='$(var.Win64)'>
+                    <File Id='libdll1file' Name='pixbufloader-png.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\lib\gdk-pixbuf-2.0\2.10.0\loaders\pixbufloader-png.dll' KeyPath='yes'/>
+                  </Component>
+                </Directory>
+              </Directory>
+            </Directory>
+          </Directory>
+
+          <Directory Id='Share' Name='share'>
+            <Directory Id='Sourceview' Name='gtksourceview-3.0'>
+              <Directory Id='Specs' Name='language-specs'>
+                <Component Id='lang0' Guid='*' Win64='$(var.Win64)'>
+                  <File Id='lang0' Name='def.lang' DiskId='1' Source='C:\gtk-build\gtk\x64\release\share\gtksourceview-3.0\language-specs\def.lang' KeyPath='yes'/>
+                </Component>
+                <Component Id='lang1' Guid='*' Win64='$(var.Win64)'>
+                  <File Id='lang1' Name='language.dtd' DiskId='1' Source='C:\gtk-build\gtk\x64\release\share\gtksourceview-3.0\language-specs\language.dtd' KeyPath='yes'/>
+                </Component>
+                <Component Id='lang2' Guid='*' Win64='$(var.Win64)'>
+                  <File Id='lang2' Name='language.rng' DiskId='1' Source='C:\gtk-build\gtk\x64\release\share\gtksourceview-3.0\language-specs\language.rng' KeyPath='yes'/>
+                </Component>
+                <Component Id='lang3' Guid='*' Win64='$(var.Win64)'>
+                  <File Id='lang3' Name='language2.rng' DiskId='1' Source='C:\gtk-build\gtk\x64\release\share\gtksourceview-3.0\language-specs\language2.rng' KeyPath='yes'/>
+                </Component>
+              </Directory>
+            </Directory>
+
+            <Directory Id='Icons' Name='icons'>
+              <Directory Id='Adwaita' Name='Adwaita'>
+
+                <Directory Id='sixteensixteen' Name='16x16'>
+
+                  <Directory Id='Legacy' Name='legacy'>
+                    <Component Id='icon1' Guid='*' Win64='$(var.Win64)'>
+                      <File Id='icon1file' Name='document-properties.png' DiskId='1' Source='C:\gtk-build\gtk\x64\release\share\icons\Adwaita\16x16\legacy\document-properties.png' KeyPath='yes'/>
+                    </Component>
+                  </Directory>
+                </Directory>
+
+                <Directory Id='Scalable' Name='scalable'>
+                  <Directory Id='Ui' Name='ui'>
+                    <Component Id='icon2' Guid='*' Win64='$(var.Win64)'>
+                      <File Id='icon2file' Name='window-close-symbolic.svg' DiskId='1' Source='C:\gtk-build\gtk\x64\release\share\icons\Adwaita\scalable\ui\window-close-symbolic.svg' KeyPath='yes'/>
+                    </Component>
+                    <Component Id='icon3' Guid='*' Win64='$(var.Win64)'>
+                      <File Id='icon3file' Name='window-maximize-symbolic.svg' DiskId='1' Source='C:\gtk-build\gtk\x64\release\share\icons\Adwaita\scalable\ui\window-maximize-symbolic.svg' KeyPath='yes'/>
+                    </Component>
+                    <Component Id='icon4' Guid='*' Win64='$(var.Win64)'>
+                      <File Id='icon4file' Name='window-minimize-symbolic.svg' DiskId='1' Source='C:\gtk-build\gtk\x64\release\share\icons\Adwaita\scalable\ui\window-minimize-symbolic.svg' KeyPath='yes'/>
+                    </Component>
+                  </Directory>
+                  <Directory Id='Actions' Name='actions'>
+                    <Component Id='icon0' Guid='*' Win64='$(var.Win64)'>
+                      <File Id='icon0file' Name='edit-find-symbolic.svg' DiskId='1' Source='C:\gtk-build\gtk\x64\release\share\icons\Adwaita\scalable\actions\edit-find-symbolic.svg' KeyPath='yes'/>
+                    </Component>
+                  </Directory>
+                </Directory>
+
+                <Component Id='idx0' Guid='*' Win64='$(var.Win64)'>
+                  <File Id='idx0file' Name='index.theme' DiskId='1' Source='C:\gtk-build\gtk\x64\release\share\icons\Adwaita\index.theme' KeyPath='yes'/>
+                </Component>
+
+              </Directory>
+
+              <Directory Id='Hicolor' Name='hicolor'>
+
+                <Component Id='idx1' Guid='*' Win64='$(var.Win64)'>
+                  <File Id='idx1file' Name='index.theme' DiskId='1' Source='C:\gtk-build\gtk\x64\release\share\icons\hicolor\index.theme' KeyPath='yes'/>
+                </Component>
+
+              </Directory>
+            </Directory>
+
+            <Directory Id='Themes' Name='themes'>
+              <Directory Id='Windows10' Name='Windows-10-Dark'>
+                <Component Id='ThemeLicense' Guid='*' Win64='$(var.Win64)'>
+                  <File Id='ThemeLicenseFile' Name='settings.ini' DiskId='1' Source='submodules/Windows-10-Dark/LICENSE.md' KeyPath='yes'/>
+                </Component>
+
+                <Directory Id='gtk320' Name='gtk-3.20'>
+                  <Component Id='SettingsTheme' Guid='*' Win64='$(var.Win64)'>
+                    <File Id='SettingsThemeFile' Name='settings.ini' DiskId='1' Source='submodules/Windows-10-Dark/gtk-3.20/settings.ini' KeyPath='yes'/>
+                  </Component>
+                  <Component Id='gtkcss' Guid='*' Win64='$(var.Win64)'>
+                    <File Id='gtkcssFile' Name='gtk.css' DiskId='1' Source='submodules/Windows-10-Dark/gtk-3.20/gtk.css' KeyPath='yes'/>
+                  </Component>
+
+                  <Directory Id='Assets' Name='assets'>
+                    <Component Id='theme0' Guid='*' Win64='$(var.Win64)'>
+                      <File Id='theme0File' Name='close-focused.png' DiskId='1' Source='submodules/Windows-10-Dark/gtk-3.20/assets/close-focused.png' KeyPath='yes'/>
+                    </Component>
+                    <Component Id='theme1' Guid='*' Win64='$(var.Win64)'>
+                      <File Id='theme1File' Name='close-focused-active.png' DiskId='1' Source='submodules/Windows-10-Dark/gtk-3.20/assets/close-focused-active.png' KeyPath='yes'/>
+                    </Component>
+                    <Component Id='theme2' Guid='*' Win64='$(var.Win64)'>
+                      <File Id='theme2File' Name='close-unfocused.png' DiskId='1' Source='submodules/Windows-10-Dark/gtk-3.20/assets/close-unfocused.png' KeyPath='yes'/>
+                    </Component>
+                    <Component Id='theme3' Guid='*' Win64='$(var.Win64)'>
+                      <File Id='theme3File' Name='maximize-focused.png' DiskId='1' Source='submodules/Windows-10-Dark/gtk-3.20/assets/maximize-focused.png' KeyPath='yes'/>
+                    </Component>
+                    <Component Id='theme4' Guid='*' Win64='$(var.Win64)'>
+                      <File Id='theme4File' Name='maximize-unfocused.png' DiskId='1' Source='submodules/Windows-10-Dark/gtk-3.20/assets/maximize-unfocused.png' KeyPath='yes'/>
+                    </Component>
+                    <Component Id='theme5' Guid='*' Win64='$(var.Win64)'>
+                      <File Id='theme5File' Name='minimize-focused.png' DiskId='1' Source='submodules/Windows-10-Dark/gtk-3.20/assets/minimize-focused.png' KeyPath='yes'/>
+                    </Component>
+                    <Component Id='theme6' Guid='*' Win64='$(var.Win64)'>
+                      <File Id='theme6File' Name='minimize-unfocused.png' DiskId='1' Source='submodules/Windows-10-Dark/gtk-3.20/assets/minimize-unfocused.png' KeyPath='yes'/>
+                    </Component>
+                  </Directory>
+                </Directory>
+              </Directory>
+            </Directory>
+
+          </Directory>
+
+        </Directory>
+      </Directory>
+
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="Boop-GTK"/>
+      </Directory>
+    </Directory>
+
+    <DirectoryRef Id="ApplicationProgramsFolder">
+      <Component Id="ApplicationShortcut" Guid="D8E06AF7-0D37-45EF-870A-FB044256F7DA">
+        <Shortcut Id="ApplicationStartMenuShortcut" Name="Boop-GTK" Description="A scriptable scratchpad for developers" Target="[#binary0]" WorkingDirectory="APPLICATIONFOLDER" Icon="AppIcon">
+          <Icon Id="AppIcon" SourceFile="target\$(var.Profile)\boop-gtk.exe" />
+        </Shortcut>
+        <RemoveFolder Id="CleanUpShortCut" Directory="ApplicationProgramsFolder" On="uninstall"/>
+        <RegistryValue Root="HKCU" Key="Software\mrbenshef\Boop-GTK" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+      </Component>
+    </DirectoryRef>
+
+    <Feature Id='Binaries' Title='Application' Description='Installs all binaries, dlls and the license.' Level='1' ConfigurableDirectory='APPLICATIONFOLDER' AllowAdvertise='no' Display='expand' Absent='disallow'>
+      <!--
+              Comment out or remove the following `ComponentRef` tag to remove
+              the license sidecar file from the installer.
+            -->
+      <ComponentRef Id='License'/>
+      
+      <ComponentRef Id='binary0'/>
+      <ComponentRef Id='ApplicationShortcut' />
+
+      <ComponentRef Id='dll0'/>
+      <ComponentRef Id='dll1'/>
+      <ComponentRef Id='dll2'/>
+      <ComponentRef Id='dll3'/>
+      <ComponentRef Id='dll4'/>
+      <ComponentRef Id='dll5'/>
+      <ComponentRef Id='dll6'/>
+      <ComponentRef Id='dll7'/>
+      <ComponentRef Id='dll8'/>
+      <ComponentRef Id='dll9'/>
+      <ComponentRef Id='dll10'/>
+      <ComponentRef Id='dll11'/>
+      <ComponentRef Id='dll12'/>
+      <ComponentRef Id='dll13'/>
+      <ComponentRef Id='dll14'/>
+      <ComponentRef Id='dll15'/>
+      <ComponentRef Id='dll16'/>
+      <ComponentRef Id='exebus'/>
+      <ComponentRef Id='dll17'/>
+      <ComponentRef Id='dll18'/>
+      <ComponentRef Id='dll19'/>
+      <ComponentRef Id='dll20'/>
+      <ComponentRef Id='dll21'/>
+      <ComponentRef Id='dll22'/>
+      <ComponentRef Id='dll23'/>
+      <ComponentRef Id='dll24'/>
+      <ComponentRef Id='dll25'/>
+      <ComponentRef Id='dll26'/>
+      <ComponentRef Id='dll27'/>
+      <ComponentRef Id='dll28'/>
+      <ComponentRef Id='dll29'/>
+      <ComponentRef Id='dll30'/>
+      <ComponentRef Id='dll31'/>
+      <ComponentRef Id='dll32'/>
+      <ComponentRef Id='dll33'/>
+      <ComponentRef Id='dll34'/>
+      <ComponentRef Id='dll35'/>
+      <ComponentRef Id='dll36'/>
+      <ComponentRef Id='dll37'/>
+      <ComponentRef Id='dll38'/>
+
+      <ComponentRef Id='Settings'/>
+
+      <ComponentRef Id='loadercache'/>
+      <ComponentRef Id='libdll0'/>
+      <ComponentRef Id='libdll1'/>
+
+      <ComponentRef Id='lang0'/>
+      <ComponentRef Id='lang1'/>
+      <ComponentRef Id='lang2'/>
+      <ComponentRef Id='lang3'/>
+
+      <ComponentRef Id='icon0'/>
+      <ComponentRef Id='icon1'/>
+      <ComponentRef Id='icon2'/>
+      <ComponentRef Id='icon3'/>
+      <ComponentRef Id='icon4'/>
+
+      <ComponentRef Id='idx0'/>
+      <ComponentRef Id='idx1'/>
+
+      <ComponentRef Id='ThemeLicense'/>
+      <ComponentRef Id='SettingsTheme'/>
+      <ComponentRef Id='gtkcss'/>
+
+      <ComponentRef Id='theme0'/>
+      <ComponentRef Id='theme1'/>
+      <ComponentRef Id='theme2'/>
+      <ComponentRef Id='theme3'/>
+      <ComponentRef Id='theme4'/>
+      <ComponentRef Id='theme5'/>
+      <ComponentRef Id='theme6'/>
+
+      <Feature Id='Environment' Title='PATH Environment Variable' Description='Add the install location of the [ProductName] executable to the PATH system environment variable. This allows the [ProductName] executable to be called from any location.' Level='1' Absent='allow'>
+        <ComponentRef Id='Path'/>
+      </Feature>
+    </Feature>
+
+    <SetProperty Id='ARPINSTALLLOCATION' Value='[APPLICATIONFOLDER]' After='CostFinalize'/>
+
+
+    <!--
+          Uncomment the following `Icon` and `Property` tags to change the product icon.
+
+          The product icon is the graphic that appears in the Add/Remove
+          Programs control panel for the application.
+        -->
+    <!--<Icon Id='ProductICO' SourceFile='wix\Product.ico'/>-->
+    <!--<Property Id='ARPPRODUCTICON' Value='ProductICO' />-->
+
+    <Property Id='ARPHELPLINK' Value='https://boop-gtk.mrbenshef.co.uk'/>
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+
+    <UI>
+      <UIRef Id='WixUI_FeatureTree'/>
+      <!--
+              Disabling the EULA dialog in the installer is a two step process:
+
+                 1. Uncomment the following two `Publish` tags
+                 2. Comment out or remove the `<WiXVariable Id='WixUILicenseRtf'...` tag further down
+
+            -->
+      <!--<Publish Dialog='WelcomeDlg' Control='Next' Event='NewDialog' Value='CustomizeDlg' Order='99'>1</Publish>-->
+      <!--<Publish Dialog='CustomizeDlg' Control='Back' Event='NewDialog' Value='WelcomeDlg' Order='99'>1</Publish>-->
+
+    </UI>
+
+    <!--
+          Disabling the EULA dialog in the installer requires commenting out
+          or removing the following `WixVariable` tag
+        -->
+    <WixVariable Id='WixUILicenseRtf' Value='wix\License.rtf'/>
+
+
+    <!--
+          Uncomment the next `WixVaraible` tag to customize the installer's
+          Graphical User Interface (GUI) and add a custom banner image across
+          the top of each screen. See the WiX Toolset documentation for details
+          about customization.
+
+          The banner BMP dimensions are 493 x 58 pixels.
+        -->
+    <!--<WixVariable Id='WixUIBannerBmp' Value='wix\Banner.bmp'/>-->
+
+
+    <!--
+          Uncomment the next `WixVariable` tag to customize the installer's
+          Graphical User Interface (GUI) and add a custom image to the first
+          dialog, or screen. See the WiX Toolset documentation for details about
+          customization.
+
+          The dialog BMP dimensions are 493 x 312 pixels.
+        -->
+    <!--<WixVariable Id='WixUIDialogBmp' Value='wix\Dialog.bmp'/>-->
+
+  </Product>
+
+</Wix>

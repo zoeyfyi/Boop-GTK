@@ -1,12 +1,12 @@
+#![forbid(unsafe_code)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // don't spawn command line on windows
 
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate shrinkwraprs;
-#[macro_use]
-extern crate gladis_proc_macro;
 extern crate gladis;
+extern crate gladis_proc_macro;
 
 extern crate gdk;
 extern crate gdk_pixbuf;
@@ -17,7 +17,6 @@ extern crate pango;
 extern crate sourceview;
 
 extern crate directories;
-extern crate libc;
 extern crate rust_embed;
 extern crate rusty_v8;
 extern crate serde;
@@ -49,14 +48,13 @@ use sublime_fuzzy::ScoreConfig;
 
 use app::App;
 use directories::ProjectDirs;
-use executor::Executor;
 use fmt::Display;
 use std::{
-    cell::RefCell,
     error::Error,
-    fs::{self, File},
+    fs,
     io::prelude::*,
-    rc::Rc,
+    sync::{Arc, RwLock},
+    thread,
 };
 
 lazy_static! {
@@ -75,10 +73,6 @@ const SEARCH_CONFIG: ScoreConfig = ScoreConfig {
 #[derive(RustEmbed)]
 #[folder = "submodules/Boop/Boop/Boop/scripts/"]
 struct Scripts;
-
-#[derive(RustEmbed)]
-#[folder = "ui/icons/"]
-struct Icons;
 
 #[derive(Debug)]
 enum LoadScriptError {
@@ -126,8 +120,7 @@ fn load_user_scripts(config_dir: &Path) -> Result<Vec<Script>, LoadScriptError> 
         .filter_map(Result::ok)
         .map(|f| f.path())
         .filter(|path| path.is_file())
-        .filter_map(|path| fs::read_to_string(path).ok())
-        .map(Script::from_source)
+        .map(Script::from_file)
         .filter_map(Result::ok)
         .collect())
 }
@@ -138,9 +131,11 @@ fn load_internal_scripts() -> Vec<Script> {
     // scripts are internal, so we can unwrap "safely"
     for file in Scripts::iter() {
         let file: Cow<'_, str> = file;
-        let source: Cow<'static, [u8]> = Scripts::get(&file).unwrap();
-        let script_source = String::from_utf8(source.to_vec()).unwrap();
-        if let Ok(script) = Script::from_source(script_source) {
+        let source: Cow<'static, [u8]> = Scripts::get(&file)
+            .unwrap_or_else(|| panic!("failed to get file: {}", file.to_string()));
+        let script_source = String::from_utf8(source.to_vec())
+            .unwrap_or_else(|e| panic!("{} is not UTF8: {}", file, e));
+        if let Ok(script) = Script::from_source(script_source, PathBuf::new()) {
             scripts.push(script);
         }
     }
@@ -169,8 +164,8 @@ fn load_all_scripts(config_dir: &Path) -> (Vec<Script>, Option<ScriptError>) {
     (scripts, None)
 }
 
-// extract files stored in binary to the config directory
-fn extract_files() {
+// extract language file, ideally we would use GResource for this but sourceview doesn't support that
+fn extract_language_file() {
     let config_dir = PROJECT_DIRS.config_dir().to_path_buf();
     if !config_dir.exists() {
         info!("config directory does not exist, attempting to create it");
@@ -183,61 +178,91 @@ fn extract_files() {
     info!("configuration directory at: {}", config_dir.display());
 
     let lang_file_path = {
-        let mut path = config_dir.clone();
+        let mut path = config_dir;
         path.push("boop.lang");
         path
     };
 
-    if !lang_file_path.exists() {
-        info!(
-            "language file does not exist, creating a new one at: {}",
-            lang_file_path.display()
-        );
-        let mut file = fs::File::create(&lang_file_path).expect("Could not create language file");
-        file.write_all(include_bytes!("../boop.lang"))
-            .expect("Failed to write language file");
-        info!("language file created at: {}", lang_file_path.display());
-    }
+    let mut file = fs::File::create(&lang_file_path).expect("Could not create language file");
+    file.write_all(include_bytes!("../boop.lang"))
+        .expect("Failed to write language file");
+    info!("language file written at: {}", lang_file_path.display());
+}
 
-    let icons_path = {
-        let mut path = config_dir;
-        path.push("icons");
-        path
-    };
+fn watch_scripts_folder(scripts: Arc<RwLock<Vec<Script>>>) {
+    use notify::{RecommendedWatcher, RecursiveMode, Result, Watcher};
 
-    // create icons directory
-    match fs::create_dir_all(&icons_path) {
-        Ok(()) => {
-            info!("created icons directory {}", icons_path.display());
+    trace!("watch_scripts_folder");
 
-            for icon in Icons::iter() {
-                let icon: Cow<str> = icon;
-                let icon_path = {
-                    let mut path = icons_path.clone();
-                    path.push(icon.to_string());
-                    path
-                };
+    // watch for changes to script folder
+    let watcher: Result<RecommendedWatcher> = Watcher::new_immediate(move |res| {
+        debug!("res: {:?}", res);
+        match res {
+            Ok(event) => {
+                let event: notify::Event = event;
 
-                if icon_path.exists() {
-                    continue;
-                }
+                for file in event.paths {
+                    debug!("file: {}", file.display());
 
-                match File::create(&icon_path) {
-                    Ok(mut file) => {
-                        let icon_data: Cow<'static, [u8]> = Icons::get(&icon).unwrap();
-                        match file.write_all(&icon_data) {
-                            Ok(()) => info!("written {} ({})", icon, icon_path.display()),
-                            Err(err) => error!("error writing {}, {}", icon, err),
+                    match file.extension() {
+                        Some(s) => {
+                            if s == "js" {
+                            } else {
+                                break;
+                            }
+                        }
+                        None => break,
+                    }
+
+                    info!("{} changed, reloading", file.display());
+
+                    // remove scripts, if they where modified we create a new instance bellow
+                    let mut scripts = scripts.write().expect("script lock is poisoned");
+                    for i in 0..scripts.len() {
+                        if scripts[i].path == file {
+                            scripts.remove(i);
+                            break;
                         }
                     }
-                    Err(err) => {
-                        error!("error creating file for {}, {}", icon, err);
+
+                    // .drain_filter(|script| script.path == file);
+
+                    if !file.exists() {
+                        break;
+                    }
+
+                    match Script::from_file(file.clone()) {
+                        Ok(script) => {
+                            scripts.push(script);
+                            scripts.sort_by_key(|s| s.metadata.name.clone());
+                        }
+                        Err(e) => {
+                            error!("error parsing {}: {}", file.display(), e);
+                        }
                     }
                 }
             }
+            Err(e) => error!("watch error: {:?}", e),
         }
-        Err(err) => {
-            error!("failed to create icon directory: {}", err);
+    });
+
+    // configure and start watcher
+    match watcher {
+        Ok(mut watcher) => {
+            let mut config_dir = PROJECT_DIRS.config_dir().to_path_buf();
+            config_dir.push("scripts");
+
+            info!("watching {}", config_dir.display());
+
+            loop {
+                if let Err(watch_error) = watcher.watch(&config_dir, RecursiveMode::Recursive) {
+                    error!("watch start error: {}", watch_error);
+                    break;
+                }
+            }
+        }
+        Err(watcher_error) => {
+            error!("couldn't create watcher: {}", watcher_error);
         }
     }
 }
@@ -250,7 +275,7 @@ fn main() {
         gdk_pixbuf::Pixbuf::get_formats().len()
     );
 
-    extract_files();
+    extract_language_file();
 
     // initalize V8
     let platform = v8::new_default_platform().unwrap();
@@ -262,16 +287,17 @@ fn main() {
 
     let (mut scripts, script_error) = load_all_scripts(&config_dir);
 
-    // sort alphabetically and assign id's
-    scripts.sort_by_cached_key(|s| s.metadata().name.clone());
-    for (i, script) in scripts.iter_mut().enumerate() {
-        script.id = i as u32;
-    }
+    // sort alphabetically
+    scripts.sort_by_key(|s| s.metadata.name.clone());
 
-    // TODO(mrbenshef): merge executor and script
-    let scripts: Rc<RefCell<Vec<Executor>>> = Rc::new(RefCell::new(
-        scripts.into_iter().map(Executor::new).collect(),
-    ));
+    // watch scripts folder for changes
+    let scripts = Arc::new(RwLock::new(scripts));
+    {
+        let scripts = scripts.clone();
+        thread::spawn(move || {
+            watch_scripts_folder(scripts);
+        });
+    }
 
     // needed on windows
     sourceview::View::static_type();
@@ -280,15 +306,15 @@ fn main() {
         .expect("failed to initialize GTK application");
 
     application.connect_activate(move |application| {
-        // add icon path to search path
-        let icons_path = {
-            let mut path = config_dir.clone();
-            path.push("icons");
-            path
-        };
-        let icon_theme = gtk::IconTheme::get_default().unwrap();
-        icon_theme.append_search_path(&icons_path);
-        icon_theme.prepend_search_path(&icons_path);
+        // resources.gresources is created by build.rs
+        // it includes all the files in the resources directory
+        let resource_bytes = include_bytes!("../resources/resources.gresource");
+        let resource_data = glib::Bytes::from(&resource_bytes[..]);
+        gio::resources_register(&gio::Resource::from_data(&resource_data).unwrap());
+
+        // add embedeed icons to theme
+        let icon_theme = gtk::IconTheme::get_default().expect("failed to get default icon theme");
+        icon_theme.add_resource_path("/co/uk/mrbenshef/Boop-GTK/icons");
 
         let app = App::new(&config_dir, scripts.clone());
         app.set_application(Some(application));
@@ -302,11 +328,7 @@ fn main() {
         let command_pallete_action = gio::SimpleAction::new("command_pallete", None);
         application.add_action(&command_pallete_action);
         application.set_accels_for_action("app.command_pallete", &["<Primary><Shift>P"]);
-
-        // regisiter handler
-        {
-            command_pallete_action.connect_activate(move |_, _| app.open_command_pallete());
-        }
+        command_pallete_action.connect_activate(move |_, _| app.open_command_pallete());
     });
 
     application.run(&[]);

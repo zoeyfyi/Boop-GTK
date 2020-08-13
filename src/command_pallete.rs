@@ -6,9 +6,12 @@ use gtk::{Dialog, Entry, TreePath, TreeView, Window};
 use shrinkwraprs::Shrinkwrap;
 use sublime_fuzzy::FuzzySearch;
 
-use crate::{executor::Executor, SEARCH_CONFIG};
+use crate::{script::Script, SEARCH_CONFIG};
 use glib::Type;
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{
+    collections::HashMap,
+    sync::{Arc, RwLock},
+};
 
 const ICON_COLUMN: u32 = 0;
 const TEXT_COLUMN: u32 = 1;
@@ -43,13 +46,15 @@ pub struct CommandPalleteDialog {
     #[shrinkwrap(main_field)]
     widgets: CommandPalleteDialogWidgets,
 
-    scripts: Rc<RefCell<Vec<Executor>>>,
+    scripts: Arc<RwLock<Vec<Script>>>,
 }
 
 impl CommandPalleteDialog {
-    pub fn new<P: IsA<Window>>(window: &P, scripts: Rc<RefCell<Vec<Executor>>>) -> Self {
-        let widgets =
-            CommandPalleteDialogWidgets::from_string(include_str!("../ui/command-pallete.glade"));
+    pub fn new<P: IsA<Window>>(window: &P, scripts: Arc<RwLock<Vec<Script>>>) -> Self {
+        let widgets = CommandPalleteDialogWidgets::from_resource(
+            "/co/uk/mrbenshef/Boop-GTK/command-pallete.glade",
+        )
+        .unwrap_or_else(|e| panic!("failed to load command-pallete.glade: {}", e)); // TODO: don't debug print once gladis errors implement display
 
         let command_pallete_dialog = CommandPalleteDialog {
             widgets,
@@ -117,21 +122,29 @@ impl CommandPalleteDialog {
                 }
             }
 
-            for script in scripts.borrow().iter() {
-                let mut icon_name = script.script().metadata().icon.to_lowercase();
+            for (index, script) in scripts
+                .read()
+                .expect("scripts lock is poisoned")
+                .iter()
+                .enumerate()
+            {
+                let mut icon_name = script.metadata.icon.to_lowercase();
                 icon_name.insert_str(0, "boop-gtk-");
                 icon_name.push_str("-symbolic");
 
                 let entry_text = format!(
                     "<b>{}</b>\n<span size=\"smaller\">{}</span>",
-                    script.script().metadata().name.to_string(),
-                    script.script().metadata().description.to_string()
+                    script.metadata.name.to_string(),
+                    script.metadata.description.to_string()
                 );
 
-                let id = script.script().id;
-
-                let values: [&dyn ToValue; 5] =
-                    [&icon_name, &entry_text, &id, &(-(id as i64)), &true];
+                let values: [&dyn ToValue; 5] = [
+                    &icon_name,
+                    &entry_text,
+                    &(index as u64),
+                    &(-(index as i64)),
+                    &true,
+                ];
                 store.set(&store.append(), &COLUMNS, &values);
             }
 
@@ -212,8 +225,16 @@ impl CommandPalleteDialog {
         let model: gtk::TreeModelFilter = dialog_tree_view.get_model().unwrap().downcast().unwrap();
 
         if let (Some(path), _) = dialog_tree_view.get_cursor() {
-            let value = model.get_value(&model.get_iter(&path).unwrap(), ID_COLUMN as i32);
-            let v = value.downcast::<u64>().unwrap().get().unwrap();
+            let value = model.get_value(
+                &model
+                    .get_iter(&path)
+                    .unwrap_or_else(|| panic!("failed to get iter for path: {:?}", path)),
+                ID_COLUMN as i32,
+            );
+            let v = value
+                .downcast::<u64>()
+                .expect("cannot downcast value to u64")
+                .get_some();
             dialog.response(gtk::ResponseType::Other(v as u16));
         }
     }
@@ -221,7 +242,7 @@ impl CommandPalleteDialog {
     fn on_changed(
         searchbar: &Entry,
         dialog_tree_view: &TreeView,
-        scripts: Rc<RefCell<Vec<Executor>>>,
+        scripts: Arc<RwLock<Vec<Script>>>,
     ) {
         let filter_store: gtk::TreeModelFilter =
             dialog_tree_view.get_model().unwrap().downcast().unwrap();
@@ -235,15 +256,16 @@ impl CommandPalleteDialog {
 
         // score each script using search text
         let script_to_score = scripts
-            .borrow()
+            .read()
+            .expect("scripts lock is poisoned")
             .iter()
-            .map(|script| {
-                let mut search =
-                    FuzzySearch::new(&searchbar_text, &script.script().metadata().name, true);
+            .enumerate()
+            .map(|(index, script)| {
+                let mut search = FuzzySearch::new(&searchbar_text, &script.metadata.name, true);
                 search.set_score_config(SEARCH_CONFIG);
 
                 let score = search.best_match().map(|m| m.score()).unwrap_or(-1000);
-                (script.script().id as u64, score)
+                (index as u64, score)
             })
             .collect::<HashMap<u64, isize>>();
 
@@ -252,8 +274,11 @@ impl CommandPalleteDialog {
             let mut path = gtk::TreePath::new();
             path.append_index(i);
 
-            let iter = store.get_iter(&path).unwrap();
+            let iter = store
+                .get_iter(&path)
+                .unwrap_or_else(|| panic!("failed to get iter for path: {:?}", path));
 
+            // TODO: use gtk_liststore_item crate
             let script_id: u64 = store
                 .get_value(&iter, ID_COLUMN as i32)
                 .get()

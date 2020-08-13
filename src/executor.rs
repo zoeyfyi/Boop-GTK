@@ -1,4 +1,4 @@
-use crate::{script::Script, Scripts, PROJECT_DIRS};
+use crate::{Scripts, PROJECT_DIRS};
 use dirty2::Dirty;
 use rusty_v8 as v8;
 use simple_error::SimpleError;
@@ -39,8 +39,7 @@ static BOOP_WRAPPER_END: &str = "
 ";
 
 pub struct Executor {
-    isolate: Option<v8::OwnedIsolate>,
-    script: Script,
+    isolate: v8::OwnedIsolate,
 }
 
 struct ExecutorState {
@@ -120,15 +119,31 @@ pub enum TextReplacement {
 }
 
 impl Executor {
-    pub fn new(script: Script) -> Self {
-        Executor {
-            isolate: None,
-            script,
-        }
-    }
+    pub fn new(source: &str) -> Self {
+        info!("initalizing isolate");
 
-    pub fn script(&self) -> &Script {
-        &self.script
+        // set up execution context
+        let mut isolate = v8::Isolate::new(Default::default());
+        let (global_context, main_function) = {
+            let scope = &mut v8::HandleScope::new(&mut isolate);
+            // let context = v8::Context::new(scope);
+            let (context, main_function) = Executor::initialize_context(source, scope);
+            (v8::Global::new(scope, context), main_function)
+        };
+
+        // set status slot, stores execution infomation
+        let status_slot: Rc<RefCell<ExecutionStatus>> =
+            Rc::new(RefCell::new(ExecutionStatus::default()));
+        isolate.set_slot(status_slot);
+
+        // set state slot, stores v8 details
+        let state_slot: Rc<RefCell<ExecutorState>> = Rc::new(RefCell::new(ExecutorState {
+            global_context: Some(global_context),
+            main_function: Some(main_function),
+        }));
+        isolate.set_slot(state_slot);
+
+        Executor { isolate }
     }
 
     // load source code from internal files or external filesystem depending on the path
@@ -173,7 +188,7 @@ impl Executor {
     }
 
     fn initialize_context<'s>(
-        script: &Script,
+        source: &str,
         scope: &mut v8::HandleScope<'s, ()>,
     ) -> (v8::Local<'s, v8::Context>, v8::Global<v8::Function>) {
         let scope = &mut v8::EscapableHandleScope::new(scope);
@@ -181,81 +196,53 @@ impl Executor {
         let global = context.global(scope);
         let scope = &mut v8::ContextScope::new(scope, context);
 
-        let require_key = v8::String::new(scope, "require").unwrap();
-        let require_val = v8::Function::new(scope, Executor::global_require).unwrap();
+        let require_key =
+            v8::String::new(scope, "require").expect("failed to created 'require' string");
+        let require_val = v8::Function::new(scope, Executor::global_require)
+            .expect("failed to created require function");
         global.set(scope, require_key.into(), require_val.into());
 
         // complile and run script
-        let code = v8::String::new(scope, script.source()).unwrap();
-        let compiled_script = v8::Script::compile(scope, code, None).unwrap();
+        let code = v8::String::new(scope, source).expect("failed to created JS string");
+        let compiled_script =
+            v8::Script::compile(scope, code, None).expect("failed to compile script");
 
         let tc_scope = &mut v8::TryCatch::new(scope);
         let result = compiled_script.run(tc_scope);
 
         if result.is_none() {
             assert!(tc_scope.has_caught());
-            let exception = tc_scope.exception().unwrap();
+            let exception = tc_scope
+                .exception()
+                .expect("exception was caught, but exception is none");
 
             error!(
                 "<<JS EXCEPTION>> {}",
                 exception
                     .to_string(tc_scope)
-                    .unwrap()
+                    .expect("failed to convert exception to string")
                     .to_rust_string_lossy(tc_scope),
             );
         }
 
         // extract main function
-        let main_key = v8::String::new(tc_scope, "main").unwrap();
+        let main_key =
+            v8::String::new(tc_scope, "main").expect("failed to create JS string 'main'");
         let main_function =
             v8::Local::<v8::Function>::try_from(global.get(tc_scope, main_key.into()).unwrap())
-                .unwrap();
+                .expect("failed to get main function");
         let main_function = v8::Global::new(tc_scope, main_function);
 
         (tc_scope.escape(context), main_function)
     }
 
-    fn initialize_isolate(&mut self) {
-        assert!(self.isolate.is_none());
-
-        info!("initalizing isolate for {}", self.script().metadata().name);
-
-        // set up execution context
-        let mut isolate = v8::Isolate::new(Default::default());
-        let (global_context, main_function) = {
-            let scope = &mut v8::HandleScope::new(&mut isolate);
-            // let context = v8::Context::new(scope);
-            let (context, main_function) = Executor::initialize_context(&self.script, scope);
-            (v8::Global::new(scope, context), main_function)
-        };
-
-        // set status slot, stores execution infomation
-        let status_slot: Rc<RefCell<ExecutionStatus>> =
-            Rc::new(RefCell::new(ExecutionStatus::default()));
-        isolate.set_slot(status_slot);
-
-        // set state slot, stores v8 details
-        let state_slot: Rc<RefCell<ExecutorState>> = Rc::new(RefCell::new(ExecutorState {
-            global_context: Some(global_context),
-            main_function: Some(main_function),
-        }));
-        isolate.set_slot(state_slot);
-
-        self.isolate = Some(isolate);
-    }
-
     pub fn execute(&mut self, full_text: &str, selection: Option<&str>) -> ExecutionStatus {
-        if self.isolate.is_none() {
-            self.initialize_isolate();
-        }
-
         // setup execution status
         {
-            let isolate = self.isolate.as_ref().unwrap();
-
-            let status_slot = isolate
+            let status_slot = self
+                .isolate
                 .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
-                .unwrap();
+                .expect("failed to get mutable access to status slot");
 
             let mut status = status_slot.borrow_mut();
 
@@ -272,25 +259,30 @@ impl Executor {
         // TODO: use ObjectTemplate, problem: rusty_v8 doesn't have set_accessor_with_setter or even set_accessor for
         // object templates
         {
-            let isolate = self.isolate.as_mut().unwrap();
-
-            let state_slot = isolate
+            let state_slot = self
+                .isolate
                 .get_slot_mut::<Rc<RefCell<ExecutorState>>>()
-                .unwrap()
+                .expect("failed to get mutable access to state slot")
                 .clone();
             let state_slot = state_slot.borrow();
 
-            let context = state_slot.global_context.as_ref().unwrap();
-            let scope = &mut v8::HandleScope::with_context(isolate, context);
+            let context = state_slot
+                .global_context
+                .as_ref()
+                .expect("global_context is not initalizied");
+            let scope = &mut v8::HandleScope::with_context(&mut self.isolate, context);
 
             // payload is the object passed into function main
             let payload = v8::Object::new(scope);
 
             // getter/setters: full_text, text, selection
             {
-                let full_text_key = v8::String::new(scope, "fullText").unwrap();
-                let text_key = v8::String::new(scope, "text").unwrap();
-                let selection_key = v8::String::new(scope, "selection").unwrap();
+                let full_text_key = v8::String::new(scope, "fullText")
+                    .expect("failed to create JS string for 'fullText'");
+                let text_key =
+                    v8::String::new(scope, "text").expect("failed to create JS string for 'text'");
+                let selection_key = v8::String::new(scope, "selection")
+                    .expect("failed to create JS string for 'selection'");
 
                 payload.set_accessor_with_setter(
                     scope,
@@ -314,33 +306,44 @@ impl Executor {
 
             // functions: post_info, post_error, insert
             {
-                let post_info_key = v8::String::new(scope, "postInfo").unwrap();
-                let post_error_key = v8::String::new(scope, "postError").unwrap();
-                let insert_key = v8::String::new(scope, "insert").unwrap();
+                let post_info_key = v8::String::new(scope, "postInfo")
+                    .expect("failed to create JS string 'postInfo'");
+                let post_error_key = v8::String::new(scope, "postError")
+                    .expect("failed to create JS string 'postError'");
+                let insert_key =
+                    v8::String::new(scope, "insert").expect("failed to create JS string 'insert'");
 
-                let post_info_val = v8::Function::new(scope, Executor::payload_post_info).unwrap();
-                let post_error_val =
-                    v8::Function::new(scope, Executor::payload_post_error).unwrap();
-                let insert_val = v8::Function::new(scope, Executor::payload_insert).unwrap();
+                let post_info_val = v8::Function::new(scope, Executor::payload_post_info)
+                    .expect("failed to convert post_info function");
+                let post_error_val = v8::Function::new(scope, Executor::payload_post_error)
+                    .expect("failed to create post_error function");
+                let insert_val = v8::Function::new(scope, Executor::payload_insert)
+                    .expect("failed to create payload_insert function");
 
                 payload.set(scope, post_info_key.into(), post_info_val.into());
                 payload.set(scope, post_error_key.into(), post_error_val.into());
                 payload.set(scope, insert_key.into(), insert_val.into());
             }
 
-            let main_function = state_slot.main_function.as_ref().unwrap().get(scope);
+            let main_function = state_slot
+                .main_function
+                .as_ref()
+                .expect("main_function not initialized")
+                .get(scope);
             let tc_scope = &mut v8::TryCatch::new(scope);
             let result = main_function.call(tc_scope, payload.into(), &[payload.into()]);
 
             if result.is_none() {
                 assert!(tc_scope.has_caught());
-                let exception = tc_scope.exception().unwrap();
+                let exception = tc_scope
+                    .exception()
+                    .expect("failed to get exception, but exception was caught");
 
                 error!(
                     "<<JS EXCEPTION>> {}",
                     exception
                         .to_string(tc_scope)
-                        .unwrap()
+                        .expect("failed to convert exception to string")
                         .to_rust_string_lossy(tc_scope),
                 );
             }
@@ -350,10 +353,8 @@ impl Executor {
         {
             let status_slot = self
                 .isolate
-                .as_ref()
-                .unwrap()
                 .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
-                .unwrap();
+                .expect("failed to get mutable access to status slot");
 
             let status = (status_slot).borrow();
 
@@ -369,7 +370,7 @@ impl Executor {
         let mut path = args
             .get(0)
             .to_string(scope)
-            .unwrap()
+            .expect("failed to convert argument to require to string")
             .to_rust_string_lossy(scope);
 
         info!("loading {}", path);
@@ -383,8 +384,10 @@ impl Executor {
             Ok(raw_source) => {
                 let source = format!("{}{}{}", BOOP_WRAPPER_START, raw_source, BOOP_WRAPPER_END);
 
-                let code = v8::String::new(scope, &source).unwrap();
-                let compiled_script = v8::Script::compile(scope, code, None).unwrap();
+                let code = v8::String::new(scope, &source)
+                    .expect("failed to create JS string from source");
+                let compiled_script =
+                    v8::Script::compile(scope, code, None).expect("failed to compile script");
 
                 let tc_scope = &mut v8::TryCatch::new(scope);
                 let export = compiled_script.run(tc_scope);
@@ -393,13 +396,15 @@ impl Executor {
                     Some(export) => rv.set(export),
                     None => {
                         assert!(tc_scope.has_caught());
-                        let exception = tc_scope.exception().unwrap();
+                        let exception = tc_scope
+                            .exception()
+                            .expect("failed to get exception, but exception was caught");
 
                         error!(
                             "<<JS EXCEPTION>> {}",
                             exception
                                 .to_string(tc_scope)
-                                .unwrap()
+                                .expect("failed to convert exception to string")
                                 .to_rust_string_lossy(tc_scope),
                         );
                     }
@@ -422,12 +427,12 @@ impl Executor {
         let info = args
             .get(0)
             .to_string(scope)
-            .unwrap()
+            .expect("failed to convert argument to post_info to string")
             .to_rust_string_lossy(scope);
 
         scope
             .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
-            .unwrap()
+            .expect("failed to get mutable access to status slot")
             .borrow_mut()
             .info
             .replace(info);
@@ -444,12 +449,12 @@ impl Executor {
         let error = args
             .get(0)
             .to_string(scope)
-            .unwrap()
+            .expect("failed to convert argument to post_error to string")
             .to_rust_string_lossy(scope);
 
         scope
             .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
-            .unwrap()
+            .expect("failed to get mutable access to status slot")
             .borrow_mut()
             .error
             .replace(error);
@@ -466,12 +471,12 @@ impl Executor {
         let insert = args
             .get(0)
             .to_string(scope)
-            .unwrap()
+            .expect("failed to convert insert argument to string")
             .to_rust_string_lossy(scope);
 
         scope
             .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
-            .unwrap()
+            .expect("failed to get mutable access to status slot")
             .borrow_mut()
             .insert
             .push(insert);
@@ -488,13 +493,17 @@ impl Executor {
     ) {
         let full_text = scope
             .get_slot::<Rc<RefCell<ExecutionStatus>>>()
-            .unwrap()
+            .expect("failed to get status slot")
             .borrow()
             .full_text
             .read()
             .clone();
 
-        rv.set(v8::String::new(scope, &full_text).unwrap().into());
+        rv.set(
+            v8::String::new(scope, &full_text)
+                .expect("failed to construct JS string from full_text")
+                .into(),
+        );
     }
 
     fn payload_full_text_setter(
@@ -503,13 +512,16 @@ impl Executor {
         value: v8::Local<v8::Value>,
         _args: v8::PropertyCallbackArguments,
     ) {
-        let new_value = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
+        let new_value = value
+            .to_string(scope)
+            .expect("failed to convert value to string")
+            .to_rust_string_lossy(scope);
 
         info!("setting full_text ({} bytes)", new_value.len());
 
         let slot = scope
             .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
-            .unwrap();
+            .expect("failed to get mutable access to status slot");
 
         let mut slot = slot.borrow_mut();
 
@@ -526,13 +538,17 @@ impl Executor {
     ) {
         let text = scope
             .get_slot::<Rc<RefCell<ExecutionStatus>>>()
-            .unwrap()
+            .expect("failed to get status slot")
             .borrow()
             .text
             .read()
             .clone();
 
-        rv.set(v8::String::new(scope, &text).unwrap().into());
+        rv.set(
+            v8::String::new(scope, &text)
+                .expect("faield to create JS string from text")
+                .into(),
+        );
     }
 
     fn payload_text_setter(
@@ -541,13 +557,16 @@ impl Executor {
         value: v8::Local<v8::Value>,
         _args: v8::PropertyCallbackArguments,
     ) {
-        let new_value = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
+        let new_value = value
+            .to_string(scope)
+            .expect("failed to convert value to string")
+            .to_rust_string_lossy(scope);
 
         info!("setting text ({} bytes)", new_value.len());
 
         let slot = scope
             .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
-            .unwrap();
+            .expect("faield to get mutable access status slot");
 
         let mut slot = slot.borrow_mut();
 
@@ -564,13 +583,17 @@ impl Executor {
     ) {
         let selection = scope
             .get_slot::<Rc<RefCell<ExecutionStatus>>>()
-            .unwrap()
+            .expect("failed to get status slot")
             .borrow()
             .selection
             .read()
             .clone();
 
-        rv.set(v8::String::new(scope, &selection).unwrap().into());
+        rv.set(
+            v8::String::new(scope, &selection)
+                .expect("problem constructing JS string")
+                .into(),
+        );
     }
 
     fn payload_selection_setter(
@@ -579,147 +602,21 @@ impl Executor {
         value: v8::Local<v8::Value>,
         _args: v8::PropertyCallbackArguments,
     ) {
-        let new_value = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
+        let new_value = value
+            .to_string(scope)
+            .expect("failed to convert value to string")
+            .to_rust_string_lossy(scope);
 
         info!("setting selection ({} bytes)", new_value.len());
 
         let slot = scope
             .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
-            .unwrap();
+            .expect("failed to get mutable access to status slot");
 
         let mut slot = slot.borrow_mut();
 
         let selection = slot.selection.write();
 
         *selection = new_value;
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::script::ParseScriptError;
-    use std::{borrow::Cow, sync::Mutex};
-
-    lazy_static! {
-        static ref INIT_LOCK: Mutex<u32> = Mutex::new(0);
-    }
-
-    #[must_use]
-    struct SetupGuard {}
-
-    fn setup() -> SetupGuard {
-        let mut g = INIT_LOCK.lock().unwrap();
-        *g += 1;
-        if *g == 1 {
-            v8::V8::initialize_platform(v8::new_default_platform().unwrap());
-            v8::V8::initialize();
-        }
-        SetupGuard {}
-    }
-
-    #[test]
-    fn test_retain_execution_context() {
-        let _guard = setup();
-
-        let mut executor = Executor::new(
-            Script::from_source(
-                "
-            /**
-                {
-                    \"api\":1,
-                    \"name\":\"Counter\",
-                    \"description\":\"Counts up\",
-                    \"author\":\"Ben\",
-                    \"icon\":\"html\",
-                    \"tags\":\"count\"
-                }
-            **/
-            
-            let number = 0;
-            
-            function main(state) {
-                number += 1;
-                state.text = number;
-            }"
-                .to_string(),
-            )
-            .unwrap(),
-        );
-
-        for i in 1..10 {
-            let status = executor.execute("", None);
-            assert_eq!(
-                TextReplacement::Full(i.to_string()),
-                status.into_replacement()
-            );
-        }
-    }
-
-    #[test]
-    fn test_builtin_scripts() {
-        let _guard = setup();
-
-        use rust_embed::RustEmbed;
-
-        #[derive(RustEmbed)]
-        #[folder = "submodules/Boop/Boop/Boop/scripts/"]
-        struct Scripts;
-
-        for file in Scripts::iter() {
-            println!("testing {}", file);
-
-            let source: Cow<'static, [u8]> = Scripts::get(&file).unwrap();
-            let script_source = String::from_utf8(source.to_vec()).unwrap();
-
-            match Script::from_source(script_source) {
-                Ok(script) => {
-                    let mut executor = Executor::new(script);
-                    executor.execute(
-                        "foobar ♈ ♉ ♊ ♋ ♌ ♍ ♎ ♏ ♐ ♑ ♒ ♓ 😁 😝 😋 😄",
-                        None,
-                    );
-                }
-                Err(e) => match e {
-                    ParseScriptError::NoMetadata => {
-                        assert!(file.starts_with("lib/")); // only library files should fail
-                    }
-                    ParseScriptError::InvalidMetadata(e) => panic!(e),
-                },
-            }
-        }
-    }
-
-    #[test]
-    fn test_extra_scripts() {
-        let _guard = setup();
-
-        use rust_embed::RustEmbed;
-
-        #[derive(RustEmbed)]
-        #[folder = "submodules/Boop/Scripts/"]
-        struct Scripts;
-
-        for file in Scripts::iter() {
-            if !file.ends_with(".js") {
-                continue; // not a javascript file
-            }
-
-            println!("testing {}", file);
-
-            let source: Cow<'static, [u8]> = Scripts::get(&file).unwrap();
-            let script_source = String::from_utf8(source.to_vec()).unwrap();
-
-            match Script::from_source(script_source) {
-                Ok(script) => {
-                    let mut executor = Executor::new(script);
-                    executor.execute(
-                        "foobar ♈ ♉ ♊ ♋ ♌ ♍ ♎ ♏ ♐ ♑ ♒ ♓ 😁 😝 😋 😄",
-                        None,
-                    );
-                }
-                Err(e) => panic!(e),
-            }
-        }
     }
 }

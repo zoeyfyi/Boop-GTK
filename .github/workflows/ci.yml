@@ -63,13 +63,13 @@ jobs:
       with:
         submodules: 'recursive'
     # cache cargo
-    - uses: actions/cache@v2
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    # - uses: actions/cache@v2
+    #   with:
+    #     path: |
+    #       ~/.cargo/registry
+    #       ~/.cargo/git
+    #       target
+    #     key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     # deps
     - name: GTK development librarys
       run: brew install gtk+3 gtksourceview3 pkg-config
@@ -132,6 +132,9 @@ jobs:
       if: steps.cache.outputs.cache-hit != 'true'
     - name: Add gvsbuild bin directory to Path
       run: echo "::add-path::C:\gtk-build\gtk\x64\release\bin"
+    # is glib-compile-resources.exe here?
+    - name: test glib-compile-resources.exe
+      run: glib-compile-resources.exe --help
     # build
     - name: build
       run: cargo build
