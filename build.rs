@@ -1,8 +1,9 @@
 #[cfg(windows)]
 extern crate winres;
+extern crate fs_extra;
 
 use io::Write;
-use std::{fs, io, process::Command};
+use std::{env, fs, io, path::Path, process::Command};
 
 const XML_HEADER: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 <gresources>
@@ -39,13 +40,31 @@ fn add_files(xml: &mut String, folder: &str) {
 }
 
 fn main() {
+    let out_dir = env::var("OUT_DIR").unwrap();
+    let mut resources = Path::new(&out_dir).to_path_buf();
+    resources.push("resources");
+
+    fs::create_dir_all(resources.clone()).unwrap();
+    fs_extra::dir::copy("resources", out_dir, &{
+        let mut options = fs_extra::dir::CopyOptions::new();
+        options.copy_inside = true;
+        options.overwrite = true;
+        options
+    })
+    .unwrap();
+
     let mut xml = String::with_capacity(XML_HEADER.len() + XML_FOOTER.len() + 1024);
 
     xml.push_str(XML_HEADER);
     add_files(&mut xml, "resources");
     xml.push_str(XML_FOOTER);
 
-    let mut file = fs::File::create("resources/resources.xml").unwrap();
+    let resource_xml = {
+        let mut f = resources.clone();
+        f.push("resources.xml");
+        f
+    };
+    let mut file = fs::File::create(resource_xml).unwrap();
     file.write_all(xml.as_bytes()).unwrap();
 
     let mut cmd = if cfg!(target_os = "windows") {
@@ -55,7 +74,7 @@ fn main() {
     };
 
     cmd.arg("resources.xml")
-        .current_dir("resources")
+        .current_dir(resources)
         .output()
         .expect("failed to compile resources");
 

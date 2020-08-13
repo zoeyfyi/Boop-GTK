@@ -61,3 +61,6 @@ features = ["v2_44"]
 
 [target.'cfg(windows)'.build-dependencies]
 winres = "0.1"
+
+[build-dependencies]
+fs_extra = "1.1.0"
