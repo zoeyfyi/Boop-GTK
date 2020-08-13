@@ -308,7 +308,7 @@ fn main() {
     application.connect_activate(move |application| {
         // resources.gresources is created by build.rs
         // it includes all the files in the resources directory
-        let resource_bytes = include_bytes!("../resources/resources.gresource");
+        let resource_bytes = include_bytes!(concat!(env!("OUT_DIR"), "/resources/resources.gresource"));
         let resource_data = glib::Bytes::from(&resource_bytes[..]);
         gio::resources_register(&gio::Resource::from_data(&resource_data).unwrap());
 

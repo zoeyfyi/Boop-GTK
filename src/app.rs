@@ -49,7 +49,7 @@ impl App {
     pub fn new(config_dir: &Path, scripts: Arc<RwLock<Vec<Script>>>) -> Self {
         let mut app = App {
             widgets: AppWidgets::from_resource("/co/uk/mrbenshef/Boop-GTK/boop-gtk.glade")
-                .unwrap_or_else(|e| panic!("failed to load boop-gtk.glade: {}", e)),
+                .unwrap_or_else(|e| panic!("failed to load boop-gtk.glade: {}", e)), // TODO: don't debug print once gladis errors implement display
             context_id: 0,
             scripts,
         };

@@ -58,10 +58,13 @@ jobs:
       shell: cmd
     # fetch gtk dependencies
     - name: GTK development librarys
-      run: python .\build.py build -p=x64 --vs-ver=16 --msys-dir=C:\msys64 -k --enable-gi --py-wheel --py-egg gtk3 gdk-pixbuf gtksourceview3
+      run: python .\build.py build -p=x64 --vs-ver=16 --msys-dir=C:\msys64 -k --enable-gi --py-wheel --py-egg gtk3 gdk-pixbuf gtksourceview3 adwaita-icon-theme hicolor-icon-theme
       working-directory: C:\gtk-build\github\gvsbuild
     - name: Add gvsbuild bin directory to Path
       run: echo "::add-path::C:\gtk-build\gtk\x64\release\bin"
+    # install cargo wix
+    - name: install cargo-wix
+      run: cargo install cargo-wix
     # build installer
     - name: build
       run: cargo wix -v --nocapture -o boop-gtk.windows.msi
@@ -133,7 +136,7 @@ jobs:
     - name: Python TOML
       run: sudo apt-get install python3-toml 
     - name: Generate sources
-      run: bash flatpak/gen-sources.sh
+      run: sudo bash flatpak/gen-sources.sh
     - name: Flatpak
       run: sudo flatpak-builder --repo=repo build-dir flatpak/uk.co.mrbenshef.Boop-GTK.json
     - name: Flatpak build bundle
