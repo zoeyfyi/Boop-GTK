@@ -1,6 +1,6 @@
+extern crate fs_extra;
 #[cfg(windows)]
 extern crate winres;
-extern crate fs_extra;
 
 use io::Write;
 use std::{env, fs, io, path::Path, process::Command};
