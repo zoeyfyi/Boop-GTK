@@ -10,6 +10,7 @@
 ![Continuous integration](https://github.com/mrbenshef/Boop-GTK/workflows/Continuous%20integration/badge.svg)
 ![Release](https://github.com/mrbenshef/Boop-GTK/workflows/Release/badge.svg?branch=release)
 ![Crates.io](https://img.shields.io/crates/v/boop-gtk)
+[![boop-gtk](https://snapcraft.io//boop-gtk/badge.svg)](https://snapcraft.io/boop-gtk)
 
 ### What is Boop-GTK?
 
@@ -33,7 +34,7 @@ Boop-GTK is a port of Boop to GTK, so users on Linux and Windows can Boop it!
 
 | Linux | Windows | MacOS |
 | :--- | :--- | :--- |
-| [boop-gtk.linux.amd64](https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.linux.amd64) </br> [boop-gtk.flatpak](https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.flatpak) </br> [boop-gtk.snap](https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.snap) | [boop-gtk.windows.msi](https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.windows.msi) | You should really use [Boop](https://github.com/IvanMathy/Boop), </br> but if you _really_ want to: </br> [boop-gtk.macos](https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.macos) |
+| [boop-gtk.linux.amd64](https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.linux.amd64) </br> [boop-gtk.flatpak](https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.flatpak) </br> [boop-gtk.snap](https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.snap) </br> [![Get it from the Snap Store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/boop-gtk) | [boop-gtk.windows.msi](https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.windows.msi) | You should really use [Boop](https://github.com/IvanMathy/Boop), </br> but if you _really_ want to: </br> [boop-gtk.macos](https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.macos) |
 
 ### Building
 
