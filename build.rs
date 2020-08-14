@@ -1,4 +1,4 @@
-extern crate fs_extra;
+use fs_extra;
 #[cfg(windows)]
 extern crate winres;
 
