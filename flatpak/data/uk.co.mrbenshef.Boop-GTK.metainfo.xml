@@ -28,7 +28,7 @@
     <release version="0.2.1" date="2020-07-28">
       <description>
         <ul>
-          <li>Fix JWT decoder script (see https://github.com/IvanMathy/Boop/releases/tag/1.2.1).</li>
+          <li>Fix JWT decoder script (for more infomation, see the release notes of Boop 1.2.1).</li>
           <li>Remove unsafe Rust sections</li>
         </ul>
       </description>
