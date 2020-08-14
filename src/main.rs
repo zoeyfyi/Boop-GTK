@@ -6,9 +6,6 @@ extern crate lazy_static;
 #[macro_use]
 extern crate shrinkwraprs;
 
-
-
-
 use gdk_pixbuf;
 use gio;
 use glib;
@@ -19,8 +16,6 @@ use sourceview;
 use directories;
 use rust_embed;
 use rusty_v8;
-
-
 
 #[macro_use]
 extern crate log;
