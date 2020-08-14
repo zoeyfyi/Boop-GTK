@@ -363,9 +363,9 @@ impl Executor {
     }
 
     fn global_require(
-        scope: &mut v8::HandleScope,
-        args: v8::FunctionCallbackArguments,
-        mut rv: v8::ReturnValue,
+        scope: &mut v8::HandleScope<'_>,
+        args: v8::FunctionCallbackArguments<'_>,
+        mut rv: v8::ReturnValue<'_>,
     ) {
         let mut path = args
             .get(0)
@@ -420,9 +420,9 @@ impl Executor {
     }
 
     fn payload_post_info(
-        scope: &mut v8::HandleScope,
-        args: v8::FunctionCallbackArguments,
-        mut rv: v8::ReturnValue,
+        scope: &mut v8::HandleScope<'_>,
+        args: v8::FunctionCallbackArguments<'_>,
+        mut rv: v8::ReturnValue<'_>,
     ) {
         let info = args
             .get(0)
@@ -442,9 +442,9 @@ impl Executor {
     }
 
     fn payload_post_error(
-        scope: &mut v8::HandleScope,
-        args: v8::FunctionCallbackArguments,
-        mut rv: v8::ReturnValue,
+        scope: &mut v8::HandleScope<'_>,
+        args: v8::FunctionCallbackArguments<'_>,
+        mut rv: v8::ReturnValue<'_>,
     ) {
         let error = args
             .get(0)
@@ -464,9 +464,9 @@ impl Executor {
     }
 
     fn payload_insert(
-        scope: &mut v8::HandleScope,
-        args: v8::FunctionCallbackArguments,
-        mut rv: v8::ReturnValue,
+        scope: &mut v8::HandleScope<'_>,
+        args: v8::FunctionCallbackArguments<'_>,
+        mut rv: v8::ReturnValue<'_>,
     ) {
         let insert = args
             .get(0)
@@ -486,10 +486,10 @@ impl Executor {
     }
 
     fn payload_full_text_getter(
-        scope: &mut v8::HandleScope,
-        _key: v8::Local<v8::Name>,
-        _args: v8::PropertyCallbackArguments,
-        mut rv: v8::ReturnValue,
+        scope: &mut v8::HandleScope<'_>,
+        _key: v8::Local<'_, v8::Name>,
+        _args: v8::PropertyCallbackArguments<'_>,
+        mut rv: v8::ReturnValue<'_>,
     ) {
         let full_text = scope
             .get_slot::<Rc<RefCell<ExecutionStatus>>>()
@@ -507,10 +507,10 @@ impl Executor {
     }
 
     fn payload_full_text_setter(
-        scope: &mut v8::HandleScope,
-        _key: v8::Local<v8::Name>,
-        value: v8::Local<v8::Value>,
-        _args: v8::PropertyCallbackArguments,
+        scope: &mut v8::HandleScope<'_>,
+        _key: v8::Local<'_, v8::Name>,
+        value: v8::Local<'_, v8::Value>,
+        _args: v8::PropertyCallbackArguments<'_>,
     ) {
         let new_value = value
             .to_string(scope)
@@ -531,10 +531,10 @@ impl Executor {
     }
 
     fn payload_text_getter(
-        scope: &mut v8::HandleScope,
-        _key: v8::Local<v8::Name>,
-        _args: v8::PropertyCallbackArguments,
-        mut rv: v8::ReturnValue,
+        scope: &mut v8::HandleScope<'_>,
+        _key: v8::Local<'_, v8::Name>,
+        _args: v8::PropertyCallbackArguments<'_>,
+        mut rv: v8::ReturnValue<'_>,
     ) {
         let text = scope
             .get_slot::<Rc<RefCell<ExecutionStatus>>>()
@@ -552,10 +552,10 @@ impl Executor {
     }
 
     fn payload_text_setter(
-        scope: &mut v8::HandleScope,
-        _key: v8::Local<v8::Name>,
-        value: v8::Local<v8::Value>,
-        _args: v8::PropertyCallbackArguments,
+        scope: &mut v8::HandleScope<'_>,
+        _key: v8::Local<'_, v8::Name>,
+        value: v8::Local<'_, v8::Value>,
+        _args: v8::PropertyCallbackArguments<'_>,
     ) {
         let new_value = value
             .to_string(scope)
@@ -576,10 +576,10 @@ impl Executor {
     }
 
     fn payload_selection_getter(
-        scope: &mut v8::HandleScope,
-        _key: v8::Local<v8::Name>,
-        _args: v8::PropertyCallbackArguments,
-        mut rv: v8::ReturnValue,
+        scope: &mut v8::HandleScope<'_>,
+        _key: v8::Local<'_, v8::Name>,
+        _args: v8::PropertyCallbackArguments<'_>,
+        mut rv: v8::ReturnValue<'_>,
     ) {
         let selection = scope
             .get_slot::<Rc<RefCell<ExecutionStatus>>>()
@@ -597,10 +597,10 @@ impl Executor {
     }
 
     fn payload_selection_setter(
-        scope: &mut v8::HandleScope,
-        _key: v8::Local<v8::Name>,
-        value: v8::Local<v8::Value>,
-        _args: v8::PropertyCallbackArguments,
+        scope: &mut v8::HandleScope<'_>,
+        _key: v8::Local<'_, v8::Name>,
+        value: v8::Local<'_, v8::Value>,
+        _args: v8::PropertyCallbackArguments<'_>,
     ) {
         let new_value = value
             .to_string(scope)

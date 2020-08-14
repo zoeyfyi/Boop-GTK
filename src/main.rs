@@ -5,22 +5,17 @@
 extern crate lazy_static;
 #[macro_use]
 extern crate shrinkwraprs;
-extern crate gladis;
-extern crate gladis_proc_macro;
 
-extern crate gdk;
-extern crate gdk_pixbuf;
-extern crate gio;
-extern crate glib;
-extern crate gtk;
-extern crate pango;
-extern crate sourceview;
+use gdk_pixbuf;
+use gio;
+use glib;
+use gtk;
 
-extern crate directories;
-extern crate rust_embed;
-extern crate rusty_v8;
-extern crate serde;
-extern crate simple_error;
+use sourceview;
+
+use directories;
+use rust_embed;
+use rusty_v8;
 
 #[macro_use]
 extern crate log;
