@@ -1,7 +1,7 @@
 [package]
 name = "boop-gtk"
 build = "build.rs"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["Ben Sheffield"]
 edition = "2018"
 description = """A scriptable scratchpad for developers
