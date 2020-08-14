@@ -64,7 +64,7 @@ sudo flatpak install -y flathub org.freedesktop.Platform//19.08 org.freedesktop.
 wget https://github.com/flatpak/flatpak-builder/releases/download/1.0.10/flatpak-builder-1.0.10.tar.xz && tar -xvf flatpak-builder-1.0.10.tar.xz && cd flatpak-builder-1.0.10 && ./configure --disable-documentation && make && sudo make install
 sudo apt-get install python3-toml
 bash flatpak/gen-sources.sh
-sudo flatpak-builder --repo=repo build-dir flatpak/uk.co.mrbenshef.Boop-GTK.json
+flatpak-builder --repo=repo build-dir flatpak/uk.co.mrbenshef.Boop-GTK.json
 flatpak build-bundle ./repo boop-gtk.flatpak uk.co.mrbenshef.Boop-GTK
 ```
 
