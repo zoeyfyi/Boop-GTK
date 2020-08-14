@@ -5,23 +5,6 @@
 extern crate lazy_static;
 #[macro_use]
 extern crate shrinkwraprs;
-extern crate gladis;
-extern crate gladis_proc_macro;
-
-extern crate gdk;
-extern crate gdk_pixbuf;
-extern crate gio;
-extern crate glib;
-extern crate gtk;
-extern crate pango;
-extern crate sourceview;
-
-extern crate directories;
-extern crate rust_embed;
-extern crate rusty_v8;
-extern crate serde;
-extern crate simple_error;
-
 #[macro_use]
 extern crate log;
 
@@ -308,7 +291,8 @@ fn main() {
     application.connect_activate(move |application| {
         // resources.gresources is created by build.rs
         // it includes all the files in the resources directory
-        let resource_bytes = include_bytes!(concat!(env!("OUT_DIR"), "/resources/resources.gresource"));
+        let resource_bytes =
+            include_bytes!(concat!(env!("OUT_DIR"), "/resources/resources.gresource"));
         let resource_data = glib::Bytes::from(&resource_bytes[..]);
         gio::resources_register(&gio::Resource::from_data(&resource_data).unwrap());
 

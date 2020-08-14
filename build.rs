@@ -1,7 +1,3 @@
-#[cfg(windows)]
-extern crate winres;
-extern crate fs_extra;
-
 use io::Write;
 use std::{env, fs, io, path::Path, process::Command};
 
@@ -18,7 +14,7 @@ fn add_files(xml: &mut String, folder: &str) {
     for path in fs::read_dir(folder).unwrap() {
         let path = path.as_ref().unwrap();
 
-        if path.path().display().to_string().ends_with("~") {
+        if path.path().display().to_string().ends_with('~') {
             continue;
         }
 

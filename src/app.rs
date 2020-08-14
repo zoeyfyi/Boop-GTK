@@ -1,7 +1,6 @@
 use crate::{
     command_pallete::CommandPalleteDialog,
     executor::{self},
-    gtk::ButtonExt,
     script::Script,
 };
 use gdk_pixbuf::prelude::*;

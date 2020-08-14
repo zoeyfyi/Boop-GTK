@@ -17,7 +17,14 @@
   <url type="homepage">https://boop-gtk.mrbenshef.co.uk/</url>
   <content_rating type="oars-1.0" />
   <releases>
-   <release version="1.0.0" date="2020-07-28">
+    <release version="1.0.1" date="2020-08-14">
+      <description>
+        <ul>
+          <li>Fix issues in desktop and metainfo files</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.0.0" date="2020-07-28">
       <description>
         <ul>
           <li>Installer available for Windows</li>
@@ -28,7 +35,7 @@
     <release version="0.2.1" date="2020-07-28">
       <description>
         <ul>
-          <li>Fix JWT decoder script (see https://github.com/IvanMathy/Boop/releases/tag/1.2.1).</li>
+          <li>Fix JWT decoder script (for more infomation, see the release notes of Boop 1.2.1).</li>
           <li>Remove unsafe Rust sections</li>
         </ul>
       </description>
