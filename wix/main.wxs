@@ -233,15 +233,6 @@ Port of @IvanMathy&#39;s Boop to GTK
             <Directory Id='Icons' Name='icons'>
               <Directory Id='Adwaita' Name='Adwaita'>
 
-                <Directory Id='sixteensixteen' Name='16x16'>
-
-                  <Directory Id='Legacy' Name='legacy'>
-                    <Component Id='icon1' Guid='*' Win64='$(var.Win64)'>
-                      <File Id='icon1file' Name='document-properties.png' DiskId='1' Source='C:\gtk-build\gtk\x64\release\share\icons\Adwaita\16x16\legacy\document-properties.png' KeyPath='yes'/>
-                    </Component>
-                  </Directory>
-                </Directory>
-
                 <Directory Id='Scalable' Name='scalable'>
                   <Directory Id='Ui' Name='ui'>
                     <Component Id='icon2' Guid='*' Win64='$(var.Win64)'>
@@ -255,6 +246,9 @@ Port of @IvanMathy&#39;s Boop to GTK
                     </Component>
                   </Directory>
                   <Directory Id='Actions' Name='actions'>
+                    <Component Id='icon1' Guid='*' Win64='$(var.Win64)'>
+                      <File Id='icon1' Name='open-menu-symbolic.svg' DiskId='1' Source='C:\gtk-build\gtk\x64\release\share\icons\Adwaita\scalable\actions\open-menu-symbolic.svg' KeyPath='yes'/>
+                    </Component>
                     <Component Id='icon0' Guid='*' Win64='$(var.Win64)'>
                       <File Id='icon0file' Name='edit-find-symbolic.svg' DiskId='1' Source='C:\gtk-build\gtk\x64\release\share\icons\Adwaita\scalable\actions\edit-find-symbolic.svg' KeyPath='yes'/>
                     </Component>
