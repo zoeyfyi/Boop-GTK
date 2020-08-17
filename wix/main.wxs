@@ -252,6 +252,9 @@ Port of @IvanMathy&#39;s Boop to GTK
                     <Component Id='icon0' Guid='*' Win64='$(var.Win64)'>
                       <File Id='icon0file' Name='edit-find-symbolic.svg' DiskId='1' Source='C:\gtk-build\gtk\x64\release\share\icons\Adwaita\scalable\actions\edit-find-symbolic.svg' KeyPath='yes'/>
                     </Component>
+                    <Component Id='icon5' Guid='*' Win64='$(var.Win64)'>
+                      <File Id='icon5' Name='edit-clear-symbolic.svg' DiskId='1' Source='C:\gtk-build\gtk\x64\release\share\icons\Adwaita\scalable\actions\edit-clear-symbolic.svg' KeyPath='yes'/>
+                    </Component>
                   </Directory>
                 </Directory>
 
@@ -398,6 +401,7 @@ Port of @IvanMathy&#39;s Boop to GTK
       <ComponentRef Id='icon2'/>
       <ComponentRef Id='icon3'/>
       <ComponentRef Id='icon4'/>
+      <ComponentRef Id='icon5'/>
 
       <ComponentRef Id='idx0'/>
       <ComponentRef Id='idx1'/>
