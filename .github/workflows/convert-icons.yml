@@ -14,7 +14,7 @@ jobs:
     - name: Convert pdfs
       run: bash convert-icons.sh
     - name: Create Pull Request
-      uses: peter-evans/create-pull-request@v2.8.1
+      uses: peter-evans/create-pull-request@v3.1.1
       with:
         commit-message: "chore: convert icons"
         title: Update icons
