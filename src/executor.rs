@@ -387,7 +387,7 @@ impl Executor {
                 let code = v8::String::new(scope, &source)
                     .expect("failed to create JS string from source");
                 let compiled_script =
-                    v8::Script::compile(scope, code, None).expect("failed to compile script");
+                    v8::Script::compile(scope, code, None).expect("failed to compile script"); // TODO: catch and handle
 
                 let tc_scope = &mut v8::TryCatch::new(scope);
                 let export = compiled_script.run(tc_scope);

@@ -100,7 +100,6 @@ impl Script {
                             );
                             let result = executor.execute(&full_text, selection.as_deref());
                             t_sender.send(ExecutorJob::Responce(result)).unwrap(); // blocks until send
-                            // TODO: handle
                         }
                         ExecutorJob::Responce(_) => {
                             warn!("executor thread received a responce on channel");
