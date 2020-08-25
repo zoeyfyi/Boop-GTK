@@ -14,7 +14,7 @@ pub struct Script {
 #[derive(Debug)]
 enum ExecutorJob {
     Request((String, Option<String>)),
-    Responce(ExecutionStatus),
+    Responce(Result<ExecutionStatus, SimpleError>),
     Kill,
 }
 
@@ -100,7 +100,6 @@ impl Script {
                             );
                             let result = executor.execute(&full_text, selection.as_deref());
                             t_sender.send(ExecutorJob::Responce(result)).unwrap(); // blocks until send
-                            // TODO: handle
                         }
                         ExecutorJob::Responce(_) => {
                             warn!("executor thread received a responce on channel");
@@ -154,7 +153,7 @@ impl Script {
             .map_err(|e| SimpleError::with("cannot receive result on channel", e))?;
 
         if let ExecutorJob::Responce(status) = result {
-            return Ok(status);
+            return status;
         }
 
         bail!(
@@ -227,6 +226,48 @@ mod tests {
     }
 
     #[test]
+    fn test_is_selection() {
+        let _guard = setup();
+
+        let mut script = Script::from_source(
+            r#"
+            /**
+                {
+                    "api": 1,
+                    "name": "Test",
+                    "description": "Test script",
+                    "author": "Ben",
+                    "icon": "html",
+                    "tags": "test"
+                }
+            **/
+            
+            let number = 0;
+            
+            function main(state) {
+                state.fullText = state.isSelection;
+            }"#
+            .to_string(),
+            PathBuf::new(),
+        )
+        .unwrap();
+
+        let status = script.execute("", None);
+        assert!(status.is_ok());
+        assert_eq!(
+            TextReplacement::Full("false".to_string()),
+            status.unwrap().into_replacement()
+        );
+
+        let status = script.execute("foo", Some("fo"));
+        assert!(status.is_ok());
+        assert_eq!(
+            TextReplacement::Full("true".to_string()),
+            status.unwrap().into_replacement()
+        );
+    }
+
+    #[test]
     fn test_builtin_scripts() {
         let _guard = setup();
 
@@ -242,14 +283,15 @@ mod tests {
             let source: Cow<'static, [u8]> = Scripts::get(&file).unwrap();
             let script_source = String::from_utf8(source.to_vec()).unwrap();
 
+            let full_text = match file.as_ref() {
+                "MinifyJSON.js" => "{\n\n\"foo\":\n\"bar\"}",
+                "SumAll.js" => "100\n9.00\n230\n2.09",
+                _ => "foobar ♈ ♉ ♊ ♋ ♌ ♍ ♎ ♏ ♐ ♑ ♒ ♓ 😁 😝 😋 😄",
+            };
+
             match Script::from_source(script_source, PathBuf::new()) {
                 Ok(mut script) => {
-                    script
-                        .execute(
-                            "foobar ♈ ♉ ♊ ♋ ♌ ♍ ♎ ♏ ♐ ♑ ♒ ♓ 😁 😝 😋 😄",
-                            None,
-                        )
-                        .unwrap();
+                    script.execute(full_text, None).unwrap();
                 }
                 Err(e) => match e {
                     ParseScriptError::NoMetadata => {

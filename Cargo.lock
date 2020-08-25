@@ -101,7 +101,7 @@ dependencies = [
 
 [[package]]
 name = "boop-gtk"
-version = "1.0.1"
+version = "1.1.0"
 dependencies = [
  "crossbeam",
  "directories",
@@ -1209,9 +1209,9 @@ dependencies = [
 
 [[package]]
 name = "simple-error"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "339844c9af2d844b9230bb28e8f819a7790cbf20a29b5cbd2b59916a03a1ef51"
+checksum = "634bf7bc1315698154cb1b45c1db17fcd2e5ce41f925b7b4063e971536714bf1"
 
 [[package]]
 name = "slab"
