@@ -9,7 +9,7 @@
 
 ![Continuous integration](https://github.com/mrbenshef/Boop-GTK/workflows/Continuous%20integration/badge.svg)
 ![Release](https://github.com/mrbenshef/Boop-GTK/workflows/Release/badge.svg?branch=release)
-![Crates.io](https://img.shields.io/crates/v/boop-gtk)
+[![Crates.io](https://img.shields.io/crates/v/boop-gtk)](https://crates.io/crates/boop-gtk)
 [![boop-gtk](https://snapcraft.io//boop-gtk/badge.svg)](https://snapcraft.io/boop-gtk)
 [![Flathub](https://img.shields.io/flathub/v/uk.co.mrbenshef.Boop-GTK)](https://flathub.org/apps/details/uk.co.mrbenshef.Boop-GTK)
 
