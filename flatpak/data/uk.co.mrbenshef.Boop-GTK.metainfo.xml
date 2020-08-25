@@ -17,6 +17,15 @@
   <url type="homepage">https://boop-gtk.mrbenshef.co.uk/</url>
   <content_rating type="oars-1.0" />
   <releases>
+    <release version="1.1.0" date="2020-08-25">
+      <description>
+        <ul>
+          <li>Add `isSelection` to input argument of main, `isSelection` is true when text is selected in the buffer and false otherwise.</li>
+          <li>Fixed an issue that crashed Boop-GTK when requiring scripts with syntax errors</li>
+          <li>Use the correct icon for the primary menu</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.0.1" date="2020-08-14">
       <description>
         <ul>

@@ -60,7 +60,7 @@ jobs:
     - name: GTK development libraries (msys)
       run: C:\msys64\usr\bin\bash.exe -lc "pacman -Syy --noconfirm mingw-w64-x86_64-adwaita-icon-theme"
     - name: GTK development libraries (gvsbuild)
-      run: python .\build.py build -p=x64 --vs-ver=16 --msys-dir=C:\msys64 -k --enable-gi --py-wheel --py-egg gtk3 gdk-pixbuf gtksourceview3 hicolor-icon-theme
+      run: python .\build.py build -p=x64 --vs-ver=16 --msys-dir=C:\msys64 -k --enable-gi --py-wheel --py-egg gtk3 gdk-pixbuf gtksourceview3 librsvg hicolor-icon-theme
       working-directory: C:\gtk-build\github\gvsbuild
     - name: Add gvsbuild bin directory to Path
       run: echo "::add-path::C:\gtk-build\gtk\x64\release\bin"
