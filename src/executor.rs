@@ -396,9 +396,10 @@ impl Executor {
         args: v8::FunctionCallbackArguments<'_>,
         mut rv: v8::ReturnValue<'_>,
     ) {
-        args.get(0)
+        let export = args
+            .get(0)
             .to_string(scope)
-            .ok_or(SimpleError::new("argument to require is not a string"))
+            .ok_or_else(|| SimpleError::new("argument to require is not a string"))
             .map(|string_arg| string_arg.to_rust_string_lossy(scope))
             .map(|mut path| {
                 if !path.ends_with(".js") {
@@ -408,18 +409,18 @@ impl Executor {
                 path
             })
             // grab the source
-            .and_then(|path| Executor::load_raw_source(path))
+            .and_then(Executor::load_raw_source)
             // add boop wrapper
             .map(|raw_source| [BOOP_WRAPPER_START, &raw_source, BOOP_WRAPPER_END].concat())
             // create JS string
             .and_then(|source| {
                 v8::String::new(scope, &source)
-                    .ok_or(SimpleError::new("failed to create JS string from source"))
+                    .ok_or_else(|| SimpleError::new("failed to create JS string from source"))
             })
             // compile the script
             .and_then(|code| {
                 v8::Script::compile(scope, code, None)
-                    .ok_or(SimpleError::new("failed to compile JS"))
+                    .ok_or_else(|| SimpleError::new("failed to compile JS"))
             })
             // execute the script
             .and_then(|compiled_script| {
@@ -428,15 +429,12 @@ impl Executor {
                 compiled_script
                     .run(tc_scope)
                     .ok_or_else(|| Executor::js_exception_to_error(tc_scope))
-            })
-            // set the return value to the result
-            .and_then(|export| {
-                rv.set(export);
-                Ok(())
-            })
-            .unwrap_or_else(|err| {
-                error!("failed to require script: {}", err);
             });
+
+        match export {
+            Ok(export) => rv.set(export),
+            Err(err) => error!("failed to require script: {}", err),
+        }
     }
 
     fn payload_post_info(
