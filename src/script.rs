@@ -14,7 +14,7 @@ pub struct Script {
 #[derive(Debug)]
 enum ExecutorJob {
     Request((String, Option<String>)),
-    Responce(ExecutionStatus),
+    Responce(Result<ExecutionStatus, SimpleError>),
     Kill,
 }
 
@@ -153,7 +153,7 @@ impl Script {
             .map_err(|e| SimpleError::with("cannot receive result on channel", e))?;
 
         if let ExecutorJob::Responce(status) = result {
-            return Ok(status);
+            return status;
         }
 
         bail!(
