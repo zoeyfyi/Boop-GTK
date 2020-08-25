@@ -16,7 +16,8 @@ build-packages:
 parts:
   boop-gtk:
     plugin: rust
-    source: .
+    source: https://github.com/mrbenshef/Boop-GTK.git
+    source-tag: v1.1.0
 
 slots:
   dbus-daemon:
