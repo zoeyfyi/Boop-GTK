@@ -236,7 +236,11 @@ impl Executor {
         (tc_scope.escape(context), main_function)
     }
 
-    pub fn execute(&mut self, full_text: &str, selection: Option<&str>) -> ExecutionStatus {
+    pub fn execute(
+        &mut self,
+        full_text: &str,
+        selection: Option<&str>,
+    ) -> Result<ExecutionStatus, SimpleError> {
         // setup execution status
         {
             let status_slot = self
@@ -256,6 +260,7 @@ impl Executor {
         }
 
         // prepare payload and execute main
+
         // TODO: use ObjectTemplate, problem: rusty_v8 doesn't have set_accessor_with_setter or even set_accessor for
         // object templates
         {
@@ -275,55 +280,78 @@ impl Executor {
             // payload is the object passed into function main
             let payload = v8::Object::new(scope);
 
+            // value: isSelection
+            {
+                let is_selection_key = v8::String::new(scope, "isSelection")
+                    .expect("failed to construct 'isSelection' JS string");
+
+                let is_selection_value = v8::Boolean::new(scope, selection.is_some());
+
+                payload
+                    .set(scope, is_selection_key.into(), is_selection_value.into())
+                    .expect("failed to set 'isSelection' value");
+            }
+
             // getter/setters: full_text, text, selection
             {
                 let full_text_key = v8::String::new(scope, "fullText")
-                    .expect("failed to create JS string for 'fullText'");
+                    .expect("failed to construct 'fullText' JS string");
                 let text_key =
-                    v8::String::new(scope, "text").expect("failed to create JS string for 'text'");
+                    v8::String::new(scope, "text").expect("failed to construct 'text' JS string");
                 let selection_key = v8::String::new(scope, "selection")
-                    .expect("failed to create JS string for 'selection'");
+                    .expect("failed to construct 'selection' JS string");
 
-                payload.set_accessor_with_setter(
-                    scope,
-                    full_text_key.into(),
-                    Executor::payload_full_text_getter,
-                    Executor::payload_full_text_setter,
-                );
-                payload.set_accessor_with_setter(
-                    scope,
-                    text_key.into(),
-                    Executor::payload_text_getter,
-                    Executor::payload_text_setter,
-                );
-                payload.set_accessor_with_setter(
-                    scope,
-                    selection_key.into(),
-                    Executor::payload_selection_getter,
-                    Executor::payload_selection_setter,
-                );
+                payload
+                    .set_accessor_with_setter(
+                        scope,
+                        full_text_key.into(),
+                        Executor::payload_full_text_getter,
+                        Executor::payload_full_text_setter,
+                    )
+                    .expect("failed to set 'full_text' accessor");
+                payload
+                    .set_accessor_with_setter(
+                        scope,
+                        text_key.into(),
+                        Executor::payload_text_getter,
+                        Executor::payload_text_setter,
+                    )
+                    .expect("failed to set 'text' accessor");
+                payload
+                    .set_accessor_with_setter(
+                        scope,
+                        selection_key.into(),
+                        Executor::payload_selection_getter,
+                        Executor::payload_selection_setter,
+                    )
+                    .expect("failed to set 'selection' accessor");
             }
 
             // functions: post_info, post_error, insert
-            {
-                let post_info_key = v8::String::new(scope, "postInfo")
-                    .expect("failed to create JS string 'postInfo'");
-                let post_error_key = v8::String::new(scope, "postError")
-                    .expect("failed to create JS string 'postError'");
-                let insert_key =
-                    v8::String::new(scope, "insert").expect("failed to create JS string 'insert'");
 
-                let post_info_val = v8::Function::new(scope, Executor::payload_post_info)
-                    .expect("failed to convert post_info function");
-                let post_error_val = v8::Function::new(scope, Executor::payload_post_error)
-                    .expect("failed to create post_error function");
-                let insert_val = v8::Function::new(scope, Executor::payload_insert)
-                    .expect("failed to create payload_insert function");
+            let post_info_key =
+                v8::String::new(scope, "postInfo").expect("failed to create JS string 'postInfo'");
+            let post_error_key = v8::String::new(scope, "postError")
+                .expect("failed to create JS string 'postError'");
+            let insert_key =
+                v8::String::new(scope, "insert").expect("failed to create JS string 'insert'");
 
-                payload.set(scope, post_info_key.into(), post_info_val.into());
-                payload.set(scope, post_error_key.into(), post_error_val.into());
-                payload.set(scope, insert_key.into(), insert_val.into());
-            }
+            let post_info_val = v8::Function::new(scope, Executor::payload_post_info)
+                .expect("failed to convert post_info function");
+            let post_error_val = v8::Function::new(scope, Executor::payload_post_error)
+                .expect("failed to create post_error function");
+            let insert_val = v8::Function::new(scope, Executor::payload_insert)
+                .expect("failed to create payload_insert function");
+
+            payload
+                .set(scope, post_info_key.into(), post_info_val.into())
+                .expect("failed to set 'post_info' function");
+            payload
+                .set(scope, post_error_key.into(), post_error_val.into())
+                .expect("failed to set 'post_error' function");
+            payload
+                .set(scope, insert_key.into(), insert_val.into())
+                .expect("failed to set 'insert' function");
 
             let main_function = state_slot
                 .main_function
@@ -331,22 +359,10 @@ impl Executor {
                 .expect("main_function not initialized")
                 .get(scope);
             let tc_scope = &mut v8::TryCatch::new(scope);
-            let result = main_function.call(tc_scope, payload.into(), &[payload.into()]);
 
-            if result.is_none() {
-                assert!(tc_scope.has_caught());
-                let exception = tc_scope
-                    .exception()
-                    .expect("failed to get exception, but exception was caught");
-
-                error!(
-                    "<<JS EXCEPTION>> {}",
-                    exception
-                        .to_string(tc_scope)
-                        .expect("failed to convert exception to string")
-                        .to_rust_string_lossy(tc_scope),
-                );
-            }
+            main_function
+                .call(tc_scope, payload.into(), &[payload.into()])
+                .ok_or_else(|| Executor::js_exception_to_error(tc_scope))?;
         }
 
         // extract execution status
@@ -358,8 +374,21 @@ impl Executor {
 
             let status = (status_slot).borrow();
 
-            status.clone()
+            Ok(status.clone())
         }
+    }
+
+    fn js_exception_to_error(tc_scope: &mut v8::TryCatch<v8::HandleScope>) -> SimpleError {
+        tc_scope
+            .exception()
+            .map(|exception| exception.to_string(tc_scope))
+            .flatten()
+            .map(|exception_str| exception_str.to_rust_string_lossy(tc_scope))
+            .map(|e| format!("JS Exception: {}", e))
+            .map(SimpleError::new)
+            .unwrap_or_else(|| {
+                SimpleError::new("failed to get exception, but exception was caught")
+            })
     }
 
     fn global_require(
@@ -367,56 +396,47 @@ impl Executor {
         args: v8::FunctionCallbackArguments<'_>,
         mut rv: v8::ReturnValue<'_>,
     ) {
-        let mut path = args
-            .get(0)
+        args.get(0)
             .to_string(scope)
-            .expect("failed to convert argument to require to string")
-            .to_rust_string_lossy(scope);
-
-        info!("loading {}", path);
-
-        // append extension
-        if !path.ends_with(".js") {
-            path.push_str(".js");
-        }
-
-        match Executor::load_raw_source(path) {
-            Ok(raw_source) => {
-                let source = format!("{}{}{}", BOOP_WRAPPER_START, raw_source, BOOP_WRAPPER_END);
-
-                let code = v8::String::new(scope, &source)
-                    .expect("failed to create JS string from source");
-                let compiled_script =
-                    v8::Script::compile(scope, code, None).expect("failed to compile script");
-
-                let tc_scope = &mut v8::TryCatch::new(scope);
-                let export = compiled_script.run(tc_scope);
-
-                match export {
-                    Some(export) => rv.set(export),
-                    None => {
-                        assert!(tc_scope.has_caught());
-                        let exception = tc_scope
-                            .exception()
-                            .expect("failed to get exception, but exception was caught");
-
-                        error!(
-                            "<<JS EXCEPTION>> {}",
-                            exception
-                                .to_string(tc_scope)
-                                .expect("failed to convert exception to string")
-                                .to_rust_string_lossy(tc_scope),
-                        );
-                    }
+            .ok_or(SimpleError::new("argument to require is not a string"))
+            .map(|string_arg| string_arg.to_rust_string_lossy(scope))
+            .map(|mut path| {
+                if !path.ends_with(".js") {
+                    path.push_str(".js");
                 }
-            }
-            Err(e) => {
-                warn!("problem requiring script, {}", e);
+                info!("loading {}", path);
+                path
+            })
+            // grab the source
+            .and_then(|path| Executor::load_raw_source(path))
+            // add boop wrapper
+            .map(|raw_source| [BOOP_WRAPPER_START, &raw_source, BOOP_WRAPPER_END].concat())
+            // create JS string
+            .and_then(|source| {
+                v8::String::new(scope, &source)
+                    .ok_or(SimpleError::new("failed to create JS string from source"))
+            })
+            // compile the script
+            .and_then(|code| {
+                v8::Script::compile(scope, code, None)
+                    .ok_or(SimpleError::new("failed to compile JS"))
+            })
+            // execute the script
+            .and_then(|compiled_script| {
+                let tc_scope = &mut v8::TryCatch::new(scope);
 
-                let undefined = v8::undefined(scope).into();
-                rv.set(undefined)
-            }
-        }
+                compiled_script
+                    .run(tc_scope)
+                    .ok_or_else(|| Executor::js_exception_to_error(tc_scope))
+            })
+            // set the return value to the result
+            .and_then(|export| {
+                rv.set(export);
+                Ok(())
+            })
+            .unwrap_or_else(|err| {
+                error!("failed to require script: {}", err);
+            });
     }
 
     fn payload_post_info(
