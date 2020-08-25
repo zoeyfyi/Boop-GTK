@@ -280,14 +280,26 @@ impl Executor {
             // payload is the object passed into function main
             let payload = v8::Object::new(scope);
 
+            // value: isSelection
+            {
+                let is_selection_key = v8::String::new(scope, "isSelection")
+                    .expect("failed to construct 'isSelection' JS string");
+
+                let is_selection_value = v8::Boolean::new(scope, selection.is_some());
+
+                payload
+                    .set(scope, is_selection_key.into(), is_selection_value.into())
+                    .expect("failed to set 'isSelection' value");
+            }
+
             // getter/setters: full_text, text, selection
             {
                 let full_text_key = v8::String::new(scope, "fullText")
-                    .ok_or_else(|| SimpleError::new("failed to create JS string from buffer"))?;
-                let text_key = v8::String::new(scope, "text")
-                    .ok_or_else(|| SimpleError::new("failed to create JS string from buffer"))?;
+                    .expect("failed to construct 'fullText' JS string");
+                let text_key =
+                    v8::String::new(scope, "text").expect("failed to construct 'text' JS string");
                 let selection_key = v8::String::new(scope, "selection")
-                    .ok_or_else(|| SimpleError::new("failed to create JS string from buffer"))?;
+                    .expect("failed to construct 'selection' JS string");
 
                 payload
                     .set_accessor_with_setter(
