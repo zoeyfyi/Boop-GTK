@@ -63,4 +63,4 @@ features = ["v2_44"]
 winres = "0.1"
 
 [build-dependencies]
-fs_extra = "1.1.0"
+fs_extra = "1.2.0"
