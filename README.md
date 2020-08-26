@@ -1,7 +1,7 @@
 # Boop-GTK
 
 <p align="center">
-  <img src="screenshot.png">
+  <a href="https://youtu.be/WXDTsJ4cqO4"><img src="screenshot.png"></a>
 </p>
 
 <h2 align="center">A scriptable scratchpad for developers</h2>
@@ -30,6 +30,8 @@ Boop-GTK is a port of Boop to GTK, so users on Linux and Windows can Boop it!
 | Linux | Windows |
 | :---: | :---: |
 | ![linux](screenshot.png) | ![windows](windows-screenshot.png) |
+
+There is also a quick demo on [youtube](https://youtu.be/WXDTsJ4cqO4).
 
 ### Get Boop-GTK
 
