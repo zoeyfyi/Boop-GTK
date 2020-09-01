@@ -106,9 +106,12 @@ impl App {
         }
 
         {
-            let about_dialog = app.about_dialog.clone();
+            let about_dialog: AboutDialog = app.about_dialog.clone();
             app.about_button.connect_clicked(move |_| {
-                about_dialog.show();
+                let responce = about_dialog.run();
+                if responce == gtk::ResponseType::DeleteEvent || responce == gtk::ResponseType::Cancel {
+                    about_dialog.hide();
+                }
             });
         }
 
