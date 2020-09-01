@@ -60,6 +60,14 @@ impl App {
                 .ok()
                 .as_ref(),
         );
+
+        for script in app.scripts.read().expect("scripts lock is poisoned").iter() {
+            if let Some(author) = &script.metadata.author {
+                app.about_dialog
+                    .add_credit_section(&script.metadata.name, &[author]);
+            }
+        }
+
         app.setup_syntax_highlighting(config_dir);
 
         let context_id = app.context_id;
@@ -106,9 +114,14 @@ impl App {
         }
 
         {
-            let about_dialog = app.about_dialog.clone();
+            let about_dialog: AboutDialog = app.about_dialog.clone();
             app.about_button.connect_clicked(move |_| {
-                about_dialog.show();
+                let responce = about_dialog.run();
+                if responce == gtk::ResponseType::DeleteEvent
+                    || responce == gtk::ResponseType::Cancel
+                {
+                    about_dialog.hide();
+                }
             });
         }
 
