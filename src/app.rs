@@ -63,7 +63,8 @@ impl App {
 
         for script in app.scripts.read().expect("scripts lock is poisoned").iter() {
             if let Some(author) = &script.metadata.author {
-                app.about_dialog.add_credit_section(&script.metadata.name, &[author]);
+                app.about_dialog
+                    .add_credit_section(&script.metadata.name, &[author]);
             }
         }
 
@@ -116,7 +117,9 @@ impl App {
             let about_dialog: AboutDialog = app.about_dialog.clone();
             app.about_button.connect_clicked(move |_| {
                 let responce = about_dialog.run();
-                if responce == gtk::ResponseType::DeleteEvent || responce == gtk::ResponseType::Cancel {
+                if responce == gtk::ResponseType::DeleteEvent
+                    || responce == gtk::ResponseType::Cancel
+                {
                     about_dialog.hide();
                 }
             });
