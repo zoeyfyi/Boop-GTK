@@ -60,6 +60,13 @@ impl App {
                 .ok()
                 .as_ref(),
         );
+
+        for script in app.scripts.read().expect("scripts lock is poisoned").iter() {
+            if let Some(author) = &script.metadata.author {
+                app.about_dialog.add_credit_section(&script.metadata.name, &[author]);
+            }
+        }
+
         app.setup_syntax_highlighting(config_dir);
 
         let context_id = app.context_id;
