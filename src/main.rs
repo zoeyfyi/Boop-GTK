@@ -38,6 +38,7 @@ use std::{
     io::prelude::*,
     sync::{Arc, RwLock},
     thread,
+    time::Duration,
 };
 
 lazy_static! {
@@ -220,7 +221,7 @@ fn watch_scripts_folder(scripts: Arc<RwLock<Vec<Script>>>) {
                             scripts.sort_by_key(|s| s.metadata.name.clone());
                         }
                         Err(e) => {
-                            error!("error parsing {}: {}", file.display(), e);
+                            warn!("error parsing {}: {}", file.display(), e);
                         }
                     }
                 }
@@ -237,11 +238,15 @@ fn watch_scripts_folder(scripts: Arc<RwLock<Vec<Script>>>) {
 
             info!("watching {}", config_dir.display());
 
+            if let Err(watch_error) = watcher.watch(&config_dir, RecursiveMode::Recursive) {
+                error!("watch start error: {}", watch_error);
+                return;
+            }
+
+            // keep the thread alive
             loop {
-                if let Err(watch_error) = watcher.watch(&config_dir, RecursiveMode::Recursive) {
-                    error!("watch start error: {}", watch_error);
-                    break;
-                }
+                trace!("watching!");
+                thread::sleep(Duration::from_millis(1000));
             }
         }
         Err(watcher_error) => {
