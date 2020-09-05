@@ -238,12 +238,14 @@ fn watch_scripts_folder(scripts: Arc<RwLock<Vec<Script>>>) {
 
             info!("watching {}", config_dir.display());
 
+            if let Err(watch_error) = watcher.watch(&config_dir, RecursiveMode::Recursive) {
+                error!("watch start error: {}", watch_error);
+                return;
+            }
+
+            // keep the thread alive
             loop {
                 trace!("watching!");
-                if let Err(watch_error) = watcher.watch(&config_dir, RecursiveMode::Recursive) {
-                    error!("watch start error: {}", watch_error);
-                    break;
-                }
                 thread::sleep(Duration::from_millis(1000));
             }
         }
