@@ -1,7 +1,7 @@
 # Boop-GTK
 
 <p align="center">
-  <img src="screenshot.png">
+  <a href="https://youtu.be/WXDTsJ4cqO4"><img src="screenshot.png"></a>
 </p>
 
 <h2 align="center">A scriptable scratchpad for developers</h2>
@@ -9,7 +9,7 @@
 
 ![Continuous integration](https://github.com/mrbenshef/Boop-GTK/workflows/Continuous%20integration/badge.svg)
 ![Release](https://github.com/mrbenshef/Boop-GTK/workflows/Release/badge.svg?branch=release)
-![Crates.io](https://img.shields.io/crates/v/boop-gtk)
+[![Crates.io](https://img.shields.io/crates/v/boop-gtk)](https://crates.io/crates/boop-gtk)
 [![boop-gtk](https://snapcraft.io//boop-gtk/badge.svg)](https://snapcraft.io/boop-gtk)
 [![Flathub](https://img.shields.io/flathub/v/uk.co.mrbenshef.Boop-GTK)](https://flathub.org/apps/details/uk.co.mrbenshef.Boop-GTK)
 
@@ -31,6 +31,8 @@ Boop-GTK is a port of Boop to GTK, so users on Linux and Windows can Boop it!
 | :---: | :---: |
 | ![linux](screenshot.png) | ![windows](windows-screenshot.png) |
 
+There is also a quick demo on [youtube](https://youtu.be/WXDTsJ4cqO4).
+
 ### Get Boop-GTK
 
 | Linux | Windows | MacOS |
@@ -51,7 +53,7 @@ cargo build
 ```shell
 sudo apt-get install snap snapcraft
 snapcraft snap
-sudo snap install boop-gtk_1.1.0_amd64.snap
+sudo snap install boop-gtk_1.1.1_amd64.snap
 ```
 
 #### Linux Flatpak

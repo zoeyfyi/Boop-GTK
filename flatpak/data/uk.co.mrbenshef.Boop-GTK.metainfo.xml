@@ -17,6 +17,15 @@
   <url type="homepage">https://boop-gtk.mrbenshef.co.uk/</url>
   <content_rating type="oars-1.0" />
   <releases>
+    <release version="1.1.1" date="2020-09-05">
+      <description>
+        <ul>
+          <li>Fixed bug that caused high CPU usage.</li>
+          <li>Add script authors to the credit section in the about dialog.</li>
+          <li>Upgrade dependencies</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.1.0" date="2020-08-25">
       <description>
         <ul>
