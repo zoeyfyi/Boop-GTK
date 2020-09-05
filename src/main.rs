@@ -221,7 +221,7 @@ fn watch_scripts_folder(scripts: Arc<RwLock<Vec<Script>>>) {
                             scripts.sort_by_key(|s| s.metadata.name.clone());
                         }
                         Err(e) => {
-                            error!("error parsing {}: {}", file.display(), e);
+                            warn!("error parsing {}: {}", file.display(), e);
                         }
                     }
                 }
