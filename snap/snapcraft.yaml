@@ -1,6 +1,6 @@
 name: boop-gtk
 title: Boop-GTK
-version: '1.1.0'
+version: '1.1.1'
 icon: snap/gui/boop-gtk.png
 summary: Port of IvanMathy's Boop to GTK, a scriptable scratchpad for developers.
 description: |
@@ -16,8 +16,7 @@ build-packages:
 parts:
   boop-gtk:
     plugin: rust
-    source: https://github.com/mrbenshef/Boop-GTK.git
-    source-tag: v1.1.0
+    source: .
 
 slots:
   dbus-daemon:
