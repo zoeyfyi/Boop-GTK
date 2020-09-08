@@ -5,6 +5,7 @@ use simple_error::SimpleError;
 use std::{
     cell::RefCell,
     convert::TryFrom,
+    error::Error,
     fmt::{Debug, Display},
     fs::File,
     io::Read,
@@ -135,9 +136,21 @@ pub enum TextReplacement {
     None,
 }
 
+#[derive(Debug, Default, PartialEq)]
+pub struct JSException {
+    exception_str: String,
+    resource_name: Option<String>,
+    source_line: Option<String>,
+    line_number: Option<usize>,
+    columns: Option<(usize, usize)>,
+}
+
 #[derive(Debug, PartialEq)]
 pub enum ExecutorError {
     SourceExceedsMaxLength,
+    Compile(JSException),
+    Execute(JSException),
+    NoMain,
     OtherError(SimpleError), // TODO: remove
 }
 
@@ -145,17 +158,24 @@ impl Display for ExecutorError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ExecutorError::SourceExceedsMaxLength => write!(f, "source exceeds max length"),
+            ExecutorError::Compile(exception) => write!(f, "JS compile exception: {:?}", exception),
+            ExecutorError::Execute(exception) => {
+                write!(f, "JS execution exception: {:?}", exception)
+            }
+            ExecutorError::NoMain => write!(f, "no main function"),
             ExecutorError::OtherError(err) => write!(f, "other error: {}", err),
         }
     }
 }
+
+impl Error for ExecutorError {}
 
 impl Executor {
     pub fn new(source: &str) -> Result<Self, ExecutorError> {
         INIT_V8.call_once(|| {
             let start = Instant::now();
 
-            // initialized V8
+            // initialize V8
             let platform = v8::new_default_platform().unwrap();
             v8::V8::initialize_platform(platform);
             v8::V8::initialize();
@@ -163,10 +183,15 @@ impl Executor {
             info!("V8 initialized in {:?}", start.elapsed());
         });
 
-        info!("initalizing isolate");
-
         // set up execution context
-        let mut isolate = v8::Isolate::new(Default::default());
+        let mut isolate = {
+            let start = Instant::now();
+
+            let isolate = v8::Isolate::new(Default::default());
+            info!("isolate initialized in {:?}", start.elapsed());
+
+            isolate
+        };
         let (global_context, main_function) = {
             let scope = &mut v8::HandleScope::new(&mut isolate);
             // let context = v8::Context::new(scope);
@@ -247,33 +272,29 @@ impl Executor {
 
         // complile and run script
         let code = v8::String::new(scope, source).ok_or(ExecutorError::SourceExceedsMaxLength)?;
-        let compiled_script =
-            v8::Script::compile(scope, code, None).expect("failed to compile script");
 
         let tc_scope = &mut v8::TryCatch::new(scope);
-        let result = compiled_script.run(tc_scope);
+        let compiled_script = v8::Script::compile(tc_scope, code, None)
+            .ok_or_else(|| {
+                Executor::extract_exception(tc_scope)
+                    .expect("exception occored but no exception was caught")
+            })
+            .map_err(ExecutorError::Compile)?;
 
-        if result.is_none() {
-            assert!(tc_scope.has_caught());
-            let exception = tc_scope
-                .exception()
-                .expect("exception was caught, but exception is none");
-
-            error!(
-                "<<JS EXCEPTION>> {}",
-                exception
-                    .to_string(tc_scope)
-                    .expect("failed to convert exception to string")
-                    .to_rust_string_lossy(tc_scope),
-            );
-        }
+        compiled_script
+            .run(tc_scope)
+            .ok_or_else(|| {
+                Executor::extract_exception(tc_scope)
+                    .expect("exception occored but no exception was caught")
+            })
+            .map_err(ExecutorError::Execute)?;
 
         // extract main function
         let main_key =
             v8::String::new(tc_scope, "main").expect("failed to create JS string 'main'");
         let main_function =
             v8::Local::<v8::Function>::try_from(global.get(tc_scope, main_key.into()).unwrap())
-                .expect("failed to get main function");
+                .map_err(|_e| ExecutorError::NoMain)?;
         let main_function = v8::Global::new(tc_scope, main_function);
 
         Ok((tc_scope.escape(context), main_function))
@@ -401,12 +422,16 @@ impl Executor {
                 .as_ref()
                 .expect("main_function not initialized")
                 .get(scope);
-            let tc_scope = &mut v8::TryCatch::new(scope);
+            let escape_scope = &mut v8::EscapableHandleScope::new(scope);
+            let tc_scope = &mut v8::TryCatch::new(escape_scope);
 
             main_function
                 .call(tc_scope, payload.into(), &[payload.into()])
                 .ok_or_else(|| {
-                    ExecutorError::OtherError(Executor::js_exception_to_error(tc_scope))
+                    ExecutorError::Execute(
+                        Executor::extract_exception(tc_scope)
+                            .expect("exception occored but no exception was caught"),
+                    )
                 })?;
         }
 
@@ -423,17 +448,37 @@ impl Executor {
         }
     }
 
-    fn js_exception_to_error(tc_scope: &mut v8::TryCatch<v8::HandleScope>) -> SimpleError {
-        tc_scope
-            .exception()
-            .map(|exception| exception.to_string(tc_scope))
-            .flatten()
-            .map(|exception_str| exception_str.to_rust_string_lossy(tc_scope))
-            .map(|e| format!("JS Exception: {}", e))
-            .map(SimpleError::new)
-            .unwrap_or_else(|| {
-                SimpleError::new("failed to get exception, but exception was caught")
-            })
+    fn extract_exception(
+        tc_scope: &mut v8::TryCatch<v8::EscapableHandleScope>,
+    ) -> Option<JSException> {
+        let exception_str = tc_scope
+            .exception()?
+            .to_string(tc_scope)
+            .expect("exception is not a string")
+            .to_rust_string_lossy(tc_scope);
+
+        let message = match tc_scope.message() {
+            Some(message) => message,
+            None => {
+                return Some(JSException {
+                    exception_str,
+                    ..Default::default()
+                });
+            }
+        };
+
+        Some(JSException {
+            exception_str,
+            resource_name: message
+                .get_script_resource_name(tc_scope)
+                .and_then(|r| r.to_string(tc_scope))
+                .map(|r| r.to_rust_string_lossy(tc_scope)),
+            source_line: message
+                .get_source_line(tc_scope)
+                .map(|l| l.to_rust_string_lossy(tc_scope)),
+            line_number: message.get_line_number(tc_scope),
+            columns: Some((message.get_start_column(), message.get_end_column())),
+        })
     }
 
     fn global_require(
@@ -469,11 +514,17 @@ impl Executor {
             })
             // execute the script
             .and_then(|compiled_script| {
-                let tc_scope = &mut v8::TryCatch::new(scope);
+                let escape_scope = &mut v8::EscapableHandleScope::new(scope);
+                let tc_scope = &mut v8::TryCatch::new(escape_scope);
 
                 compiled_script
                     .run(tc_scope)
-                    .ok_or_else(|| Executor::js_exception_to_error(tc_scope))
+                    .ok_or_else(|| {
+                        Executor::extract_exception(tc_scope)
+                            .expect("exception occored but no exception was caught")
+                    })
+                    .map_err(ExecutorError::Execute)
+                    .map_err(|err| SimpleError::with("error executing script", err))
             });
 
         match export {
@@ -687,16 +738,80 @@ impl Executor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Mutex;
 
-    lazy_static! {
-        static ref INIT_LOCK: Mutex<u32> = Mutex::new(0);
+    fn init() {
+        let _ = env_logger::builder().is_test(true).try_init();
     }
 
     #[test]
-    fn test_execute_error_big_string() {
+    fn test_error_new_big_string() {
+        init();
         let source = "0".repeat(1 << 29);
         let result = Executor::new(&source);
         assert_eq!(result.unwrap_err(), ExecutorError::SourceExceedsMaxLength);
+    }
+
+    #[test]
+    fn test_error_new_compile() {
+        init();
+        let source = "this won't compile!";
+        let result = Executor::new(&source);
+        assert_eq!(
+            result.unwrap_err(),
+            ExecutorError::Compile(JSException {
+                exception_str: "SyntaxError: Unexpected identifier".to_string(),
+                resource_name: Some("undefined".to_string()),
+                source_line: Some("this won\'t compile!".to_string()),
+                line_number: Some(1),
+                columns: Some((5, 8)),
+            })
+        );
+    }
+
+    #[test]
+    fn test_error_new_execute() {
+        init();
+        let source = r#"throw "Woo! Exception!";"#;
+        let result = Executor::new(source);
+        assert_eq!(
+            result.unwrap_err(),
+            ExecutorError::Execute(JSException {
+                exception_str: "Woo! Exception!".to_string(),
+                resource_name: Some("undefined".to_string()),
+                source_line: Some("throw \"Woo! Exception!\";".to_string()),
+                line_number: Some(1),
+                columns: Some((0, 1))
+            })
+        );
+    }
+
+    #[test]
+    fn test_error_execute_no_main() {
+        init();
+        let source = r#"let i = 100;"#;
+
+        assert_eq!(Executor::new(source).unwrap_err(), ExecutorError::NoMain)
+    }
+
+    #[test]
+    fn test_error_execute_exception() {
+        init();
+        let source = r#"function main() {
+            throw "(╯°□°）╯︵ ┻━┻";
+        }"#;
+
+        assert_eq!(
+            Executor::new(source)
+                .unwrap()
+                .execute("full_text", None)
+                .unwrap_err(),
+            ExecutorError::Execute(JSException {
+                exception_str: "(╯°□°）╯︵ ┻━┻".to_string(),
+                resource_name: Some("undefined".to_string()),
+                source_line: Some("            throw \"(╯°□°）╯︵ ┻━┻\";".to_string()),
+                line_number: Some(2),
+                columns: Some((12, 13))
+            })
+        );
     }
 }
