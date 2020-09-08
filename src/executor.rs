@@ -5,6 +5,7 @@ use simple_error::SimpleError;
 use std::{
     cell::RefCell,
     convert::TryFrom,
+    env,
     error::Error,
     fmt::{Debug, Display},
     fs::File,
@@ -151,7 +152,6 @@ pub enum ExecutorError {
     Compile(JSException),
     Execute(JSException),
     NoMain,
-    OtherError(SimpleError), // TODO: remove
 }
 
 impl Display for ExecutorError {
@@ -163,7 +163,6 @@ impl Display for ExecutorError {
                 write!(f, "JS execution exception: {:?}", exception)
             }
             ExecutorError::NoMain => write!(f, "no main function"),
-            ExecutorError::OtherError(err) => write!(f, "other error: {}", err),
         }
     }
 }
@@ -237,8 +236,13 @@ impl Executor {
             return Ok(raw_source);
         }
 
-        let mut external_path = PROJECT_DIRS.config_dir().to_path_buf();
-        external_path.push("scripts");
+        let mut external_path = if cfg!(test) {
+            env::temp_dir()
+        } else {
+            let mut path = PROJECT_DIRS.config_dir().to_path_buf();
+            path.push("scripts");
+            path
+        };
         external_path.push(&path);
 
         info!(
@@ -486,7 +490,7 @@ impl Executor {
         args: v8::FunctionCallbackArguments<'_>,
         mut rv: v8::ReturnValue<'_>,
     ) {
-        let export = args
+        let code = args
             .get(0)
             .to_string(scope)
             .ok_or_else(|| SimpleError::new("argument to require is not a string"))
@@ -506,25 +510,26 @@ impl Executor {
             .and_then(|source| {
                 v8::String::new(scope, &source)
                     .ok_or_else(|| SimpleError::new("failed to create JS string from source"))
-            })
-            // compile the script
-            .and_then(|code| {
-                v8::Script::compile(scope, code, None)
-                    .ok_or_else(|| SimpleError::new("failed to compile JS"))
-            })
-            // execute the script
-            .and_then(|compiled_script| {
-                let escape_scope = &mut v8::EscapableHandleScope::new(scope);
-                let tc_scope = &mut v8::TryCatch::new(escape_scope);
+            });
 
-                compiled_script
-                    .run(tc_scope)
-                    .ok_or_else(|| {
-                        Executor::extract_exception(tc_scope)
-                            .expect("exception occored but no exception was caught")
-                    })
-                    .map_err(ExecutorError::Execute)
-                    .map_err(|err| SimpleError::with("error executing script", err))
+        if let Err(err) = code {
+            let exception_str = v8::String::new(scope, &err.to_string())
+                .expect("failed to create string for exception");
+            let exception = v8::Exception::error(scope, exception_str);
+
+            scope.throw_exception(exception);
+
+            return;
+        }
+
+        let code = code.unwrap();
+
+        let export = 
+            // compile the script
+            v8::Script::compile(scope, code, None)
+            .ok_or_else(|| SimpleError::new("failed to compile JS"))
+            .and_then(|script| {
+                script.run(scope).ok_or_else(|| SimpleError::new("failed to execute JS"))
             });
 
         match export {
@@ -738,6 +743,8 @@ impl Executor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    extern crate tempfile;
+    use std::io::prelude::*;
 
     fn init() {
         let _ = env_logger::builder().is_test(true).try_init();
@@ -813,5 +820,119 @@ mod tests {
                 columns: Some((12, 13))
             })
         );
+    }
+
+    #[test]
+    fn test_error_require_internal_script() {
+        init();
+        let source = r#"function main() {
+            let foo = require("@boop/non-existant");
+        }"#;
+
+        assert_eq!(
+            Executor::new(source)
+                .unwrap()
+                .execute("full_text", None)
+                .unwrap_err(),
+            ExecutorError::Execute(JSException {
+                exception_str: "Error: no internal script with path \"@boop/non-existant.js\""
+                    .to_string(),
+                resource_name: Some("undefined".to_string()),
+                source_line: Some(
+                    "            let foo = require(\"@boop/non-existant\");".to_string()
+                ),
+                line_number: Some(2),
+                columns: Some((22, 23))
+            }),
+        );
+    }
+
+    #[test]
+    fn test_error_require_script_missing() {
+        init();
+        let source = r#"function main() {
+            let foo = require("this-script-does-not-exist.js");
+        }"#;
+
+        assert_eq!(
+            Executor::new(source)
+                .unwrap()
+                .execute("full_text", None)
+                .unwrap_err(),
+            ExecutorError::Execute(JSException { 
+                exception_str: "Error: could not open \"this-script-does-not-exist.js\", No such file or directory (os error 2)".to_string(), 
+                resource_name: Some("undefined".to_string()), 
+                source_line: Some("            let foo = require(\"this-script-does-not-exist.js\");".to_string()), 
+                line_number: Some(2), 
+                columns: Some((22, 23)) 
+            }),
+        );
+    }
+
+    #[test]
+    fn test_error_require_script_compile_error() {
+        init();
+
+        let mut file = tempfile::Builder::new().suffix(".js").tempfile().unwrap();
+        write!(file, r#"┻━┻ ︵ ¯\(ツ)/¯ ︵ ┻━┻"#).unwrap();
+
+        let file_name = file.path().file_name().unwrap().to_str().unwrap();
+
+        let source = format!(
+            "function main() {{
+                let foo = require(\"{}\");
+            }}",
+            file_name
+        );
+
+        assert_eq!(
+            Executor::new(&source)
+                .unwrap()
+                .execute("full_text", None)
+                .unwrap_err(),
+            ExecutorError::Execute(JSException {
+                exception_str: "SyntaxError: Invalid or unexpected token".to_string(),
+                resource_name: Some("undefined".to_string()),
+                source_line: Some(r#"┻━┻ ︵ ¯\(ツ)/¯ ︵ ┻━┻"#.to_string()),
+                line_number: Some(17),
+                columns: Some((0, 0))
+            }),
+        );
+    }
+
+    #[test]
+    fn test_error_require_script_execute_error() {
+        init();
+
+        let mut file = tempfile::Builder::new().suffix(".js").tempfile().unwrap();
+        write!(
+            file,
+            r#"(function() {{ throw "༼ﾉຈل͜ຈ༽ﾉ︵┻━┻"; return 123 }})()"#
+        ).unwrap();
+
+        let file_name = file.path().file_name().unwrap().to_str().unwrap();
+
+        let source = format!(
+            "function main() {{
+                let foo = require(\"{}\");
+            }}",
+            file_name
+        );
+
+        assert_eq!(
+            Executor::new(&source)
+                .unwrap()
+                .execute("full_text", None)
+                .unwrap_err(),
+            ExecutorError::Execute(JSException {
+                exception_str: "༼ﾉຈل\u{35c}ຈ༽ﾉ︵┻━┻".to_string(),
+                resource_name: Some("undefined".to_string()),
+                source_line: Some(
+                    "(function() { throw \"༼ﾉຈل\u{35c}ຈ༽ﾉ︵┻━┻\"; return 123 })()".to_string()
+                ),
+                line_number: Some(17),
+                columns: Some((14, 15))
+            })
+        )
     }
 }
