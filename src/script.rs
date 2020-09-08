@@ -176,30 +176,10 @@ impl Script {
 mod tests {
     use super::*;
     use crate::{executor::TextReplacement, script::ParseScriptError};
-    use rusty_v8 as v8;
-    use std::{borrow::Cow, sync::Mutex};
-
-    lazy_static! {
-        static ref INIT_LOCK: Mutex<u32> = Mutex::new(0);
-    }
-
-    #[must_use]
-    struct SetupGuard {}
-
-    fn setup() -> SetupGuard {
-        let mut g = INIT_LOCK.lock().unwrap();
-        *g += 1;
-        if *g == 1 {
-            v8::V8::initialize_platform(v8::new_default_platform().unwrap());
-            v8::V8::initialize();
-        }
-        SetupGuard {}
-    }
+    use std::borrow::Cow;
 
     #[test]
     fn test_retain_execution_context() {
-        let _guard = setup();
-
         let mut script = Script::from_source(
             "
             /**
@@ -236,8 +216,6 @@ mod tests {
 
     #[test]
     fn test_is_selection() {
-        let _guard = setup();
-
         let mut script = Script::from_source(
             r#"
             /**
@@ -278,8 +256,6 @@ mod tests {
 
     #[test]
     fn test_builtin_scripts() {
-        let _guard = setup();
-
         use rust_embed::RustEmbed;
 
         #[derive(RustEmbed)]
@@ -314,8 +290,6 @@ mod tests {
 
     #[test]
     fn test_extra_scripts() {
-        let _guard = setup();
-
         use rust_embed::RustEmbed;
 
         #[derive(RustEmbed)]

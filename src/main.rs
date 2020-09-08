@@ -14,8 +14,6 @@ use script::Script;
 mod app;
 mod command_pallete;
 
-use rusty_v8 as v8;
-
 use gio::prelude::*;
 use gtk::prelude::*;
 use gtk::Application;
@@ -264,12 +262,6 @@ fn main() {
     );
 
     extract_language_file();
-
-    // initalize V8
-    let platform = v8::new_default_platform().unwrap();
-    v8::V8::initialize_platform(platform);
-    v8::V8::initialize();
-    info!("V8 initialized");
 
     let config_dir = PROJECT_DIRS.config_dir().to_path_buf();
 

@@ -2,7 +2,16 @@ use crate::{Scripts, PROJECT_DIRS};
 use dirty2::Dirty;
 use rusty_v8 as v8;
 use simple_error::SimpleError;
-use std::{cell::RefCell, convert::TryFrom, fmt::Display, fs::File, io::Read, rc::Rc};
+use std::{
+    cell::RefCell,
+    convert::TryFrom,
+    fmt::{Debug, Display},
+    fs::File,
+    io::Read,
+    rc::Rc,
+    sync::Once,
+    time::Instant,
+};
 
 static BOOP_WRAPPER_START: &str = "
 /***********************************
@@ -38,8 +47,16 @@ static BOOP_WRAPPER_END: &str = "
 ***********************************/
 ";
 
+static INIT_V8: Once = Once::new();
+
 pub struct Executor {
     isolate: v8::OwnedIsolate,
+}
+
+impl Debug for Executor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Executor{{}}")
+    }
 }
 
 struct ExecutorState {
@@ -118,14 +135,16 @@ pub enum TextReplacement {
     None,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ExecutorError {
+    SourceExceedsMaxLength,
     OtherError(SimpleError), // TODO: remove
 }
 
 impl Display for ExecutorError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            ExecutorError::SourceExceedsMaxLength => write!(f, "source exceeds max length"),
             ExecutorError::OtherError(err) => write!(f, "other error: {}", err),
         }
     }
@@ -133,6 +152,17 @@ impl Display for ExecutorError {
 
 impl Executor {
     pub fn new(source: &str) -> Result<Self, ExecutorError> {
+        INIT_V8.call_once(|| {
+            let start = Instant::now();
+
+            // initialized V8
+            let platform = v8::new_default_platform().unwrap();
+            v8::V8::initialize_platform(platform);
+            v8::V8::initialize();
+
+            info!("V8 initialized in {:?}", start.elapsed());
+        });
+
         info!("initalizing isolate");
 
         // set up execution context
@@ -216,7 +246,7 @@ impl Executor {
         global.set(scope, require_key.into(), require_val.into());
 
         // complile and run script
-        let code = v8::String::new(scope, source).expect("failed to created JS string");
+        let code = v8::String::new(scope, source).ok_or(ExecutorError::SourceExceedsMaxLength)?;
         let compiled_script =
             v8::Script::compile(scope, code, None).expect("failed to compile script");
 
@@ -654,35 +684,19 @@ impl Executor {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::{executor::TextReplacement, script::ParseScriptError};
-//     use rusty_v8 as v8;
-//     use std::{borrow::Cow, sync::Mutex};
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Mutex;
 
-//     lazy_static! {
-//         static ref INIT_LOCK: Mutex<u32> = Mutex::new(0);
-//     }
+    lazy_static! {
+        static ref INIT_LOCK: Mutex<u32> = Mutex::new(0);
+    }
 
-//     #[must_use]
-//     struct SetupGuard {}
-
-//     fn setup() -> SetupGuard {
-//         let mut g = INIT_LOCK.lock().unwrap();
-//         *g += 1;
-//         if *g == 1 {
-//             v8::V8::initialize_platform(v8::new_default_platform().unwrap());
-//             v8::V8::initialize();
-//         }
-//         SetupGuard {}
-//     }
-
-//     #[test]
-//     fn test_retain_execution_context() {
-//         let _guard = setup();
-
-        
-//     }
-
-// }
+    #[test]
+    fn test_execute_error_big_string() {
+        let source = "0".repeat(1 << 29);
+        let result = Executor::new(&source);
+        assert_eq!(result.unwrap_err(), ExecutorError::SourceExceedsMaxLength);
+    }
+}
