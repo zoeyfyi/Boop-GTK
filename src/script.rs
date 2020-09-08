@@ -1,8 +1,7 @@
-use crate::executor::{ExecutionStatus, Executor};
+use crate::executor::{ExecutionStatus, Executor, ExecutorError};
 use crossbeam::crossbeam_channel::bounded;
 use crossbeam::{Receiver, Sender};
 use serde::Deserialize;
-use simple_error::{bail, SimpleError};
 use std::{fmt, fs, path::PathBuf, thread};
 
 pub struct Script {
@@ -14,7 +13,7 @@ pub struct Script {
 #[derive(Debug)]
 enum ExecutorJob {
     Request((String, Option<String>)),
-    Responce(Result<ExecutionStatus, SimpleError>),
+    Responce(Result<ExecutionStatus, ExecutorError>),
     Kill,
 }
 
@@ -84,9 +83,19 @@ impl Script {
             let t_name = self.metadata.name.clone();
             let t_source = self.source.clone();
             let (t_sender, t_receiver) = (sender.clone(), receiver.clone());
+
             thread::spawn(move || {
                 info!("thread spawned for {}", t_name);
-                let mut executor = Executor::new(&t_source);
+
+                let executor = Executor::new(&t_source);
+
+                if let Err(err) = executor {
+                    t_sender.send(ExecutorJob::Responce(Err(err))).unwrap();
+                    return;
+                }
+
+                let mut executor = executor.unwrap();
+
                 debug!("executor created");
 
                 loop {
@@ -110,7 +119,7 @@ impl Script {
                         }
                     }
                 }
-            })
+            });
         };
 
         self.channel = Some(ExecutorChannel { sender, receiver });
@@ -129,7 +138,7 @@ impl Script {
         &mut self,
         full_text: &str,
         selection: Option<&str>,
-    ) -> Result<ExecutionStatus, SimpleError> {
+    ) -> Result<ExecutionStatus, ExecutorError> {
         if self.channel.is_none() {
             self.init_executor_thread();
         }
@@ -144,19 +153,19 @@ impl Script {
                 full_text.to_owned(),
                 selection.map(|s| s.to_owned()),
             )))
-            .map_err(|e| SimpleError::with("cannot send text to channel", e))?;
+            .expect("channel is disconnected");
 
         // receive result
         let result = channel
             .receiver
             .recv()
-            .map_err(|e| SimpleError::with("cannot receive result on channel", e))?;
+            .expect("receive channel is empty and disconnected");
 
         if let ExecutorJob::Responce(status) = result {
             return status;
         }
 
-        bail!(
+        panic!(
             "expected a responce on channel, but got a request: {:?}",
             result
         );

@@ -215,7 +215,7 @@ impl App {
                     self.do_replacement(status.into_replacement());
                 }
                 Err(e) => {
-                    self.status_bar.push(self.context_id, e.as_str());
+                    self.status_bar.push(self.context_id, &e.to_string());
                 }
             }
         }

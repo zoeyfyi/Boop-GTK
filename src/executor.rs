@@ -2,7 +2,7 @@ use crate::{Scripts, PROJECT_DIRS};
 use dirty2::Dirty;
 use rusty_v8 as v8;
 use simple_error::SimpleError;
-use std::{cell::RefCell, convert::TryFrom, fs::File, io::Read, rc::Rc};
+use std::{cell::RefCell, convert::TryFrom, fmt::Display, fs::File, io::Read, rc::Rc};
 
 static BOOP_WRAPPER_START: &str = "
 /***********************************
@@ -118,8 +118,21 @@ pub enum TextReplacement {
     None,
 }
 
+#[derive(Debug)]
+pub enum ExecutorError {
+    OtherError(SimpleError), // TODO: remove
+}
+
+impl Display for ExecutorError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ExecutorError::OtherError(err) => write!(f, "other error: {}", err),
+        }
+    }
+}
+
 impl Executor {
-    pub fn new(source: &str) -> Self {
+    pub fn new(source: &str) -> Result<Self, ExecutorError> {
         info!("initalizing isolate");
 
         // set up execution context
@@ -127,7 +140,7 @@ impl Executor {
         let (global_context, main_function) = {
             let scope = &mut v8::HandleScope::new(&mut isolate);
             // let context = v8::Context::new(scope);
-            let (context, main_function) = Executor::initialize_context(source, scope);
+            let (context, main_function) = Executor::initialize_context(source, scope)?;
             (v8::Global::new(scope, context), main_function)
         };
 
@@ -143,7 +156,7 @@ impl Executor {
         }));
         isolate.set_slot(state_slot);
 
-        Executor { isolate }
+        Ok(Executor { isolate })
     }
 
     // load source code from internal files or external filesystem depending on the path
@@ -190,7 +203,7 @@ impl Executor {
     fn initialize_context<'s>(
         source: &str,
         scope: &mut v8::HandleScope<'s, ()>,
-    ) -> (v8::Local<'s, v8::Context>, v8::Global<v8::Function>) {
+    ) -> Result<(v8::Local<'s, v8::Context>, v8::Global<v8::Function>), ExecutorError> {
         let scope = &mut v8::EscapableHandleScope::new(scope);
         let context = v8::Context::new(scope);
         let global = context.global(scope);
@@ -233,14 +246,14 @@ impl Executor {
                 .expect("failed to get main function");
         let main_function = v8::Global::new(tc_scope, main_function);
 
-        (tc_scope.escape(context), main_function)
+        Ok((tc_scope.escape(context), main_function))
     }
 
     pub fn execute(
         &mut self,
         full_text: &str,
         selection: Option<&str>,
-    ) -> Result<ExecutionStatus, SimpleError> {
+    ) -> Result<ExecutionStatus, ExecutorError> {
         // setup execution status
         {
             let status_slot = self
@@ -362,7 +375,9 @@ impl Executor {
 
             main_function
                 .call(tc_scope, payload.into(), &[payload.into()])
-                .ok_or_else(|| Executor::js_exception_to_error(tc_scope))?;
+                .ok_or_else(|| {
+                    ExecutorError::OtherError(Executor::js_exception_to_error(tc_scope))
+                })?;
         }
 
         // extract execution status
@@ -638,3 +653,36 @@ impl Executor {
         *selection = new_value;
     }
 }
+
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use crate::{executor::TextReplacement, script::ParseScriptError};
+//     use rusty_v8 as v8;
+//     use std::{borrow::Cow, sync::Mutex};
+
+//     lazy_static! {
+//         static ref INIT_LOCK: Mutex<u32> = Mutex::new(0);
+//     }
+
+//     #[must_use]
+//     struct SetupGuard {}
+
+//     fn setup() -> SetupGuard {
+//         let mut g = INIT_LOCK.lock().unwrap();
+//         *g += 1;
+//         if *g == 1 {
+//             v8::V8::initialize_platform(v8::new_default_platform().unwrap());
+//             v8::V8::initialize();
+//         }
+//         SetupGuard {}
+//     }
+
+//     #[test]
+//     fn test_retain_execution_context() {
+//         let _guard = setup();
+
+        
+//     }
+
+// }
