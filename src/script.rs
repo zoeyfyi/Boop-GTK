@@ -97,15 +97,15 @@ impl Script {
                         ExecutorJob::Request((full_text, selection)) => {
                             if executor.is_none() {
                                 let exe = Executor::new(&t_source);
-    
+
                                 if let Err(ref err) = exe {
                                     warn!("failed to create executor");
                                     t_sender.send(ExecutorJob::Responce(Err(err.clone()))).unwrap();
                                 }
-                                
+
                                 executor = exe.ok();
                             }
-                            
+
                             if let Some(executor) = executor.as_mut() {
                                 info!(
                                     "request received, full_text: {} bytes, selection: {} bytes",
@@ -114,7 +114,7 @@ impl Script {
                                 );
                                 let result = executor.execute(&full_text, selection.as_deref());
                                 t_sender.send(ExecutorJob::Responce(result)).unwrap(); // blocks until send
-                            }                           
+                            }
                         }
                         ExecutorJob::Responce(_) => {
                             warn!("executor thread received a responce on channel");

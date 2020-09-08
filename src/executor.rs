@@ -524,12 +524,12 @@ impl Executor {
 
         let code = code.unwrap();
 
-        let export = 
-            // compile the script
-            v8::Script::compile(scope, code, None)
+        let export = v8::Script::compile(scope, code, None)
             .ok_or_else(|| SimpleError::new("failed to compile JS"))
             .and_then(|script| {
-                script.run(scope).ok_or_else(|| SimpleError::new("failed to execute JS"))
+                script
+                    .run(scope)
+                    .ok_or_else(|| SimpleError::new("failed to execute JS"))
             });
 
         match export {
@@ -859,12 +859,12 @@ mod tests {
                 .unwrap()
                 .execute("full_text", None)
                 .unwrap_err(),
-            ExecutorError::Execute(JSException { 
-                exception_str: "Error: could not open \"this-script-does-not-exist.js\", No such file or directory (os error 2)".to_string(), 
-                resource_name: Some("undefined".to_string()), 
-                source_line: Some("            let foo = require(\"this-script-does-not-exist.js\");".to_string()), 
-                line_number: Some(2), 
-                columns: Some((22, 23)) 
+            ExecutorError::Execute(JSException {
+                exception_str: "Error: could not open \"this-script-does-not-exist.js\", No such file or directory (os error 2)".to_string(),
+                resource_name: Some("undefined".to_string()),
+                source_line: Some("            let foo = require(\"this-script-does-not-exist.js\");".to_string()),
+                line_number: Some(2),
+                columns: Some((22, 23))
             }),
         );
     }
