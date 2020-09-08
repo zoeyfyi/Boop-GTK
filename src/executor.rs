@@ -139,11 +139,11 @@ pub enum TextReplacement {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct JSException {
-    exception_str: String,
-    resource_name: Option<String>,
-    source_line: Option<String>,
-    line_number: Option<usize>,
-    columns: Option<(usize, usize)>,
+    pub exception_str: String,
+    pub resource_name: Option<String>,
+    pub source_line: Option<String>,
+    pub line_number: Option<usize>,
+    pub columns: Option<(usize, usize)>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

@@ -214,8 +214,29 @@ impl App {
                     }
                     self.do_replacement(status.into_replacement());
                 }
-                Err(e) => {
-                    self.status_bar.push(self.context_id, &e.to_string());
+                Err(err) => {
+                    warn!("Exception: {:?}", err);
+                    match err {
+                        executor::ExecutorError::SourceExceedsMaxLength => {
+                            self.status_bar
+                                .push(self.context_id, "Script exceeds max length");
+                        }
+                        executor::ExecutorError::Compile(exception) => {
+                            self.status_bar.push(
+                                self.context_id,
+                                &format!("Exception: {}", exception.exception_str),
+                            );
+                        }
+                        executor::ExecutorError::Execute(exception) => {
+                            self.status_bar.push(
+                                self.context_id,
+                                &format!("Exception: {}", exception.exception_str),
+                            );
+                        }
+                        executor::ExecutorError::NoMain => {
+                            self.status_bar.push(self.context_id, "No main function");
+                        }
+                    }
                 }
             }
         }
