@@ -137,7 +137,7 @@ pub enum TextReplacement {
     None,
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct JSException {
     exception_str: String,
     resource_name: Option<String>,
@@ -146,7 +146,7 @@ pub struct JSException {
     columns: Option<(usize, usize)>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ExecutorError {
     SourceExceedsMaxLength,
     Compile(JSException),
@@ -908,7 +908,8 @@ mod tests {
         write!(
             file,
             r#"(function() {{ throw "༼ﾉຈل͜ຈ༽ﾉ︵┻━┻"; return 123 }})()"#
-        ).unwrap();
+        )
+        .unwrap();
 
         let file_name = file.path().file_name().unwrap().to_str().unwrap();
 

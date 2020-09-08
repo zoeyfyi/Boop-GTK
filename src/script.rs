@@ -87,14 +87,7 @@ impl Script {
             thread::spawn(move || {
                 info!("thread spawned for {}", t_name);
 
-                let executor = Executor::new(&t_source);
-
-                if let Err(err) = executor {
-                    t_sender.send(ExecutorJob::Responce(Err(err))).unwrap();
-                    return;
-                }
-
-                let mut executor = executor.unwrap();
+                let mut executor = None;
 
                 debug!("executor created");
 
@@ -102,13 +95,26 @@ impl Script {
                     match t_receiver.recv().unwrap() // blocks until receive 
                     {
                         ExecutorJob::Request((full_text, selection)) => {
-                            info!(
-                                "request received, full_text: {} bytes, selection: {} bytes",
-                                full_text.len(),
-                                selection.as_ref().map(|s| s.len()).unwrap_or(0),
-                            );
-                            let result = executor.execute(&full_text, selection.as_deref());
-                            t_sender.send(ExecutorJob::Responce(result)).unwrap(); // blocks until send
+                            if executor.is_none() {
+                                let exe = Executor::new(&t_source);
+    
+                                if let Err(ref err) = exe {
+                                    warn!("failed to create executor");
+                                    t_sender.send(ExecutorJob::Responce(Err(err.clone()))).unwrap();
+                                }
+                                
+                                executor = exe.ok();
+                            }
+                            
+                            if let Some(executor) = executor.as_mut() {
+                                info!(
+                                    "request received, full_text: {} bytes, selection: {} bytes",
+                                    full_text.len(),
+                                    selection.as_ref().map(|s| s.len()).unwrap_or(0),
+                                );
+                                let result = executor.execute(&full_text, selection.as_deref());
+                                t_sender.send(ExecutorJob::Responce(result)).unwrap(); // blocks until send
+                            }                           
                         }
                         ExecutorJob::Responce(_) => {
                             warn!("executor thread received a responce on channel");
