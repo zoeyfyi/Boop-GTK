@@ -254,7 +254,7 @@ fn watch_scripts_folder(scripts: Arc<RwLock<Vec<Script>>>) {
 }
 
 fn main() {
-    env_logger::init();
+    env_logger::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     debug!(
         "found {} pixbuf loaders",
