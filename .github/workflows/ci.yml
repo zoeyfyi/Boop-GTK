@@ -14,6 +14,7 @@ jobs:
     name: ${{ matrix.config.os }}
     runs-on: ${{ matrix.config.os }}
     strategy:
+      fail-fast: false
       matrix:
         config:
         - os: macOS-latest
@@ -65,7 +66,7 @@ jobs:
       id: cache
       with:
         path: release\**
-        key: ${{ runner.os }}-gvsbuild--${{ hashFiles('**/commit.txt') }}
+        key: ${{ runner.os }}-gvsbuild-${{ hashFiles('**/commit.txt') }}
     - name: Windows dependencies (move gvsbuild files)
       if: runner.os == 'windows' && steps.cache.outputs.cache-hit == 'true'
       run: xcopy /e /i release C:\gtk-build\gtk\x64\release
@@ -93,3 +94,12 @@ jobs:
       run: cargo fmt --all -- --check
     - name: Clippy
       run: cargo clippy -- -D warnings
+    ################# Windows workarounds #################
+    - name: Windows dependencies (make release folder)
+      run: mkdir release
+      shell: cmd
+      if: runner.os == 'windows' && steps.cache.outputs.cache-hit != 'true'
+    - name: Windows dependencies (move release files)
+      run: xcopy /e /i C:\gtk-build\gtk\x64\release %cd%\release
+      shell: cmd
+      if: runner.os == 'windows' && steps.cache.outputs.cache-hit != 'true'
