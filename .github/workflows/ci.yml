@@ -35,8 +35,8 @@ jobs:
       run: cargo check
     - name: Test
       run: cargo test -- --nocapture
-    - name: Rustfmt
-      run: rustfmt --all -- --check
+    - name: Fmt
+      run: cargo fmt --all -- --check
     - name: Clippy
       run: cargo clippy -- -D warnings
     
