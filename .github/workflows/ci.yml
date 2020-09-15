@@ -17,13 +17,10 @@ jobs:
       matrix:
         config:
         - os: macOS-latest
-          target: x86_64-apple-darwin
           source-view-pkg-config: 0
-        - os: ubuntu-latest-xl
-          target: x86_64-unknown-linux-gnu
+        - os: ubuntu-latest
           source-view-pkg-config: 0
         - os: windows-2019
-          target: x86_64-pc-windows-msvc
           source-view-pkg-config: 1
     env:
       GTKSOURCEVIEW_3.0_NO_PKG_CONFIG: ${{ matrix.config.source-view-pkg-config }}
