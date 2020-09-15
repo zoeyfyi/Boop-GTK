@@ -70,10 +70,9 @@ jobs:
         path: release\**
         key: ${{ runner.os }}-gvsbuild--${{ hashFiles('**/commit.txt') }}
     - name: Windows dependencies (move gvsbuild files)
-      if: runner.os == 'windows'
+      if: runner.os == 'windows' && steps.cache.outputs.cache-hit == 'true'
       run: xcopy /e /i release C:\gtk-build\gtk\x64\release
       shell: cmd
-      if: steps.cache.outputs.cache-hit == 'true'
     - name: Windows dependencies (clone gvsbuild)
       if: runner.os == 'windows' && steps.cache.outputs.cache-hit != 'true'
       run: git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
