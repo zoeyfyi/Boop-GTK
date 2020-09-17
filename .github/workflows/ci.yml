@@ -55,23 +55,20 @@ jobs:
       if: runner.os == 'macOS'
       run: brew install gtk+3 gtksourceview3 pkg-config
     # ======== Windows ========
-    - name: Windows dependencies (get the last gvsbuild commit)
-      if: runner.os == 'windows'
-      run: git ls-remote https://github.com/wingtk/gvsbuild.git refs/heads/master > commit.txt
     - name: Windows dependencies (cache gvsbuild)
       if: runner.os == 'windows'
       uses: actions/cache@v2
       id: cache
       with:
         path: release\**
-        key: ${{ runner.os }}-gvsbuild-${{ hashFiles('**/commit.txt') }}
+        key: ${{ runner.os }}-gvsbuild-${{ hashFiles('submodules/gvsbuild/**') }}
     - name: Windows dependencies (move gvsbuild files)
       if: runner.os == 'windows' && steps.cache.outputs.cache-hit == 'true'
       run: xcopy /e /i release C:\gtk-build\gtk\x64\release
       shell: cmd
-    - name: Windows dependencies (clone gvsbuild)
+    - name: Windows dependencies (copy gvsbuild)
       if: runner.os == 'windows' && steps.cache.outputs.cache-hit != 'true'
-      run: git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
+      run: xcopy /e /i submodules\gvsbuild C:\gtk-build\github\gvsbuild
     - name: Windows dependencies (remove git)
       if: runner.os == 'windows'
       run: rmdir "C:\Program Files\Git\usr\bin" /s /q # remove git's bin, there are conflicting cygwin dll's
