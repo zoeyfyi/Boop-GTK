@@ -5,10 +5,8 @@
 </br>
 
 <div align="center">
-<img height="80px" src="header.png" >
+  <img height="80px" src="header.png" >
 </div>
-
-</br>
 
 <h2 align="center">A scriptable scratchpad for developers</h2>
 <p align="center">Port of <a href="https://github.com/IvanMathy"><b>@IvanMathy</b></a>'s <a href="https://github.com/IvanMathy/Boop">Boop</a> to GTK</p>
@@ -64,6 +62,7 @@ There is also a quick demo on [youtube](https://youtu.be/WXDTsJ4cqO4).
     </td>
     <td>
       You should really use <a href="https://github.com/IvanMathy/Boop">Boop</a>, 
+      </br>
       </br>
       but if you <i>really</i> want to:
       </br>
