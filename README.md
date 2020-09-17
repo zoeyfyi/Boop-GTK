@@ -1,8 +1,14 @@
-# Boop-GTK
-
 <p align="center">
   <a href="https://youtu.be/WXDTsJ4cqO4"><img src="screenshot.png"></a>
 </p>
+
+</br>
+
+<div align="center">
+<img height="80px" src="header.png" >
+</div>
+
+</br>
 
 <h2 align="center">A scriptable scratchpad for developers</h2>
 <p align="center">Port of <a href="https://github.com/IvanMathy"><b>@IvanMathy</b></a>'s <a href="https://github.com/IvanMathy/Boop">Boop</a> to GTK</p>
