@@ -6,5 +6,5 @@ Exec=boop-gtk
 Terminal=false
 Categories=Utility;GTK;
 Keywords=Rust;Flatpak;GTK;Tools;
-Icon=${SNAP}/meta/gui/boop-gtk.png
+Icon=${SNAP}/meta/gui/boop-gtk.svg
 StartupNotify=true
