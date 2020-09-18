@@ -58,6 +58,9 @@ jobs:
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     ################# Dependencies #################
+    - name: Windows dependencies (msys)
+      if: runner.os == 'windows'
+      run: C:\msys64\usr\bin\bash.exe -lc "pacman -Syy --noconfirm mingw-w64-x86_64-adwaita-icon-theme"
     - name: Windows dependencies (cache gvsbuild)
       if: runner.os == 'windows'
       uses: actions/cache@v2
