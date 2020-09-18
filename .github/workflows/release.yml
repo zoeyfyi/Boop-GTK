@@ -149,6 +149,12 @@ jobs:
         submodules: 'recursive'
     - uses: snapcore/action-build@v1
       id: snapcraft
+    - uses: snapcore/action-publish@v1
+      if: github.event_name != 'pull_request'
+      with:
+        store_login: ${{ secrets.snapcraft_token }}
+        snap: ${{ steps.snapcraft.outputs.snap }}
+        release: stable
     - name: rename output
       run: mv ${{ steps.snapcraft.outputs.snap }} ./boop-gtk.snap
     - uses: actions/upload-artifact@v2.1.4
