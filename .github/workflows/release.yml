@@ -16,6 +16,10 @@ jobs:
     - uses: actions/checkout@v2
       with:
         submodules: 'recursive'
+    - name: Install rust
+      uses: hecrj/setup-rust-action@v1
+      with:
+        rust-version: 1.46.0
     # cache cargo
     - uses: actions/cache@v2
       with:
@@ -41,6 +45,10 @@ jobs:
     - uses: actions/checkout@v2
       with:
         submodules: 'recursive'
+    - name: Install rust
+      uses: hecrj/setup-rust-action@v1
+      with:
+        rust-version: 1.46.0
     # cache cargo
     - uses: actions/cache@v2
       with:
@@ -49,21 +57,36 @@ jobs:
           ~/.cargo/git
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-    # clone gvsbuild
-    - name: gvsbuild
-      run: git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
-    # remove git's bin, there are conflicting cygwin dll's
-    - name: remove Git
-      run: rmdir "C:\Program Files\Git\usr\bin" /s /q
-      shell: cmd
-    # fetch gtk dependencies
-    - name: GTK development libraries (msys)
+    ################# Dependencies #################
+    - name: Windows dependencies (msys)
+      if: runner.os == 'windows'
       run: C:\msys64\usr\bin\bash.exe -lc "pacman -Syy --noconfirm mingw-w64-x86_64-adwaita-icon-theme"
-    - name: GTK development libraries (gvsbuild)
+    - name: Windows dependencies (cache gvsbuild)
+      if: runner.os == 'windows'
+      uses: actions/cache@v2
+      id: cache
+      with:
+        path: release\**
+        key: ${{ runner.os }}-gvsbuild--${{ hashFiles('submodules/gvsbuild/**') }}
+    - name: Windows dependencies (move gvsbuild files)
+      if: runner.os == 'windows' && steps.cache.outputs.cache-hit == 'true'
+      run: xcopy /e /i release C:\gtk-build\gtk\x64\release
+      shell: cmd
+    - name: Windows dependencies (copy gvsbuild)
+      if: runner.os == 'windows' && steps.cache.outputs.cache-hit != 'true'
+      run: xcopy /e /i submodules\gvsbuild C:\gtk-build\github\gvsbuild
+    - name: Windows dependencies (remove git)
+      if: runner.os == 'windows'
+      run: rmdir "C:\Program Files\Git\usr\bin" /s /q # remove git's bin, there are conflicting cygwin dll's
+      shell: cmd
+    - name: Windows dependencies (gtk)
+      if: runner.os == 'windows' && steps.cache.outputs.cache-hit != 'true'
       run: python .\build.py build -p=x64 --vs-ver=16 --msys-dir=C:\msys64 -k --enable-gi --py-wheel --py-egg gtk3 gdk-pixbuf gtksourceview3 librsvg hicolor-icon-theme
       working-directory: C:\gtk-build\github\gvsbuild
-    - name: Add gvsbuild bin directory to Path
+    - name: Windows dependencies (add gvsbuild bin directory to path)
+      if: runner.os == 'windows'
       run: echo "::add-path::C:\gtk-build\gtk\x64\release\bin"
+    ################# Dependencies #################
     # install cargo wix
     - name: install cargo-wix
       run: cargo install cargo-wix
@@ -78,6 +101,16 @@ jobs:
       with:
         name: boop-gtk.windows.msi
         path: ./boop-gtk.windows.msi
+    ################# Windows workarounds #################
+    - name: Windows dependencies (make release folder)
+      run: mkdir release
+      shell: cmd
+      if: runner.os == 'windows' && steps.cache.outputs.cache-hit != 'true'
+    - name: Windows dependencies (move release files)
+      run: xcopy /e /i C:\gtk-build\gtk\x64\release %cd%\release
+      shell: cmd
+      if: runner.os == 'windows' && steps.cache.outputs.cache-hit != 'true'
+    ################# Windows workarounds #################
 
   release-macosx:
     runs-on: macos-latest
@@ -85,6 +118,10 @@ jobs:
     - uses: actions/checkout@v2
       with:
         submodules: 'recursive'
+    - name: Install rust
+      uses: hecrj/setup-rust-action@v1
+      with:
+        rust-version: 1.46.0
     # cache cargo
     - uses: actions/cache@v2
       with:
@@ -112,6 +149,12 @@ jobs:
         submodules: 'recursive'
     - uses: snapcore/action-build@v1
       id: snapcraft
+    - uses: snapcore/action-publish@v1
+      if: github.event_name != 'pull_request'
+      with:
+        store_login: ${{ secrets.snapcraft_token }}
+        snap: ${{ steps.snapcraft.outputs.snap }}
+        release: stable
     - name: rename output
       run: mv ${{ steps.snapcraft.outputs.snap }} ./boop-gtk.snap
     - uses: actions/upload-artifact@v2.1.4
@@ -155,6 +198,10 @@ jobs:
     - uses: actions/checkout@v2
       with:
         submodules: 'recursive'
+    - name: Install rust
+      uses: hecrj/setup-rust-action@v1
+      with:
+        rust-version: 1.46.0
     # cache cargo
     - uses: actions/cache@v2
       with:

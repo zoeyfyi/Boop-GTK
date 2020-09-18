@@ -1,6 +1,6 @@
 name: boop-gtk
 title: Boop-GTK
-version: '1.1.1'
+version: '1.2.0'
 icon: snap/gui/boop-gtk.svg
 summary: Port of IvanMathy's Boop to GTK, a scriptable scratchpad for developers.
 description: |
