@@ -1,8 +1,12 @@
-# Boop-GTK
-
 <p align="center">
   <a href="https://youtu.be/WXDTsJ4cqO4"><img src="screenshot.png"></a>
 </p>
+
+</br>
+
+<div align="center">
+  <img height="80px" src="header.png" >
+</div>
 
 <h2 align="center">A scriptable scratchpad for developers</h2>
 <p align="center">Port of <a href="https://github.com/IvanMathy"><b>@IvanMathy</b></a>'s <a href="https://github.com/IvanMathy/Boop">Boop</a> to GTK</p>
@@ -35,9 +39,37 @@ There is also a quick demo on [youtube](https://youtu.be/WXDTsJ4cqO4).
 
 ### Get Boop-GTK
 
-| Linux | Windows | MacOS |
-| :--- | :--- | :--- |
-| [boop-gtk.linux.amd64](https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.linux.amd64) </br> [boop-gtk.flatpak](https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.flatpak) </br> [boop-gtk.snap](https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.snap) </br> [![Get it from the Snap Store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/boop-gtk) </br> <a href='https://flathub.org/apps/details/uk.co.mrbenshef.Boop-GTK'><img width='190' alt='Download on Flathub' src='https://flathub.org/assets/badges/flathub-badge-en.png'/></a> | [boop-gtk.windows.msi](https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.windows.msi) | You should really use [Boop](https://github.com/IvanMathy/Boop), </br> but if you _really_ want to: </br> [boop-gtk.macos](https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.macos) |
+<table width="100%">
+  <tr>
+    <th width="33.333%">Linux</th>
+    <th width="33.333%">Windows</th>
+    <th width="33.333%">MacOS</th>
+  </tr>
+  <tr>
+    <td>
+      <a href="https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.linux.amd64">boop-gtk.linux.amd64</a>
+      </br>
+      <a href="https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.flatpak">boop-gtk.flatpak</a>
+      </br>
+      <a href="https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.snap">boop-gtk.snap</a>
+      </br>
+      <a href="https://snapcraft.io/boop-gtk"><img src="https://snapcraft.io/static/images/badges/en/snap-store-black.svg" alt="Get it from the Snap Store"></a>
+      </br>
+      <a href="https://flathub.org/apps/details/uk.co.mrbenshef.Boop-GTK"><img width='190' alt='Download on Flathub' src='https://flathub.org/assets/badges/flathub-badge-en.png'></a>
+    </td>
+    <td>
+      <a href="https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.windows.msi">boop-gtk.windows.msi</a>
+    </td>
+    <td>
+      You should really use <a href="https://github.com/IvanMathy/Boop">Boop</a>, 
+      </br>
+      </br>
+      but if you <i>really</i> want to:
+      </br>
+      <a href="https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.macos">boop-gtk.macos</a>
+    </td>
+  </tr>
+</table>
 
 ### Building
 
@@ -53,7 +85,7 @@ cargo build
 ```shell
 sudo apt-get install snap snapcraft
 snapcraft snap
-sudo snap install boop-gtk_1.1.1_amd64.snap
+sudo snap install boop-gtk_1.2.0_amd64.snap
 ```
 
 #### Linux Flatpak

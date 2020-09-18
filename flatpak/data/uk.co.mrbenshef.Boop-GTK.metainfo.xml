@@ -17,6 +17,14 @@
   <url type="homepage">https://boop-gtk.mrbenshef.co.uk/</url>
   <content_rating type="oars-1.0" />
   <releases>
+    <release version="1.2.0" date="2020-09-17">
+      <description>
+        <ul>
+          <li>New icon</li>
+          <li>Stability improvements</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.1.1" date="2020-09-05">
       <description>
         <ul>

@@ -12,5 +12,6 @@ resources/resources.gresource
 resources/resources.xml
 /prime
 *.snap
+*.flatpak
 /boop-gtk.windows
 boop-gtk.windows.msi

@@ -10,3 +10,6 @@
 [submodule "submodules/Windows-10-Dark"]
 	path = submodules/Windows-10-Dark
 	url = https://github.com/B00merang-Project/Windows-10-Dark.git
+[submodule "submodules/gvsbuild"]
+	path = submodules/gvsbuild
+	url = https://github.com/wingtk/gvsbuild
