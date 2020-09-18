@@ -64,7 +64,7 @@ jobs:
       id: cache
       with:
         path: release\**
-        key: ${{ runner.os }}-gvsbuild-${{ hashFiles('submodules/gvsbuild/**') }}
+        key: ${{ runner.os }}-gvsbuild--${{ hashFiles('submodules/gvsbuild/**') }}
     - name: Windows dependencies (move gvsbuild files)
       if: runner.os == 'windows' && steps.cache.outputs.cache-hit == 'true'
       run: xcopy /e /i release C:\gtk-build\gtk\x64\release
