@@ -1,5 +1,4 @@
-mkdir ui/icons;
-rm ui/icons/*.svg;
+rm resources/icons/scalable/actions/*.svg;
 for dir in submodules/Boop/Boop/Boop/Assets.xcassets/Icons/*/; do 
     # get pdf
     files=( $dir*.pdf );
@@ -11,7 +10,7 @@ for dir in submodules/Boop/Boop/Boop/Assets.xcassets/Icons/*/; do
     echo "Processing icon $name";
     name="boop-gtk-$name-symbolic.svg";
     # convert file
-    pdf2svg $file ui/icons/$name;
+    pdf2svg $file resources/icons/scalable/actions/$name;
     # convert strokes
-    ./submodules/svg-stroke-to-path/svg-stroke-to-path SameStrokeColor 'stroke="#000"' ui/icons/$name
+    # ./submodules/svg-stroke-to-path/svg-stroke-to-path SameStrokeColor 'stroke="#000"' resources/icons/scalable/actions/$name
 done
