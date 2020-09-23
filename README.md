@@ -85,7 +85,7 @@ cargo build
 ```shell
 sudo apt-get install snap snapcraft
 snapcraft snap
-sudo snap install boop-gtk_1.2.0_amd64.snap
+sudo snap install boop-gtk_1.3.0_amd64.snap
 ```
 
 #### Linux Flatpak
@@ -95,7 +95,7 @@ sudo add-apt-repository ppa:alexlarsson/flatpak
 sudo apt-get update 
 sudo apt-get install flatpak
 sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-sudo flatpak install -y flathub org.freedesktop.Platform//19.08 org.freedesktop.Sdk//19.08 org.freedesktop.Sdk.Extension.rust-stable//19.08
+sudo flatpak install -y flathub org.freedesktop.Platform//20.08 org.freedesktop.Sdk//20.08 org.freedesktop.Sdk.Extension.rust-stable//20.08
 wget https://github.com/flatpak/flatpak-builder/releases/download/1.0.10/flatpak-builder-1.0.10.tar.xz && tar -xvf flatpak-builder-1.0.10.tar.xz && cd flatpak-builder-1.0.10 && ./configure --disable-documentation && make && sudo make install
 sudo apt-get install python3-toml
 bash flatpak/gen-sources.sh
