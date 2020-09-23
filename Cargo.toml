@@ -13,6 +13,7 @@ homepage = "https://boop-gtk.mrbenshef.co.uk"
 repository = "https://github.com/mrbenshef/boop-gtk/"
 keywords = ["gtk", "text-editor", "editor", "linux", "javascript"]
 categories = ["text-editors"]
+exclude = ["submodules/flatpak-builder-tools", "submodules/gvsbuild", "submodules/svg-stroke-to-path", "submodules/Windows-10-Dark"]
 
 [profile.dev]
 lto = "off"
