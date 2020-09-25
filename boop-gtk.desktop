@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Boop-GTK
+Exec=boop-gtk
+Icon=boop-gtk
+Type=Application
+Categories=GTK;GNOME;Utility;
