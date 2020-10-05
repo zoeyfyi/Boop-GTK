@@ -48,7 +48,7 @@ serde_jsonrc = "0.1"
 log = "0.4.11"
 env_logger = "0.7.1"
 # Fuzzy search
-sublime_fuzzy = "0.6.0"
+fuse-rust = "0.1.1"
 # File system
 open = "1.4.0"
 directories = "3.0"

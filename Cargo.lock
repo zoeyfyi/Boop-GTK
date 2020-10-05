@@ -108,6 +108,7 @@ dependencies = [
  "dirty2",
  "env_logger",
  "fs_extra",
+ "fuse-rust",
  "gdk",
  "gdk-pixbuf",
  "gio",
@@ -127,7 +128,6 @@ dependencies = [
  "shrinkwraprs",
  "simple-error",
  "sourceview",
- "sublime_fuzzy",
  "tempfile",
  "winres",
 ]
@@ -351,6 +351,15 @@ name = "fuchsia-zircon-sys"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3dcaa9ae7725d12cdb85b3ad99a434db70b468c09ded17e012d86b5c1010f7a7"
+
+[[package]]
+name = "fuse-rust"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c2ffb87cd62d7a97cb3b2ab42d37ef1c855fe1f11d5283b854304564ce3c1039"
+dependencies = [
+ "crossbeam",
+]
 
 [[package]]
 name = "futures"
@@ -1317,12 +1326,6 @@ dependencies = [
  "quote",
  "syn",
 ]
-
-[[package]]
-name = "sublime_fuzzy"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bdac3d983d073c19487ba1f5e16eda43e9c6e50aa895d87110d0febe389b66b9"
 
 [[package]]
 name = "syn"
