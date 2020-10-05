@@ -6,7 +6,7 @@ use gtk::prelude::*;
 use gtk::{Dialog, Entry, TreePath, TreeView, Window};
 use shrinkwraprs::Shrinkwrap;
 
-use crate::{script::Script};
+use crate::script::Script;
 use glib::Type;
 use std::{
     collections::HashMap,
