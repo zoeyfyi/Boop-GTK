@@ -5,11 +5,12 @@ use crate::{
 };
 use gdk_pixbuf::prelude::*;
 use gladis::Gladis;
-use gtk::prelude::*;
+use glib::SourceId;
+use gtk::{prelude::*, Label, Revealer};
 use sourceview::prelude::*;
 
 use executor::TextReplacement;
-use gtk::{AboutDialog, ApplicationWindow, Button, ModelButton, Statusbar};
+use gtk::{AboutDialog, ApplicationWindow, Button, ModelButton};
 use std::{
     path::Path,
     sync::{Arc, RwLock},
@@ -18,6 +19,8 @@ use std::{
 const HEADER_BUTTON_GET_STARTED: &str = "Press Ctrl+Shift+P to get started";
 const HEADER_BUTTON_CHOOSE_ACTION: &str = "Select an action";
 
+pub const NOTIFICATION_LONG_DELAY: u32 = 5000;
+
 #[derive(Gladis, Clone, Shrinkwrap)]
 pub struct AppWidgets {
     #[shrinkwrap(main_field)]
@@ -25,7 +28,10 @@ pub struct AppWidgets {
 
     header_button: Button,
     source_view: sourceview::View,
-    status_bar: Statusbar,
+    // status_bar: Statusbar,
+    notification_revealer: Revealer,
+    notification_label: Label,
+    notification_button: Button,
 
     reset_scripts_button: ModelButton,
     config_directory_button: ModelButton,
@@ -39,21 +45,19 @@ pub struct AppWidgets {
 pub struct App {
     #[shrinkwrap(main_field)]
     widgets: AppWidgets,
-
-    context_id: u32,
     scripts: Arc<RwLock<Vec<Script>>>,
+    notification_source_id: Arc<RwLock<Option<SourceId>>>,
 }
 
 impl App {
     pub fn new(config_dir: &Path, scripts: Arc<RwLock<Vec<Script>>>) -> Self {
-        let mut app = App {
+        let app = App {
             widgets: AppWidgets::from_resource("/co/uk/mrbenshef/Boop-GTK/boop-gtk.glade")
                 .unwrap_or_else(|e| panic!("failed to load boop-gtk.glade: {}", e)),
-            context_id: 0,
             scripts,
+            notification_source_id: Arc::new(RwLock::new(None)), // SourceId doesnt implement clone, so must be seperate from AppState
         };
 
-        app.context_id = app.status_bar.get_context_id("script execution");
         app.header_button.set_label(HEADER_BUTTON_GET_STARTED);
         app.about_dialog.set_logo(
             gdk_pixbuf::Pixbuf::from_resource("/co/uk/mrbenshef/Boop-GTK/boop-gtk.png")
@@ -70,7 +74,15 @@ impl App {
 
         app.setup_syntax_highlighting(config_dir);
 
-        let context_id = app.context_id;
+        // close notification on dismiss
+        {
+            let notification_revealer = app.notification_revealer.clone();
+            app.notification_button
+                .connect_button_press_event(move |_button, _event| {
+                    notification_revealer.set_reveal_child(false);
+                    Inhibit(false)
+                });
+        }
 
         // reset the state of each script
         {
@@ -88,15 +100,14 @@ impl App {
 
         // launch config directory in default file manager
         {
-            let status_bar = app.status_bar.clone();
             let config_dir_str = config_dir.display().to_string();
+            let app_ = app.clone();
             app.config_directory_button.connect_clicked(move |_| {
                 if let Err(open_err) = open::that(config_dir_str.clone()) {
                     error!("could not launch config directory: {}", open_err);
-                    App::push_error_(
-                        status_bar.clone(),
-                        context_id,
-                        "failed to launch config directory",
+                    app_.post_notification_error(
+                        "Failed to launch config directory",
+                        NOTIFICATION_LONG_DELAY,
                     );
                 }
             });
@@ -104,11 +115,14 @@ impl App {
 
         // launch more scripts page in default web browser
         {
-            let status_bar = app.status_bar.clone();
+            let app_ = app.clone();
             app.more_scripts_button.connect_clicked(move |_| {
                 if let Err(open_err) = open::that("https://boop.okat.best/scripts/") {
                     error!("could not launch website: {}", open_err);
-                    App::push_error_(status_bar.clone(), context_id, "failed to launch website");
+                    app_.post_notification_error(
+                        "Failed to launch website",
+                        NOTIFICATION_LONG_DELAY,
+                    );
                 }
             });
         }
@@ -134,6 +148,46 @@ impl App {
         app
     }
 
+    fn post_notification(&self, text: &str, delay: u32) {
+        let notification_source_id = self.notification_source_id.clone();
+        let notification_revealer = self.notification_revealer.clone();
+        let notification_label = self.notification_label.clone();
+
+        {
+            notification_label.set_markup(text);
+            notification_revealer.set_reveal_child(true);
+
+            let mut source_id = notification_source_id.write().unwrap();
+
+            // cancel old notification timeout
+            if source_id.is_some() {
+                glib::source_remove(source_id.take().unwrap());
+            }
+
+            // dismiss after 3000ms
+            let new_source_id = {
+                let notification_source_id = notification_source_id.clone();
+                glib::timeout_add_local(delay, move || {
+                    notification_revealer.set_reveal_child(false);
+                    *notification_source_id.write().unwrap() = None;
+                    Continue(false)
+                })
+            };
+
+            source_id.replace(new_source_id);
+        }
+    }
+
+    pub fn post_notification_error(&self, text: &str, delay: u32) {
+        self.post_notification(
+            &format!(
+                r#"<span foreground="red" weight="bold">ERROR:</span> {}"#,
+                text
+            ),
+            delay,
+        );
+    }
+
     fn setup_syntax_highlighting(&self, config_dir: &Path) {
         let language_manager =
             sourceview::LanguageManager::get_default().expect("failed to get language manager");
@@ -149,8 +203,10 @@ impl App {
 
         let boop_language = language_manager.get_language("boop");
         if boop_language.is_none() {
-            self.status_bar
-                .push(self.context_id, "ERROR: failed to load language file");
+            self.post_notification(
+                r#"<span foreground="red">ERROR:</span> failed to load language file"#,
+                NOTIFICATION_LONG_DELAY,
+            );
         }
 
         // set language
@@ -164,13 +220,13 @@ impl App {
         buffer.set_language(boop_language.as_ref());
     }
 
-    fn push_error_(status_bar: gtk::Statusbar, context_id: u32, error: impl std::fmt::Display) {
-        status_bar.push(context_id, &format!("ERROR: {}", error));
-    }
+    // fn push_error_(status_bar: gtk::Statusbar, context_id: u32, error: impl std::fmt::Display) {
+    //     status_bar.push(context_id, &format!("ERROR: {}", error));
+    // }
 
-    pub fn push_error(&self, error: impl std::fmt::Display) {
-        App::push_error_(self.status_bar.clone(), self.context_id, error);
-    }
+    // pub fn push_error(&self, error: impl std::fmt::Display) {
+    //     App::push_error_(self.status_bar.clone(), self.context_id, error);
+    // }
 
     pub fn open_command_pallete(&self) {
         let dialog = CommandPalleteDialog::new(&self.window, self.scripts.clone());
@@ -185,8 +241,6 @@ impl App {
                     .metadata
                     .name
             );
-
-            self.status_bar.remove_all(self.context_id);
 
             let buffer = &self.source_view.get_buffer().expect("failed to get buffer");
 
@@ -208,9 +262,15 @@ impl App {
                 Ok(status) => {
                     // TODO: how to handle multiple messages?
                     if let Some(error) = status.error() {
-                        self.status_bar.push(self.context_id, &error);
+                        self.post_notification(
+                            &format!(
+                                r#"<span foreground="red" weight="bold">ERROR:</span> {}"#,
+                                error
+                            ),
+                            NOTIFICATION_LONG_DELAY,
+                        );
                     } else if let Some(info) = status.info() {
-                        self.status_bar.push(self.context_id, &info);
+                        self.post_notification(&info, NOTIFICATION_LONG_DELAY);
                     }
                     self.do_replacement(status.into_replacement());
                 }
@@ -218,23 +278,52 @@ impl App {
                     warn!("Exception: {:?}", err);
                     match err {
                         executor::ExecutorError::SourceExceedsMaxLength => {
-                            self.status_bar
-                                .push(self.context_id, "Script exceeds max length");
+                            self.post_notification_error(
+                                "Script exceeds max length",
+                                NOTIFICATION_LONG_DELAY,
+                            );
                         }
                         executor::ExecutorError::Compile(exception) => {
-                            self.status_bar.push(
-                                self.context_id,
-                                &format!("Exception: {}", exception.exception_str),
-                            );
+                            let error_str = match (exception.line_number, exception.columns) {
+                                (Some(line_number), Some((left_column, right_column))) => format!(
+                                    r#"<span foreground="red" weight="bold">EXCEPTION:</span> {} ({}:{} - {}:{})"#,
+                                    exception.exception_str,
+                                    line_number,
+                                    left_column,
+                                    line_number,
+                                    right_column
+                                ),
+                                _ => format!(
+                                    r#"<span foreground="red" weight="bold">EXCEPTION:</span> {}"#,
+                                    exception.exception_str,
+                                ),
+                            };
+
+                            self.post_notification(&error_str, NOTIFICATION_LONG_DELAY);
                         }
                         executor::ExecutorError::Execute(exception) => {
-                            self.status_bar.push(
-                                self.context_id,
-                                &format!("Exception: {}", exception.exception_str),
-                            );
+                            let error_str = match (exception.line_number, exception.columns) {
+                                (Some(line_number), Some((left_column, right_column))) => format!(
+                                    r#"<span foreground="red" weight="bold">EXCEPTION:</span> {} ({}:{} - {}:{})"#,
+                                    exception.exception_str,
+                                    line_number,
+                                    left_column,
+                                    line_number,
+                                    right_column
+                                ),
+                                _ => format!(
+                                    r#"<span foreground="red" weight="bold">EXCEPTION:</span> {}"#,
+                                    exception.exception_str,
+                                ),
+                            };
+
+                            self.post_notification(&error_str, NOTIFICATION_LONG_DELAY);
                         }
                         executor::ExecutorError::NoMain => {
-                            self.status_bar.push(self.context_id, "No main function");
+                            self.post_notification(
+                                r#"<span foreground="red">ERROR:</span> No main function"#,
+                                NOTIFICATION_LONG_DELAY,
+                            );
                         }
                     }
                 }
