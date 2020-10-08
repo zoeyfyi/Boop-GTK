@@ -1,6 +1,7 @@
 use crate::executor::{ExecutionStatus, Executor, ExecutorError};
 use crossbeam::crossbeam_channel::bounded;
 use crossbeam::{Receiver, Sender};
+use fuse_rust::{FuseProperty, Fuseable};
 use serde::Deserialize;
 use std::{fmt, fs, path::PathBuf, thread};
 
@@ -47,6 +48,44 @@ pub struct Metadata {
     pub author: Option<String>,
     pub icon: String,
     pub tags: Option<String>,
+}
+
+impl Fuseable for Metadata {
+    fn properties(&self) -> Vec<fuse_rust::FuseProperty> {
+        return vec![
+            FuseProperty {
+                value: "name".to_string(),
+                weight: 0.9,
+            },
+            FuseProperty {
+                value: "description".to_string(),
+                weight: 0.2,
+            },
+            FuseProperty {
+                value: "tags".to_string(),
+                weight: 0.6,
+            },
+        ];
+    }
+
+    fn lookup(&self, key: &str) -> Option<&str> {
+        match key {
+            "name" => Some(&self.name),
+            "description" => Some(&self.description),
+            "tags" => self.tags.as_deref(),
+            _ => None,
+        }
+    }
+}
+
+impl Fuseable for Script {
+    fn properties(&self) -> Vec<FuseProperty> {
+        self.metadata.properties()
+    }
+
+    fn lookup(&self, key: &str) -> Option<&str> {
+        self.metadata.lookup(key)
+    }
 }
 
 impl Script {

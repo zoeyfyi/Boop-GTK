@@ -25,8 +25,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use sublime_fuzzy::ScoreConfig;
-
 use app::App;
 use directories::ProjectDirs;
 use fmt::Display;
@@ -44,13 +42,6 @@ lazy_static! {
         ProjectDirs::from("uk.co", "mrbenshef", "boop-gtk")
             .expect("Unable to find a configuration location for your platform");
 }
-
-const SEARCH_CONFIG: ScoreConfig = ScoreConfig {
-    bonus_consecutive: 12,
-    bonus_word_start: 0,
-    bonus_coverage: 64,
-    penalty_distance: 4,
-};
 
 #[derive(RustEmbed)]
 #[folder = "submodules/Boop/Boop/Boop/scripts/"]
