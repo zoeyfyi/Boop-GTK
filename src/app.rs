@@ -64,6 +64,9 @@ impl App {
                 .ok()
                 .as_ref(),
         );
+        app.widgets
+            .about_dialog
+            .set_version(Some(env!("CARGO_PKG_VERSION")));
 
         for script in app.scripts.read().expect("scripts lock is poisoned").iter() {
             if let Some(author) = &script.metadata.author {
