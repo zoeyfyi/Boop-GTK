@@ -25,7 +25,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use app::App;
+use app::{App, NOTIFICATION_LONG_DELAY};
 use directories::ProjectDirs;
 use fmt::Display;
 use std::{
@@ -293,7 +293,7 @@ fn main() {
         app.show_all();
 
         if let Some(error) = &script_error {
-            app.push_error(error);
+            app.post_notification_error(&error.to_string(), NOTIFICATION_LONG_DELAY);
         }
 
         // add keyboard shortcut for opening command pallete
