@@ -252,10 +252,28 @@ impl App {
         match replacement {
             TextReplacement::Full(text) => {
                 info!("replacing full text");
+
+                let text = String::from_utf8(
+                    text.into_bytes()
+                        .into_iter()
+                        .filter(|b| *b != 0)
+                        .collect::<Vec<u8>>(),
+                )
+                .expect("failed to remove null bytes from text");
+
                 buffer.set_text(&text);
             }
             TextReplacement::Selection(text) => {
                 info!("replacing selection");
+
+                let text = String::from_utf8(
+                    text.into_bytes()
+                        .into_iter()
+                        .filter(|b| *b != 0)
+                        .collect::<Vec<u8>>(),
+                )
+                .expect("failed to remove null bytes from text");
+
                 match &mut buffer.get_selection_bounds() {
                     Some((start, end)) => {
                         buffer.delete(start, end);
@@ -269,6 +287,15 @@ impl App {
             TextReplacement::Insert(insertions) => {
                 let insert_text = insertions.join("");
                 info!("inserting {} bytes", insert_text.len());
+
+                let insert_text = String::from_utf8(
+                    insert_text
+                        .into_bytes()
+                        .into_iter()
+                        .filter(|b| *b != 0)
+                        .collect::<Vec<u8>>(),
+                )
+                .expect("failed to remove null bytes from text");
 
                 match &mut buffer.get_selection_bounds() {
                     Some((start, end)) => {
