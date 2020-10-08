@@ -262,7 +262,7 @@ impl CommandPalleteDialog {
                 &*scripts.read().expect("scripts lock is poisoned"),
             )
             .into_iter()
-            .map(|result| (result.index, -result.score))
+            .map(|result| (result.index, result.score))
             .collect();
 
         for i in 0..script_count {
@@ -281,16 +281,12 @@ impl CommandPalleteDialog {
                 .unwrap();
 
             let score = if searchbar_text.is_empty() {
-                -(script_id as f64)
+                script_id as f64
             } else {
                 *results.get(&(script_id as usize)).unwrap_or(&0.0)
             };
 
-            let visible = if searchbar_text.is_empty() {
-                true
-            } else {
-                results.contains_key(&(script_id as usize))
-            };
+            let visible = searchbar_text.is_empty() || results.contains_key(&(script_id as usize));
 
             let values: [&dyn ToValue; 2] = [&score, &visible];
             store.set(&iter, &[SCORE_COLUMN, VISIBLE_COLUMN], &values);
@@ -299,7 +295,7 @@ impl CommandPalleteDialog {
         // start sorting again
         store.set_sort_column_id(
             gtk::SortColumn::Index(SCORE_COLUMN),
-            gtk::SortType::Descending,
+            gtk::SortType::Ascending,
         );
 
         // reset selection to first row
