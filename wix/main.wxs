@@ -106,9 +106,6 @@ Port of @IvanMathy&#39;s Boop to GTK
             <Component Id='dll13' Guid='*' Win64='$(var.Win64)'>
               <File Id='dll13file' Name='atk-1.0-0.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\atk-1.0-0.dll' KeyPath='yes'/>
             </Component>
-            <Component Id='dll14' Guid='*' Win64='$(var.Win64)'>
-              <File Id='dll14file' Name='croco-0.6.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\croco-0.6.dll' KeyPath='yes'/>
-            </Component>
             <Component Id='dll15' Guid='*' Win64='$(var.Win64)'>
               <File Id='dll15file' Name='fontconfig.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\fontconfig.dll' KeyPath='yes'/>
             </Component>
@@ -138,9 +135,6 @@ Port of @IvanMathy&#39;s Boop to GTK
             </Component>
             <Component Id='dll23' Guid='*' Win64='$(var.Win64)'>
               <File Id='dll23file' Name='pangoft2-1.0-0.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\pangoft2-1.0-0.dll' KeyPath='yes'/>
-            </Component>
-            <Component Id='dll24' Guid='*' Win64='$(var.Win64)'>
-              <File Id='dll24file' Name='rsvg-2.0.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\rsvg-2.0.dll' KeyPath='yes'/>
             </Component>
             <Component Id='dll25' Guid='*' Win64='$(var.Win64)'>
               <File Id='dll25file' Name='turbojpeg.dll' DiskId='1' Source='C:\gtk-build\gtk\x64\release\bin\turbojpeg.dll' KeyPath='yes'/>
@@ -358,7 +352,6 @@ Port of @IvanMathy&#39;s Boop to GTK
       <ComponentRef Id='dll11'/>
       <ComponentRef Id='dll12'/>
       <ComponentRef Id='dll13'/>
-      <ComponentRef Id='dll14'/>
       <ComponentRef Id='dll15'/>
       <ComponentRef Id='dll16'/>
       <ComponentRef Id='exebus'/>
@@ -369,7 +362,6 @@ Port of @IvanMathy&#39;s Boop to GTK
       <ComponentRef Id='dll21'/>
       <ComponentRef Id='dll22'/>
       <ComponentRef Id='dll23'/>
-      <ComponentRef Id='dll24'/>
       <ComponentRef Id='dll25'/>
       <ComponentRef Id='dll26'/>
       <ComponentRef Id='dll27'/>
