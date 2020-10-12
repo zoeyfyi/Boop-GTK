@@ -58,7 +58,7 @@ lazy_static = "1.4.0"
 rust-embed = { version = "5.6.0", features = ["debug-embed"] }
 dirty2 = "0.1.0"
 simple-error = "0.2"
-crossbeam = "0.7.3"
+crossbeam = "0.8.0"
 
 [dependencies.gtk]
 version = "0.9"
