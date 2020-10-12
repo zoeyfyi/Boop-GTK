@@ -17,7 +17,7 @@
   <url type="homepage">https://boop-gtk.mrbenshef.co.uk/</url>
   <content_rating type="oars-1.0" />
   <releases>
-    <release version="1.4.0" date="2020-10-08">
+    <release version="1.4.0" date="2020-10-12">
       <description>
         <ul>
           <li>Search now looks at the description and tags on scripts</li>
