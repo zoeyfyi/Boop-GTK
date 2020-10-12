@@ -1,12 +1,12 @@
+use fuse_rust::Fuse;
 use gdk::{keys, EventKey};
 use gio::prelude::*;
 use gladis::Gladis;
 use gtk::prelude::*;
 use gtk::{Dialog, Entry, TreePath, TreeView, Window};
 use shrinkwraprs::Shrinkwrap;
-use sublime_fuzzy::FuzzySearch;
 
-use crate::{script::Script, SEARCH_CONFIG};
+use crate::script::Script;
 use glib::Type;
 use std::{
     collections::HashMap,
@@ -26,7 +26,7 @@ const COLUMNS: [u32; 5] = [
     SCORE_COLUMN,
     VISIBLE_COLUMN,
 ];
-const COLUMN_TYPES: [Type; 5] = [Type::String, Type::String, Type::U64, Type::I64, Type::Bool];
+const COLUMN_TYPES: [Type; 5] = [Type::String, Type::String, Type::U64, Type::F64, Type::Bool];
 
 const DIALOG_WIDTH: i32 = 300;
 const ICON_COLUMN_PADDING: i32 = 8;
@@ -254,22 +254,17 @@ impl CommandPalleteDialog {
 
         let searchbar_text = searchbar.get_text().to_owned();
 
-        // score each script using search text
-        let script_to_score = scripts
-            .read()
-            .expect("scripts lock is poisoned")
-            .iter()
-            .enumerate()
-            .map(|(index, script)| {
-                let mut search = FuzzySearch::new(&searchbar_text, &script.metadata.name, true);
-                search.set_score_config(SEARCH_CONFIG);
-
-                let score = search.best_match().map(|m| m.score()).unwrap_or(-1000);
-                (index as u64, score)
-            })
-            .collect::<HashMap<u64, isize>>();
-
         let script_count = store.iter_n_children(None);
+
+        let results: HashMap<usize, f64> = Fuse::default()
+            .search_text_in_fuse_list(
+                &searchbar_text,
+                &*scripts.read().expect("scripts lock is poisoned"),
+            )
+            .into_iter()
+            .map(|result| (result.index, result.score))
+            .collect();
+
         for i in 0..script_count {
             let mut path = gtk::TreePath::new();
             path.append_index(i);
@@ -286,25 +281,21 @@ impl CommandPalleteDialog {
                 .unwrap();
 
             let score = if searchbar_text.is_empty() {
-                -(script_id as i64) // alphabetical sort
+                script_id as f64
             } else {
-                script_to_score[&script_id] as i64
+                *results.get(&(script_id as usize)).unwrap_or(&0.0)
             };
 
-            let is_visible = if searchbar_text.is_empty() {
-                true
-            } else {
-                score > 0
-            };
+            let visible = searchbar_text.is_empty() || results.contains_key(&(script_id as usize));
 
-            let values: [&dyn ToValue; 2] = [&score, &is_visible];
+            let values: [&dyn ToValue; 2] = [&score, &visible];
             store.set(&iter, &[SCORE_COLUMN, VISIBLE_COLUMN], &values);
         }
 
         // start sorting again
         store.set_sort_column_id(
             gtk::SortColumn::Index(SCORE_COLUMN),
-            gtk::SortType::Descending,
+            gtk::SortType::Ascending,
         );
 
         // reset selection to first row

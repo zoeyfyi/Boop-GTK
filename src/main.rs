@@ -25,9 +25,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use sublime_fuzzy::ScoreConfig;
-
-use app::App;
+use app::{App, NOTIFICATION_LONG_DELAY};
 use directories::ProjectDirs;
 use fmt::Display;
 use std::{
@@ -44,13 +42,6 @@ lazy_static! {
         ProjectDirs::from("uk.co", "mrbenshef", "boop-gtk")
             .expect("Unable to find a configuration location for your platform");
 }
-
-const SEARCH_CONFIG: ScoreConfig = ScoreConfig {
-    bonus_consecutive: 12,
-    bonus_word_start: 0,
-    bonus_coverage: 64,
-    penalty_distance: 4,
-};
 
 #[derive(RustEmbed)]
 #[folder = "submodules/Boop/Boop/Boop/scripts/"]
@@ -302,7 +293,7 @@ fn main() {
         app.show_all();
 
         if let Some(error) = &script_error {
-            app.push_error(error);
+            app.post_notification_error(&error.to_string(), NOTIFICATION_LONG_DELAY);
         }
 
         // add keyboard shortcut for opening command pallete
