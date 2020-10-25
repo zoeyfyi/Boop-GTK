@@ -245,7 +245,7 @@ fn watch_scripts_folder(scripts: Arc<RwLock<Vec<Script>>>) {
 }
 
 fn main() {
-    env_logger::from_env(env_logger::Env::default().default_filter_or("info")).init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     debug!(
         "found {} pixbuf loaders",
@@ -301,6 +301,15 @@ fn main() {
         application.add_action(&command_pallete_action);
         application.set_accels_for_action("app.command_pallete", &["<Primary><Shift>P"]);
         command_pallete_action.connect_activate(move |_, _| app.open_command_pallete());
+
+        // Ctrl+Q keyboard shortcut for exiting
+        let quit_action = gio::SimpleAction::new("quit", None);
+        application.add_action(&quit_action);
+        application.set_accels_for_action("app.quit", &["<Primary>Q"]);
+        {
+            let application = application.clone();
+            quit_action.connect_activate(move |_, _| application.quit());
+        }
     });
 
     application.run(&[]);

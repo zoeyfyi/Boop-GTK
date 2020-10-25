@@ -1,6 +1,5 @@
 use crate::executor::{ExecutionStatus, Executor, ExecutorError};
-use crossbeam::crossbeam_channel::bounded;
-use crossbeam::{Receiver, Sender};
+use crossbeam::channel::{bounded, Receiver, Sender};
 use fuse_rust::{FuseProperty, Fuseable};
 use serde::Deserialize;
 use std::{fmt, fs, path::PathBuf, thread};
