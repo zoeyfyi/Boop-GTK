@@ -1,7 +1,7 @@
 use crate::executor::{ExecutionStatus, Executor, ExecutorError};
+use crossbeam::channel::{bounded, Receiver, Sender};
 use fuse_rust::{FuseProperty, Fuseable};
 use serde::Deserialize;
-use crossbeam::channel::{bounded, Sender, Receiver};
 use std::{fmt, fs, path::PathBuf, thread};
 
 pub struct Script {
