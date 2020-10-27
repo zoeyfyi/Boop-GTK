@@ -85,7 +85,7 @@ cargo build
 ```shell
 sudo apt-get install snap snapcraft
 snapcraft snap
-sudo snap install boop-gtk_1.4.0_amd64.snap
+sudo snap install boop-gtk_1.5.0_amd64.snap
 ```
 
 #### Linux Flatpak
