@@ -227,27 +227,27 @@ Port of @IvanMathy&#39;s Boop to GTK
             <Directory Id='Icons' Name='icons'>
               <Directory Id='Adwaita' Name='Adwaita'>
 
-                <Directory Id='Scalable' Name='16x16'>
+                <Directory Id='Scalable' Name='scalable'>
                   <Directory Id='Ui' Name='ui'>
                     <Component Id='icon2' Guid='*' Win64='$(var.Win64)'>
-                      <File Id='icon2file' Name='window-close-symbolic.png' DiskId='1' Source='C:\msys64\mingw64\share\icons\Adwaita\16x16\ui\window-close-symbolic.png' KeyPath='yes'/>
+                      <File Id='icon2file' Name='window-close-symbolic.svg' DiskId='1' Source='C:\msys64\mingw64\share\icons\Adwaita\scalable\ui\window-close-symbolic.svg' KeyPath='yes'/>
                     </Component>
                     <Component Id='icon3' Guid='*' Win64='$(var.Win64)'>
-                      <File Id='icon3file' Name='window-maximize-symbolic.png' DiskId='1' Source='C:\msys64\mingw64\share\icons\Adwaita\16x16\ui\window-maximize-symbolic.png' KeyPath='yes'/>
+                      <File Id='icon3file' Name='window-maximize-symbolic.svg' DiskId='1' Source='C:\msys64\mingw64\share\icons\Adwaita\scalable\ui\window-maximize-symbolic.svg' KeyPath='yes'/>
                     </Component>
                     <Component Id='icon4' Guid='*' Win64='$(var.Win64)'>
-                      <File Id='icon4file' Name='window-minimize-symbolic.png' DiskId='1' Source='C:\msys64\mingw64\share\icons\Adwaita\16x16\ui\window-minimize-symbolic.png' KeyPath='yes'/>
+                      <File Id='icon4file' Name='window-minimize-symbolic.svg' DiskId='1' Source='C:\msys64\mingw64\share\icons\Adwaita\scalable\ui\window-minimize-symbolic.svg' KeyPath='yes'/>
                     </Component>
                   </Directory>
                   <Directory Id='Actions' Name='actions'>
                     <Component Id='icon1' Guid='*' Win64='$(var.Win64)'>
-                      <File Id='icon1' Name='open-menu-symbolic.png' DiskId='1' Source='C:\msys64\mingw64\share\icons\Adwaita\16x16\actions\open-menu-symbolic.png' KeyPath='yes'/>
+                      <File Id='icon1' Name='open-menu-symbolic.svg' DiskId='1' Source='C:\msys64\mingw64\share\icons\Adwaita\scalable\actions\open-menu-symbolic.svg' KeyPath='yes'/>
                     </Component>
                     <Component Id='icon0' Guid='*' Win64='$(var.Win64)'>
-                      <File Id='icon0file' Name='edit-find-symbolic.png' DiskId='1' Source='C:\msys64\mingw64\share\icons\Adwaita\16x16\actions\edit-find-symbolic.png' KeyPath='yes'/>
+                      <File Id='icon0file' Name='edit-find-symbolic.svg' DiskId='1' Source='C:\msys64\mingw64\share\icons\Adwaita\scalable\actions\edit-find-symbolic.svg' KeyPath='yes'/>
                     </Component>
                     <Component Id='icon5' Guid='*' Win64='$(var.Win64)'>
-                      <File Id='icon5' Name='edit-clear-symbolic.png' DiskId='1' Source='C:\msys64\mingw64\share\icons\Adwaita\16x16\actions\edit-clear-symbolic.png' KeyPath='yes'/>
+                      <File Id='icon5' Name='edit-clear-symbolic.svg' DiskId='1' Source='C:\msys64\mingw64\share\icons\Adwaita\scalable\actions\edit-clear-symbolic.svg' KeyPath='yes'/>
                     </Component>
                   </Directory>
                 </Directory>
