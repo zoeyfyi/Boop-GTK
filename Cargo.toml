@@ -52,7 +52,7 @@ fuse-rust = "0.1.2"
 # File system
 open = "1.4.0"
 directories = "3.0"
-notify = "5.0.0-pre.2"
+notify = "5.0.0-pre.4"
 # Misc utils
 lazy_static = "1.4.0"
 rust-embed = { version = "5.6.0", features = ["debug-embed"] }
