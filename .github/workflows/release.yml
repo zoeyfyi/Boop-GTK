@@ -85,7 +85,7 @@ jobs:
       working-directory: C:\gtk-build\github\gvsbuild
     - name: Windows dependencies (add gvsbuild bin directory to path)
       if: runner.os == 'windows'
-      run: echo "::add-path::C:\gtk-build\gtk\x64\release\bin"
+      run: echo "C:\gtk-build\gtk\x64\release\bin" >> $GITHUB_PATH
     ################# Dependencies #################
     # install cargo wix
     - name: install cargo-wix
