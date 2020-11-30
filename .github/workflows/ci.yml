@@ -55,34 +55,34 @@ jobs:
       if: runner.os == 'macOS'
       run: brew install gtk+3 gtksourceview3 pkg-config
     # ======== Windows ========
-    - name: Window's debug
+    - name: Windows dependencies (msys)
       if: runner.os == 'windows'
-      run: echo $GITHUB_PATH
-    # - name: Windows dependencies (cache gvsbuild)
-    #   if: runner.os == 'windows'
-    #   uses: actions/cache@v2
-    #   id: cache
-    #   with:
-    #     path: release\**
-    #     key: ${{ runner.os }}-gvsbuild-${{ hashFiles('submodules/gvsbuild/**') }}
-    # - name: Windows dependencies (move gvsbuild files)
-    #   if: runner.os == 'windows' && steps.cache.outputs.cache-hit == 'true'
-    #   run: xcopy /e /i release C:\gtk-build\gtk\x64\release
-    #   shell: cmd
-    # - name: Windows dependencies (copy gvsbuild)
-    #   if: runner.os == 'windows' && steps.cache.outputs.cache-hit != 'true'
-    #   run: xcopy /e /i submodules\gvsbuild C:\gtk-build\github\gvsbuild
-    # - name: Windows dependencies (remove git)
-    #   if: runner.os == 'windows'
-    #   run: rmdir "C:\Program Files\Git\usr\bin" /s /q # remove git's bin, there are conflicting cygwin dll's
-    #   shell: cmd
-    # - name: Windows dependencies (gtk)
-    #   if: runner.os == 'windows' && steps.cache.outputs.cache-hit != 'true'
-    #   run: python .\build.py build -p=x64 --vs-ver=16 --msys-dir=C:\msys64 -k --enable-gi --py-wheel --py-egg gtk3 gdk-pixbuf gtksourceview3 librsvg hicolor-icon-theme
-    #   working-directory: C:\gtk-build\github\gvsbuild
-    # - name: Windows dependencies (add gvsbuild bin directory to path)
-    #   if: runner.os == 'windows'
-    #   run: echo "C:\gtk-build\gtk\x64\release\bin" >> $GITHUB_PATH
+      run: C:\msys64\usr\bin\bash.exe -lc "pacman -Syy --noconfirm mingw-w64-x86_64-pkg-config"
+    - name: Windows dependencies (cache gvsbuild)
+      if: runner.os == 'windows'
+      uses: actions/cache@v2
+      id: cache
+      with:
+        path: release\**
+        key: ${{ runner.os }}-gvsbuild-${{ hashFiles('submodules/gvsbuild/**') }}
+    - name: Windows dependencies (move gvsbuild files)
+      if: runner.os == 'windows' && steps.cache.outputs.cache-hit == 'true'
+      run: xcopy /e /i release C:\gtk-build\gtk\x64\release
+      shell: cmd
+    - name: Windows dependencies (copy gvsbuild)
+      if: runner.os == 'windows' && steps.cache.outputs.cache-hit != 'true'
+      run: xcopy /e /i submodules\gvsbuild C:\gtk-build\github\gvsbuild
+    - name: Windows dependencies (remove git)
+      if: runner.os == 'windows'
+      run: rmdir "C:\Program Files\Git\usr\bin" /s /q # remove git's bin, there are conflicting cygwin dll's
+      shell: cmd
+    - name: Windows dependencies (gtk)
+      if: runner.os == 'windows' && steps.cache.outputs.cache-hit != 'true'
+      run: python .\build.py build -p=x64 --vs-ver=16 --msys-dir=C:\msys64 -k --enable-gi --py-wheel --py-egg gtk3 gdk-pixbuf gtksourceview3 librsvg hicolor-icon-theme
+      working-directory: C:\gtk-build\github\gvsbuild
+    - name: Windows dependencies (add gvsbuild bin directory to path)
+      if: runner.os == 'windows'
+      run: echo "C:\gtk-build\gtk\x64\release\bin" >> $GITHUB_PATH
     ################# Dependencies #################
     - name: Check
       run: cargo check
