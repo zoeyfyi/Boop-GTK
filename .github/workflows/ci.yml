@@ -19,10 +19,19 @@ jobs:
         config:
         - os: macOS-latest
           source-view-pkg-config: 0
+          pkgconfig: pkg-config
+          pkgconfigpath: /usr/lib/pkgconfig
+          glibcrpath: glib-compile-resources
         - os: ubuntu-latest
           source-view-pkg-config: 0
+          pkgconfig: pkg-config
+          pkgconfigpath: /usr/lib/pkgconfig
+          glibcrpath: glib-compile-resources
         - os: windows-2019
           source-view-pkg-config: 1
+          pkgconfig: C:\msys64\mingw64\bin\pkg-config.exe
+          pkgconfigpath: C:\gtk-build\gtk\x64\release\lib\pkgconfig
+          glibcrpath: C:\gtk-build\gtk\x64\release\bin\glib-compile-resources.exe
     env:
       GTKSOURCEVIEW_3.0_NO_PKG_CONFIG: ${{ matrix.config.source-view-pkg-config }}
       SYSTEM_DEPS_GTKSOURCEVIEW_3.0_LIB: gtksourceview-3.0
@@ -55,9 +64,18 @@ jobs:
       if: runner.os == 'macOS'
       run: brew install gtk+3 gtksourceview3 pkg-config
     # ======== Windows ========
+    - name: Windows dependencies (update msys)
+      if: runner.os == 'windows'
+      run: C:\msys64\usr\bin\bash.exe -lc "pacman -Syu --noconfirm"
+    - name: Windows dependencies (msys remove cmake)
+      if: runner.os == 'windows'
+      run: C:\msys64\usr\bin\bash.exe -lc "pacman -Rs --noconfirm mingw-w64-x86_64-cmake"
     - name: Windows dependencies (msys)
       if: runner.os == 'windows'
       run: C:\msys64\usr\bin\bash.exe -lc "pacman -Syy --noconfirm mingw-w64-x86_64-pkg-config"
+    - name: Windows dependencies (add msys to path)
+      if: runner.os == 'windows'
+      run: echo "C:\msys64\mingw64\bin" >> $GITHUB_PATH
     - name: Windows dependencies (cache gvsbuild)
       if: runner.os == 'windows'
       uses: actions/cache@v2
@@ -86,12 +104,36 @@ jobs:
     ################# Dependencies #################
     - name: Check
       run: cargo check
+      env:
+        GTK_LIB_DIR: C:\msys64\mingw64\bin
+        PKG_CONFIG_ALLOW_CROSS: 1
+        PKG_CONFIG: ${{ matrix.config.pkgconfig }}
+        PKG_CONFIG_PATH: ${{ matrix.config.pkgconfigpath }}
+        GLIB_COMPILE_RESOURCES: ${{ matrix.config.glibcrpath }}
     - name: Test
       run: cargo test -- --nocapture
+      env:
+        GTK_LIB_DIR: C:\msys64\mingw64\bin
+        PKG_CONFIG_ALLOW_CROSS: 1
+        PKG_CONFIG: ${{ matrix.config.pkgconfig }}
+        PKG_CONFIG_PATH: ${{ matrix.config.pkgconfigpath }}
+        GLIB_COMPILE_RESOURCES: ${{ matrix.config.glibcrpath }}
     - name: Fmt
       run: cargo fmt --all -- --check
+      env:
+        GTK_LIB_DIR: C:\msys64\mingw64\bin
+        PKG_CONFIG_ALLOW_CROSS: 1
+        PKG_CONFIG: ${{ matrix.config.pkgconfig }}
+        PKG_CONFIG_PATH: ${{ matrix.config.pkgconfigpath }}
+        GLIB_COMPILE_RESOURCES: ${{ matrix.config.glibcrpath }}
     - name: Clippy
       run: cargo clippy -- -D warnings
+      env:
+        GTK_LIB_DIR: C:\msys64\mingw64\bin
+        PKG_CONFIG_ALLOW_CROSS: 1
+        PKG_CONFIG: ${{ matrix.config.pkgconfig }}
+        PKG_CONFIG_PATH: ${{ matrix.config.pkgconfigpath }}
+        GLIB_COMPILE_RESOURCES: ${{ matrix.config.glibcrpath }}
     ################# Windows workarounds #################
     - name: Windows dependencies (make release folder)
       run: mkdir release
