@@ -58,11 +58,19 @@ jobs:
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     ################# Dependencies #################
+    - name: Windows dependencies (update msys)
+      if: runner.os == 'windows'
+      run: C:\msys64\usr\bin\bash.exe -lc "pacman -Syu --noconfirm"
+    - name: Windows dependencies (msys remove cmake)
+      if: runner.os == 'windows'
+      run: C:\msys64\usr\bin\bash.exe -lc "pacman -Rs --noconfirm mingw-w64-x86_64-cmake"
     - name: Windows dependencies (msys)
       if: runner.os == 'windows'
-      run: C:\msys64\usr\bin\bash.exe -lc "pacman -Syy --noconfirm mingw-w64-x86_64-adwaita-icon-theme"
-    - name: Windows dependencies (cache gvsbuild)
+      run: C:\msys64\usr\bin\bash.exe -lc "pacman -Syy --noconfirm mingw-w64-x86_64-pkg-config"
+    - name: Windows dependencies (add msys to path)
       if: runner.os == 'windows'
+      run: echo "C:\msys64\mingw64\bin" >> $GITHUB_PATH
+    - name: Windows dependencies (cache gvsbuild)
       uses: actions/cache@v2
       id: cache
       with:
@@ -76,7 +84,6 @@ jobs:
       if: runner.os == 'windows' && steps.cache.outputs.cache-hit != 'true'
       run: xcopy /e /i submodules\gvsbuild C:\gtk-build\github\gvsbuild
     - name: Windows dependencies (remove git)
-      if: runner.os == 'windows'
       run: rmdir "C:\Program Files\Git\usr\bin" /s /q # remove git's bin, there are conflicting cygwin dll's
       shell: cmd
     - name: Windows dependencies (gtk)
@@ -84,8 +91,7 @@ jobs:
       run: python .\build.py build -p=x64 --vs-ver=16 --msys-dir=C:\msys64 -k --enable-gi --py-wheel --py-egg gtk3 gdk-pixbuf gtksourceview3 librsvg hicolor-icon-theme
       working-directory: C:\gtk-build\github\gvsbuild
     - name: Windows dependencies (add gvsbuild bin directory to path)
-      if: runner.os == 'windows'
-      run: echo "::add-path::C:\gtk-build\gtk\x64\release\bin"
+      run: echo "C:\gtk-build\gtk\x64\release\bin" >> $GITHUB_PATH
     ################# Dependencies #################
     # install cargo wix
     - name: install cargo-wix
@@ -95,6 +101,11 @@ jobs:
       run: cargo wix -v --nocapture -o boop-gtk.windows.msi
       env:
         GTKSOURCEVIEW_3.0_NO_PKG_CONFIG: 1
+        GTK_LIB_DIR: C:\msys64\mingw64\bin
+        PKG_CONFIG_ALLOW_CROSS: 1
+        PKG_CONFIG: C:\msys64\mingw64\bin\pkg-config.exe
+        PKG_CONFIG_PATH: C:\gtk-build\gtk\x64\release\lib\pkgconfig
+        GLIB_COMPILE_RESOURCES: C:\gtk-build\gtk\x64\release\bin\glib-compile-resources.exe
         SYSTEM_DEPS_GTKSOURCEVIEW_3.0_LIB: gtksourceview-3.0
     # upload
     - uses: actions/upload-artifact@v2.2.0
