@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // don't spawn command line on windows
+#![feature(btree_drain_filter)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -10,20 +11,15 @@ extern crate log;
 
 mod executor;
 mod script;
-use script::Script;
 mod app;
 mod command_pallete;
+mod scripts;
 
 use gio::prelude::*;
-use gtk::prelude::*;
-use gtk::Application;
+use gtk::{prelude::*, Application};
+use scripts::{LoadScriptError, ScriptMap};
 
-use rust_embed::RustEmbed;
-use std::{
-    borrow::Cow,
-    fmt,
-    path::{Path, PathBuf},
-};
+use std::{fmt, path::PathBuf};
 
 use app::{App, NOTIFICATION_LONG_DELAY};
 use directories::ProjectDirs;
@@ -34,36 +30,12 @@ use std::{
     io::prelude::*,
     sync::{Arc, RwLock},
     thread,
-    time::Duration,
 };
 
 lazy_static! {
     static ref PROJECT_DIRS: directories::ProjectDirs =
         ProjectDirs::from("uk.co", "mrbenshef", "boop-gtk")
             .expect("Unable to find a configuration location for your platform");
-}
-
-#[derive(RustEmbed)]
-#[folder = "submodules/Boop/Boop/Boop/scripts/"]
-struct Scripts;
-
-#[derive(Debug)]
-enum LoadScriptError {
-    FailedToCreateScriptDirectory,
-    FailedToReadScriptDirectory,
-}
-
-impl Display for LoadScriptError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            LoadScriptError::FailedToCreateScriptDirectory => {
-                write!(f, "Can't create scripts directory, check your permissions")
-            }
-            LoadScriptError::FailedToReadScriptDirectory => {
-                write!(f, "Can't read scripts directory, check your premissions")
-            }
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -80,62 +52,6 @@ impl Display for ScriptError {
 }
 
 impl Error for ScriptError {}
-
-fn load_user_scripts(config_dir: &Path) -> Result<Vec<Script>, LoadScriptError> {
-    let scripts_dir: PathBuf = config_dir.join("scripts");
-
-    fs::create_dir_all(&scripts_dir).map_err(|_| LoadScriptError::FailedToCreateScriptDirectory)?;
-
-    let paths =
-        fs::read_dir(&scripts_dir).map_err(|_| LoadScriptError::FailedToReadScriptDirectory)?;
-
-    Ok(paths
-        .filter_map(Result::ok)
-        .map(|f| f.path())
-        .filter(|path| path.is_file())
-        .map(Script::from_file)
-        .filter_map(Result::ok)
-        .collect())
-}
-
-fn load_internal_scripts() -> Vec<Script> {
-    let mut scripts: Vec<Script> = Vec::with_capacity(Scripts::iter().count());
-
-    // scripts are internal, so we can unwrap "safely"
-    for file in Scripts::iter() {
-        let file: Cow<'_, str> = file;
-        let source: Cow<'static, [u8]> = Scripts::get(&file)
-            .unwrap_or_else(|| panic!("failed to get file: {}", file.to_string()));
-        let script_source = String::from_utf8(source.to_vec())
-            .unwrap_or_else(|e| panic!("{} is not UTF8: {}", file, e));
-        if let Ok(script) = Script::from_source(script_source, PathBuf::new()) {
-            scripts.push(script);
-        }
-    }
-
-    scripts
-}
-
-fn load_all_scripts(config_dir: &Path) -> (Vec<Script>, Option<ScriptError>) {
-    let mut scripts = load_internal_scripts();
-
-    let internal_script_count = scripts.len();
-
-    match load_user_scripts(&config_dir) {
-        Ok(mut user_scripts) => {
-            scripts.append(&mut user_scripts);
-        }
-        Err(e) => return (scripts, Some(ScriptError::LoadError(e))),
-    }
-
-    info!(
-        "found {} scripts ({} internal scripts)",
-        scripts.len(),
-        internal_script_count,
-    );
-
-    (scripts, None)
-}
 
 // extract language file, ideally we would use GResource for this but sourceview doesn't support that
 fn extract_language_file() {
@@ -162,87 +78,7 @@ fn extract_language_file() {
     info!("language file written at: {}", lang_file_path.display());
 }
 
-fn watch_scripts_folder(scripts: Arc<RwLock<Vec<Script>>>) {
-    use notify::{RecommendedWatcher, RecursiveMode, Result, Watcher};
-
-    trace!("watch_scripts_folder");
-
-    // watch for changes to script folder
-    let watcher: Result<RecommendedWatcher> = Watcher::new_immediate(move |res| {
-        debug!("res: {:?}", res);
-        match res {
-            Ok(event) => {
-                let event: notify::Event = event;
-
-                for file in event.paths {
-                    debug!("file: {}", file.display());
-
-                    match file.extension() {
-                        Some(s) => {
-                            if s == "js" {
-                            } else {
-                                break;
-                            }
-                        }
-                        None => break,
-                    }
-
-                    info!("{} changed, reloading", file.display());
-
-                    // remove scripts, if they where modified we create a new instance bellow
-                    let mut scripts = scripts.write().expect("script lock is poisoned");
-                    for i in 0..scripts.len() {
-                        if scripts[i].path == file {
-                            scripts.remove(i);
-                            break;
-                        }
-                    }
-
-                    // .drain_filter(|script| script.path == file);
-
-                    if !file.exists() {
-                        break;
-                    }
-
-                    match Script::from_file(file.clone()) {
-                        Ok(script) => {
-                            scripts.push(script);
-                            scripts.sort_by_key(|s| s.metadata.name.clone());
-                        }
-                        Err(e) => {
-                            warn!("error parsing {}: {}", file.display(), e);
-                        }
-                    }
-                }
-            }
-            Err(e) => error!("watch error: {:?}", e),
-        }
-    });
-
-    // configure and start watcher
-    match watcher {
-        Ok(mut watcher) => {
-            let mut config_dir = PROJECT_DIRS.config_dir().to_path_buf();
-            config_dir.push("scripts");
-
-            info!("watching {}", config_dir.display());
-
-            if let Err(watch_error) = watcher.watch(&config_dir, RecursiveMode::Recursive) {
-                error!("watch start error: {}", watch_error);
-                return;
-            }
-
-            // keep the thread alive
-            loop {
-                trace!("watching!");
-                thread::sleep(Duration::from_millis(1000));
-            }
-        }
-        Err(watcher_error) => {
-            error!("couldn't create watcher: {}", watcher_error);
-        }
-    }
-}
+// fn watch_scripts_folder(scripts: Arc<RwLock<Vec<Script>>>) {}
 
 fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
@@ -256,17 +92,21 @@ fn main() {
 
     let config_dir = PROJECT_DIRS.config_dir().to_path_buf();
 
-    let (mut scripts, script_error) = load_all_scripts(&config_dir);
+    // create user scripts directory
+    let scripts_dir: PathBuf = config_dir.join("scripts");
+    let script_error = fs::create_dir_all(&scripts_dir)
+        .map_err(|_| LoadScriptError::FailedToCreateScriptDirectory)
+        .map_err(ScriptError::LoadError)
+        .err();
 
-    // sort alphabetically
-    scripts.sort_by_key(|s| s.metadata.name.clone());
+    let scripts = ScriptMap::new();
 
     // watch scripts folder for changes
     let scripts = Arc::new(RwLock::new(scripts));
     {
         let scripts = scripts.clone();
         thread::spawn(move || {
-            watch_scripts_folder(scripts);
+            ScriptMap::watch(scripts);
         });
     }
 

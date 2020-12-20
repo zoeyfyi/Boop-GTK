@@ -2,6 +2,7 @@ use crate::{
     command_pallete::CommandPalleteDialog,
     executor::{self},
     script::Script,
+    scripts::ScriptMap,
 };
 use gdk_pixbuf::prelude::*;
 use gladis::Gladis;
@@ -45,12 +46,12 @@ pub struct AppWidgets {
 pub struct App {
     #[shrinkwrap(main_field)]
     widgets: AppWidgets,
-    scripts: Arc<RwLock<Vec<Script>>>,
+    scripts: Arc<RwLock<ScriptMap>>,
     notification_source_id: Arc<RwLock<Option<SourceId>>>,
 }
 
 impl App {
-    pub fn new(config_dir: &Path, scripts: Arc<RwLock<Vec<Script>>>) -> Self {
+    pub(crate) fn new(config_dir: &Path, scripts: Arc<RwLock<ScriptMap>>) -> Self {
         let app = App {
             widgets: AppWidgets::from_resource("/co/uk/mrbenshef/Boop-GTK/boop-gtk.glade")
                 .unwrap_or_else(|e| panic!("failed to load boop-gtk.glade: {}", e)),
@@ -68,10 +69,16 @@ impl App {
             .about_dialog
             .set_version(Some(env!("CARGO_PKG_VERSION")));
 
-        for script in app.scripts.read().expect("scripts lock is poisoned").iter() {
+        for (_, script) in app
+            .scripts
+            .read()
+            .expect("scripts lock is poisoned")
+            .0
+            .iter()
+        {
             if let Some(author) = &script.metadata.author {
                 app.about_dialog
-                    .add_credit_section(&script.metadata.name, &[author]);
+                    .add_credit_section(&format!("{} script", &script.metadata.name), &[author]);
             }
         }
 
@@ -91,9 +98,10 @@ impl App {
         {
             let scripts = app.scripts.clone();
             app.reset_scripts_button.connect_clicked(move |_| {
-                for script in scripts
+                for (_, script) in scripts
                     .write()
                     .expect("scripts lock is poisoned")
+                    .0
                     .iter_mut()
                 {
                     script.kill_thread();
@@ -237,13 +245,16 @@ impl App {
 
         self.header_button.set_label(HEADER_BUTTON_CHOOSE_ACTION);
 
-        if let gtk::ResponseType::Other(script_id) = dialog.run() {
-            info!(
-                "executing {}",
-                self.scripts.read().expect("scripts lock is poisoned")[script_id as usize]
-                    .metadata
-                    .name
-            );
+        if let gtk::ResponseType::Accept = dialog.run() {
+            let selected: &str = dialog
+                .get_selected()
+                .expect("dialog didn't return a selection");
+
+            let mut script_map = self.scripts.write().expect("scripts lock is poisoned");
+            let script: &mut Script =
+                &mut script_map.0.get_mut(selected).expect("script not in map");
+
+            info!("executing {}", script.metadata.name);
 
             let buffer = &self.source_view.get_buffer().expect("failed to get buffer");
 
@@ -257,9 +268,7 @@ impl App {
                 .flatten()
                 .map(|s| s.to_string());
 
-            let status_result = self.scripts.write().expect("scripts lock is poisoned")
-                [script_id as usize]
-                .execute(buffer_text.as_str(), selection_text.as_deref());
+            let status_result = script.execute(buffer_text.as_str(), selection_text.as_deref());
 
             match status_result {
                 Ok(status) => {
