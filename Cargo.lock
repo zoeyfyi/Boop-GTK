@@ -437,9 +437,9 @@ checksum = "3dcaa9ae7725d12cdb85b3ad99a434db70b468c09ded17e012d86b5c1010f7a7"
 
 [[package]]
 name = "fuse-rust"
-version = "0.1.2"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67c284a300a010dcdcdb83c731698ddd5d4cc21f32d98b069295c0b7d257ad42"
+checksum = "6412c06af53377f410ea60e55b2bc241f90661c660aeb2c0f9b9759629f9c2fa"
 dependencies = [
  "crossbeam 0.7.3",
 ]
