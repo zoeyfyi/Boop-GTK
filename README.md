@@ -39,37 +39,16 @@ There is also a quick demo on [youtube](https://youtu.be/WXDTsJ4cqO4).
 
 ### Get Boop-GTK
 
-<table width="100%">
-  <tr>
-    <th width="33.333%">Linux</th>
-    <th width="33.333%">Windows</th>
-    <th width="33.333%">MacOS</th>
-  </tr>
-  <tr>
-    <td>
-      <a href="https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.linux.amd64">boop-gtk.linux.amd64</a>
-      </br>
-      <a href="https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.flatpak">boop-gtk.flatpak</a>
-      </br>
-      <a href="https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.snap">boop-gtk.snap</a>
-      </br>
-      <a href="https://snapcraft.io/boop-gtk"><img src="https://snapcraft.io/static/images/badges/en/snap-store-black.svg" alt="Get it from the Snap Store"></a>
-      </br>
-      <a href="https://flathub.org/apps/details/uk.co.mrbenshef.Boop-GTK"><img width='190' alt='Download on Flathub' src='https://flathub.org/assets/badges/flathub-badge-en.png'></a>
-    </td>
-    <td>
-      <a href="https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.windows.msi">boop-gtk.windows.msi</a>
-    </td>
-    <td>
-      You should really use <a href="https://github.com/IvanMathy/Boop">Boop</a>, 
-      </br>
-      </br>
-      but if you <i>really</i> want to:
-      </br>
-      <a href="https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.macos">boop-gtk.macos</a>
-    </td>
-  </tr>
-</table>
+| Platform | Format | Link |
+| -------- | ------ | ---- |
+| Linux | Binary | <a href="https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.linux.amd64">boop-gtk.linux.amd64</a> |
+| | Flatpak | <a href="https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.flatpak">boop-gtk.flatpak</a> |
+|  | Snap | <a href="https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.snap">boop-gtk.snap</a> |
+|  | AUR | <a href="https://aur.archlinux.org/packages/boop-gtk/"><code>boop-gtk</code></a> (thanks to qcasey), <a href="https://aur.archlinux.org/packages/boop-gtk-bin/"><code>boop-gtk-bin</code></a> (thanks to hvksmr1996) |
+|  | Snap Store | <a href="https://snapcraft.io/boop-gtk"><img src="https://snapcraft.io/static/images/badges/en/snap-store-black.svg" alt="Get it from the Snap Store"></a> |
+|  | Flathub | <a href="https://flathub.org/apps/details/uk.co.mrbenshef.Boop-GTK"><img width='190' alt='Download on Flathub' src='https://flathub.org/assets/badges/flathub-badge-en.png'></a> |
+| Windows | Installer | <a href="https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.windows.msi">boop-gtk.windows.msi</a> |
+| MacOS | Binary | You should really use <a href="https://github.com/IvanMathy/Boop">Boop</a>, but if you <i>really</i> want to: <a href="https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.macos">boop-gtk.macos</a> |
 
 ### Building
 
