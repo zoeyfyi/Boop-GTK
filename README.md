@@ -61,6 +61,10 @@ Boop-GTK is easy to use: open it, paste some text, run some scripts, optionally 
 - [Converting Node Modules](https://github.com/IvanMathy/Boop/blob/main/Boop/Documentation/ConvertingNodeModules.md)
 - [Global Scripts](docs/GlobalScripts.md) (unique to Boop-GTK)
 
+### Additional Scripts
+
+More scripts can be found in the [Boop repo](https://github.com/IvanMathy/Boop/tree/main/Scripts).
+
 ### Building
 
 #### Linux
