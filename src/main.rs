@@ -91,12 +91,13 @@ fn main() {
 
     // create user scripts directory
     let scripts_dir: PathBuf = config_dir.join("scripts");
-    let script_error = fs::create_dir_all(&scripts_dir)
+    let mut script_error = fs::create_dir_all(&scripts_dir)
         .map_err(|_| LoadScriptError::FailedToCreateScriptDirectory)
         .map_err(ScriptError::LoadError)
         .err();
 
-    let scripts = ScriptMap::new();
+    let (scripts, err) = ScriptMap::new();
+    script_error = script_error.or(err.map(ScriptError::LoadError));
 
     // watch scripts folder for changes
     let scripts = Arc::new(RwLock::new(scripts));

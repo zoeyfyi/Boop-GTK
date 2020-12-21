@@ -22,7 +22,7 @@ pub(crate) struct ScriptMap(pub BTreeMap<String, Script>);
 pub(crate) struct Scripts;
 
 impl ScriptMap {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new() -> (Self, Option<LoadScriptError>) {
         let mut scripts = ScriptMap(BTreeMap::new());
 
         scripts.load_internal();
@@ -37,12 +37,12 @@ impl ScriptMap {
             match env_var {
                 Some(dirs) => {
                     // $XDG_CONFIG_DIRS is a ":" seperated list of directories
-                    for dir in dirs.split(":") {
+                    for dir in dirs.split(':') {
                         let path_str = format!("{}/boop-gtk/scripts", dir);
                         let path = Path::new(&path_str);
                         if std::fs::read_dir(path).is_ok() {
                             // load scripts (overrides any internal scripts)
-                            scripts.load_path(path);
+                            scripts.load_path(path).ok();
                         }
                     }
                 }
@@ -52,16 +52,16 @@ impl ScriptMap {
                     // https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
                     let path = Path::new("/etc/xdg/boop-gtk/scripts");
                     if std::fs::read_dir(path).is_ok() {
-                        scripts.load_path(path);
+                        scripts.load_path(path).ok();
                     }
                 }
             }
         }
 
         // load user scripts overriding internal and global scripts
-        scripts.load_path(&ScriptMap::user_scripts_dir());
+        let load_err = scripts.load_path(&ScriptMap::user_scripts_dir());
 
-        scripts
+        (scripts, load_err.err())
     }
 
     fn user_scripts_dir() -> PathBuf {
