@@ -55,6 +55,7 @@ directories = "3.0"
 notify = "5.0.0-pre.4"
 # Misc utils
 lazy_static = "1.4.0"
+once_cell = "1.5.2"
 rust-embed = { version = "5.7.0", features = ["debug-embed"] }
 dirty2 = "0.1.0"
 simple-error = "0.2"
