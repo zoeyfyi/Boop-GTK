@@ -129,7 +129,17 @@ impl ScriptMap {
                         let mut scripts = scripts.write().expect("script lock is poisoned");
 
                         // remove script
-                        scripts.0.drain_filter(|_, script| script.path == file);
+                        // TODO: replace with drain_filter when stabalized
+                        let mut matched = None;
+                        for (name, script) in scripts.0.iter() {
+                            if script.path == file {
+                                matched = Some(name.clone());
+                            }
+                        }
+                        if let Some(name) = matched {
+                            scripts.0.remove(&name);
+                        }
+                        // scripts.0.drain_filter(|_, script| script.path == file);
 
                         if !file.exists() {
                             // file was deleted

@@ -1,6 +1,5 @@
 #![forbid(unsafe_code)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // don't spawn command line on windows
-#![feature(btree_drain_filter)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -77,8 +76,6 @@ fn extract_language_file() {
         .expect("Failed to write language file");
     info!("language file written at: {}", lang_file_path.display());
 }
-
-// fn watch_scripts_folder(scripts: Arc<RwLock<Vec<Script>>>) {}
 
 fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
