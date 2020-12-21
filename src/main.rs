@@ -8,10 +8,10 @@ extern crate shrinkwraprs;
 #[macro_use]
 extern crate log;
 
-mod executor;
-mod script;
 mod app;
 mod command_pallete;
+mod executor;
+mod script;
 mod scripts;
 
 use gio::prelude::*;
