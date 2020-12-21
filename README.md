@@ -50,6 +50,17 @@ There is also a quick demo on [youtube](https://youtu.be/WXDTsJ4cqO4).
 | Windows | Installer | <a href="https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.windows.msi">boop-gtk.windows.msi</a> |
 | MacOS | Binary | You should really use <a href="https://github.com/IvanMathy/Boop">Boop</a>, but if you <i>really</i> want to: <a href="https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.macos">boop-gtk.macos</a> |
 
+### Usage
+
+More documentation can be found in [Boop's docs](https://github.com/IvanMathy/Boop/blob/main/Boop/Documentation/Readme.md).
+
+Boop-GTK is easy to use: open it, paste some text, run some scripts, optionally copy the text out.
+
+- [Custom Scripts](https://github.com/IvanMathy/Boop/blob/main/Boop/Documentation/CustomScripts.md)
+- [Modules](https://github.com/IvanMathy/Boop/blob/main/Boop/Documentation/Modules.md)
+- [Converting Node Modules](https://github.com/IvanMathy/Boop/blob/main/Boop/Documentation/ConvertingNodeModules.md)
+- [Global Scripts](docs/GlobalScripts.md) (unique to Boop-GTK)
+
 ### Building
 
 #### Linux
