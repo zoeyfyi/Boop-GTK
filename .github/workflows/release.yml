@@ -66,7 +66,7 @@ jobs:
       run: C:\msys64\usr\bin\bash.exe -lc "pacman -Rs --noconfirm mingw-w64-x86_64-cmake"
     - name: Windows dependencies (msys)
       if: runner.os == 'windows'
-      run: C:\msys64\usr\bin\bash.exe -lc "pacman -Syy --noconfirm mingw-w64-x86_64-pkg-config"
+      run: C:\msys64\usr\bin\bash.exe -lc "pacman -Syy --noconfirm mingw-w64-x86_64-pkg-config mingw-w64-x86_64-adwaita-icon-theme"
     - name: Windows dependencies (add msys to path)
       if: runner.os == 'windows'
       run: echo "C:\msys64\mingw64\bin" >> $GITHUB_PATH
