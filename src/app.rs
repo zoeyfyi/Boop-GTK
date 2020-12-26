@@ -60,11 +60,7 @@ impl App {
         };
 
         app.header_button.set_label(HEADER_BUTTON_GET_STARTED);
-        app.about_dialog.set_logo(
-            gdk_pixbuf::Pixbuf::from_resource("/fyi/zoey/Boop-GTK/boop-gtk.png")
-                .ok()
-                .as_ref(),
-        );
+
         app.widgets
             .about_dialog
             .set_version(Some(env!("CARGO_PKG_VERSION")));
