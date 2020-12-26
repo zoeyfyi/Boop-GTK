@@ -15,7 +15,8 @@ mod script;
 mod scripts;
 
 use gio::prelude::*;
-use gtk::{prelude::*, Application};
+use glib;
+use gtk::{prelude::*, Application, Window};
 use scripts::{LoadScriptError, ScriptMap};
 
 use std::{fmt, path::PathBuf};
@@ -87,6 +88,8 @@ fn main() {
 
     extract_language_file();
 
+    glib::set_application_name("Boop-GTK");
+
     let config_dir = PROJECT_DIRS.config_dir().to_path_buf();
 
     // create user scripts directory
@@ -125,6 +128,8 @@ fn main() {
         // add embedeed icons to theme
         let icon_theme = gtk::IconTheme::get_default().expect("failed to get default icon theme");
         icon_theme.add_resource_path("/fyi/zoey/Boop-GTK/icons");
+
+        Window::set_default_icon_name("fyi.zoey.Boop-GTK");
 
         let app = App::new(&config_dir, scripts.clone());
         app.set_application(Some(application));
