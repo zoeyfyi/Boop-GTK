@@ -5,6 +5,6 @@ Type=Application
 Exec=boop-gtk
 Terminal=false
 Categories=Utility;GTK;
-Keywords=GTK;Tools;
+Keywords=GTK;Tools;format;lint;
 Icon=uk.co.mrbenshef.Boop-GTK
 StartupNotify=true
