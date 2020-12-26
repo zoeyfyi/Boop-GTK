@@ -1,7 +1,7 @@
 name: boop-gtk
 title: Boop-GTK
 version: '1.5.0'
-icon: snap/gui/boop-gtk.svg
+icon: data/fyi.zoey.Boop-GTK.svg
 summary: Port of IvanMathy's Boop to GTK, a scriptable scratchpad for developers.
 description: |
   Paste text, transform it (with user extendible javascipt), move on. Stop pasting sensitive infomation into sketchy sites to format JSON, compute a hash, etc.
@@ -17,6 +17,11 @@ parts:
   boop-gtk:
     plugin: rust
     source: .
+    override-build: |
+      snapcraftctl build
+      mkdir -p $SNAPCRAFT_PART_INSTALL/meta/gui/
+      cp data/fyi.zoey.Boop-GTK.svg $SNAPCRAFT_PART_INSTALL/meta/gui/
+      cp data/fyi.zoey.Boop-GTK.desktop $SNAPCRAFT_PART_INSTALL/meta/gui/
 
 slots:
   dbus-daemon:
