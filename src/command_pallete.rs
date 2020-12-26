@@ -60,10 +60,9 @@ pub struct CommandPalleteDialog {
 
 impl CommandPalleteDialog {
     pub(crate) fn new<P: IsA<Window>>(window: &P, scripts: Arc<RwLock<ScriptMap>>) -> Self {
-        let widgets = CommandPalleteDialogWidgets::from_resource(
-            "/co/uk/mrbenshef/Boop-GTK/command-pallete.glade",
-        )
-        .unwrap_or_else(|e| panic!("failed to load command-pallete.glade: {}", e));
+        let widgets =
+            CommandPalleteDialogWidgets::from_resource("/fyi/zoey/Boop-GTK/command-pallete.glade")
+                .unwrap_or_else(|e| panic!("failed to load command-pallete.glade: {}", e));
 
         let command_pallete_dialog = CommandPalleteDialog {
             widgets,

@@ -3,7 +3,7 @@ use std::{env, fs, io, path::Path, process::Command};
 
 const XML_HEADER: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 <gresources>
-    <gresource prefix="/co/uk/mrbenshef/Boop-GTK">
+    <gresource prefix="/fyi/zoey/Boop-GTK">
 "#;
 
 const XML_FOOTER: &str = r#"    </gresource>

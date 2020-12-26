@@ -8,8 +8,8 @@
     <property name="type_hint">dialog</property>
     <property name="program_name">Boop-GTK</property>
     <property name="copyright" translatable="yes">Copyright 2020 Zoey Sheffield</property>
-    <property name="website">https://boop-gtk.mrbenshef.co.uk</property>
-    <property name="website_label" translatable="yes">boop-gtk.mrbenshef.co.uk</property>
+    <property name="website">https://boop-gtk.zoey.fyi</property>
+    <property name="website_label" translatable="yes">boop-gtk.zoey.fyi</property>
     <property name="authors">Zoey Sheffield</property>
     <property name="logo_icon_name">image-missing</property>
     <property name="license_type">mit-x11</property>

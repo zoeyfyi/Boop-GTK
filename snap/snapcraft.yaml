@@ -22,7 +22,7 @@ slots:
   dbus-daemon:
     interface: dbus
     bus: session
-    name: uk.co.mrbenshef.Boop-GTK
+    name: fyi.zoey.Boop-GTK
 
 apps:
   boop-gtk:
@@ -35,4 +35,4 @@ apps:
     - unity7
     slots:
     - dbus-daemon
-    common-id: uk.co.mrbenshef.Boop-GTK
+    common-id: fyi.zoey.Boop-GTK

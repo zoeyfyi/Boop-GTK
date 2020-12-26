@@ -111,7 +111,7 @@ fn main() {
     // needed on windows
     sourceview::View::static_type();
 
-    let application = Application::new(Some("uk.co.mrbenshef.Boop-GTK"), Default::default())
+    let application = Application::new(Some("fyi.zoey.Boop-GTK"), Default::default())
         .expect("failed to initialize GTK application");
 
     application.connect_activate(move |application| {
@@ -124,7 +124,7 @@ fn main() {
 
         // add embedeed icons to theme
         let icon_theme = gtk::IconTheme::get_default().expect("failed to get default icon theme");
-        icon_theme.add_resource_path("/co/uk/mrbenshef/Boop-GTK/icons");
+        icon_theme.add_resource_path("/fyi/zoey/Boop-GTK/icons");
 
         let app = App::new(&config_dir, scripts.clone());
         app.set_application(Some(application));
