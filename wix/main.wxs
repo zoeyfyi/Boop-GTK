@@ -31,12 +31,12 @@
 
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
 
-  <Product Id='*' Name='Boop-GTK' UpgradeCode='43E49225-F99B-4F1E-A901-A7820F399B1E' Manufacturer='Ben Sheffield' Language='1033' Codepage='1252' Version='$(var.Version)'>
+  <Product Id='*' Name='Boop-GTK' UpgradeCode='43E49225-F99B-4F1E-A901-A7820F399B1E' Manufacturer='Zoey Sheffield' Language='1033' Codepage='1252' Version='$(var.Version)'>
 
     <Package Id='*' Keywords='Installer' Description='A scriptable scratchpad for developers
 
 Port of @IvanMathy&#39;s Boop to GTK
-' Manufacturer='Ben Sheffield' InstallerVersion='450' Languages='1033' Compressed='yes' InstallScope='perMachine' SummaryCodepage='1252' Platform='$(var.Platform)'/>
+' Manufacturer='Zoey Sheffield' InstallerVersion='450' Languages='1033' Compressed='yes' InstallScope='perMachine' SummaryCodepage='1252' Platform='$(var.Platform)'/>
 
     <MajorUpgrade Schedule='afterInstallInitialize' DowngradeErrorMessage='A newer version of [ProductName] is already installed. Setup will now exit.'/>
 
@@ -427,7 +427,7 @@ Port of @IvanMathy&#39;s Boop to GTK
     <!--<Icon Id='ProductICO' SourceFile='wix\Product.ico'/>-->
     <!--<Property Id='ARPPRODUCTICON' Value='ProductICO' />-->
 
-    <Property Id='ARPHELPLINK' Value='https://boop-gtk.mrbenshef.co.uk'/>
+    <Property Id='ARPHELPLINK' Value='https://boop-gtk.zoey.fyi'/>
     <Property Id="ARPPRODUCTICON" Value="AppIcon" />
 
     <UI>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>uk.co.mrbenshef.Boop-GTK</id>
+  <id>fyi.zoey.Boop-GTK</id>
   <metadata_license>CC0</metadata_license>
   <project_license>MIT</project_license>
   <name>Boop-GTK</name>
@@ -10,11 +10,11 @@
   </description>
   <screenshots>
     <screenshot type="default">
-      <image>https://raw.githubusercontent.com/mrbenshef/Boop-GTK/trunk/screenshot.png</image>
+      <image>https://raw.githubusercontent.com/zoeyfyi/Boop-GTK/trunk/screenshot.png</image>
       <caption>Main Window</caption>
     </screenshot>
   </screenshots>
-  <url type="homepage">https://boop-gtk.mrbenshef.co.uk/</url>
+  <url type="homepage">https://boop-gtk.zoey.fyi/</url>
   <content_rating type="oars-1.0" />
   <releases>
     <release version="1.5.0" date="2020-10-27">
@@ -121,8 +121,11 @@
     <kudo>ModernToolkit</kudo>
     <kudo>HiDpiIcon</kudo>
   </kudos>
-  <developer_name>Ben Sheffield</developer_name>
-  <update_contact>me@mrbenshef.co.uk</update_contact>
-
-  <launchable type="desktop-id">uk.co.mrbenshef.Boop-GTK.desktop</launchable>
+  <developer_name>Zoey Sheffield</developer_name>
+  <update_contact>me@zoey.fyi</update_contact>
+  <provides>
+    <!-- Rename ✨ magic ✨ -->
+    <id>uk.co.mrbenshef.Boop-GTK</id>
+  </provides>
+  <launchable type="desktop-id">fyi.zoey.Boop-GTK.desktop</launchable>
 </component>

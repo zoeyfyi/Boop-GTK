@@ -194,9 +194,9 @@ jobs:
     - name: Generate sources
       run: sudo bash flatpak/gen-sources.sh
     - name: Flatpak
-      run: sudo flatpak-builder --repo=repo build-dir flatpak/uk.co.mrbenshef.Boop-GTK.json
+      run: sudo flatpak-builder --repo=repo build-dir flatpak/fyi.zoey.Boop-GTK.json
     - name: Flatpak build bundle
-      run: flatpak build-bundle ./repo boop-gtk.flatpak uk.co.mrbenshef.Boop-GTK
+      run: flatpak build-bundle ./repo boop-gtk.flatpak fyi.zoey.Boop-GTK
     - uses: actions/upload-artifact@v2.2.1
       with:
         name: boop-gtk.flatpak
