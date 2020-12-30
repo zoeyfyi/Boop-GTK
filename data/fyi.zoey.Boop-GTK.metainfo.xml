@@ -17,7 +17,7 @@
   <url type="homepage">https://boop-gtk.zoey.fyi/</url>
   <content_rating type="oars-1.0" />
   <releases>
-    <release version="1.6.0" date="2020-10-27">
+    <release version="1.6.0" date="2020-12-30">
       <description>
         <ul>
           <li>Scripts are also loaded from $XDG_CONFIG_DIRS/boop-gtk/scripts</li>
