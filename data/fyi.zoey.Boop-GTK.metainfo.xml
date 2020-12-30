@@ -22,6 +22,7 @@
         <ul>
           <li>Scripts are also loaded from $XDG_CONFIG_DIRS/boop-gtk/scripts</li>
           <li>Built-in scripts can be overridden by using the same name as the script that is to be overridden</li>
+          <li>App ID changed to fyi.zoey.Boop-GTK</li>
         </ul>
       </description>
     </release>
