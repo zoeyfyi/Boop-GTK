@@ -2,15 +2,15 @@
 name = "boop-gtk"
 build = "build.rs"
 version = "1.5.0"
-authors = ["Ben Sheffield"]
+authors = ["Zoey Sheffield"]
 edition = "2018"
 description = """A scriptable scratchpad for developers
 
 Port of @IvanMathy's Boop to GTK
 """
 license = "MIT"
-homepage = "https://boop-gtk.mrbenshef.co.uk"
-repository = "https://github.com/mrbenshef/boop-gtk/"
+homepage = "https://boop-gtk.zoey.fyi"
+repository = "https://github.com/zoeyfyi/boop-gtk/"
 keywords = ["gtk", "text-editor", "editor", "linux", "javascript"]
 categories = ["text-editors"]
 exclude = [
