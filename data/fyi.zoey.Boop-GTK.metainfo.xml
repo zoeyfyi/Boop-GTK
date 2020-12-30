@@ -17,6 +17,15 @@
   <url type="homepage">https://boop-gtk.zoey.fyi/</url>
   <content_rating type="oars-1.0" />
   <releases>
+    <release version="1.6.0" date="2020-10-27">
+      <description>
+        <ul>
+          <li>Scripts are also loaded from $XDG_CONFIG_DIRS/boop-gtk/scripts</li>
+          <li>Built-in scripts can be overridden by using the same name as the script that is to be overridden</li>
+          <li>App ID changed to fyi.zoey.Boop-GTK</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.5.0" date="2020-10-27">
       <description>
         <ul>

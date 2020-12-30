@@ -1,7 +1,7 @@
 [package]
 name = "boop-gtk"
 build = "build.rs"
-version = "1.5.0"
+version = "1.6.0"
 authors = ["Zoey Sheffield"]
 edition = "2018"
 description = """A scriptable scratchpad for developers
@@ -60,6 +60,7 @@ rust-embed = { version = "5.7.0", features = ["debug-embed"] }
 dirty2 = "0.1.0"
 simple-error = "0.2"
 crossbeam = "0.8.0"
+fs_extra = "1.2.0"
 
 [dependencies.gtk]
 version = "0.9"

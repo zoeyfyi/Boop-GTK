@@ -7,6 +7,7 @@ extern crate lazy_static;
 extern crate shrinkwraprs;
 #[macro_use]
 extern crate log;
+extern crate fs_extra;
 
 mod app;
 mod command_pallete;
@@ -19,6 +20,7 @@ use glib;
 use gtk::{prelude::*, Application, Window};
 use scripts::{LoadScriptError, ScriptMap};
 
+use fs_extra::dir::move_dir;
 use std::{fmt, path::PathBuf};
 
 use app::{App, NOTIFICATION_LONG_DELAY};
@@ -34,7 +36,7 @@ use std::{
 
 lazy_static! {
     static ref PROJECT_DIRS: directories::ProjectDirs =
-        ProjectDirs::from("uk.co", "mrbenshef", "boop-gtk")
+        ProjectDirs::from("fyi", "zoey", "boop-gtk")
             .expect("Unable to find a configuration location for your platform");
 }
 
@@ -78,8 +80,51 @@ fn extract_language_file() {
     info!("language file written at: {}", lang_file_path.display());
 }
 
+fn upgrade_config_files() -> Result<bool, fs_extra::error::Error> {
+    let old_project_dirs: directories::ProjectDirs =
+        ProjectDirs::from("uk.co", "mrbenshef", "boop-gtk")
+            .expect("Unable to find a configuration location for your platform");
+
+    if !old_project_dirs.config_dir().exists() {
+        return Ok(false);
+    }
+
+    if old_project_dirs.config_dir() == PROJECT_DIRS.config_dir() {
+        debug!("old project path same as new project path, skipping upgrade");
+        return Ok(false); // config dirs are the same on this platform
+    }
+
+    if PROJECT_DIRS.config_dir().exists() {
+        warn!(
+            "old and new config files exists, old: {}, new: {}",
+            old_project_dirs.config_dir().display(),
+            PROJECT_DIRS.config_dir().display()
+        );
+        return Ok(false); // just use new config files
+    }
+
+    move_dir(old_project_dirs.config_dir(), PROJECT_DIRS.config_dir(), &{
+        let mut options = fs_extra::dir::CopyOptions::new();
+        options.copy_inside = true;
+        options.overwrite = false;
+        options
+    })
+    .map(|_| true)
+}
+
 fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+
+    match upgrade_config_files() {
+        Ok(true) => {
+            info!(
+                "old config files moved to {}",
+                PROJECT_DIRS.config_dir().display()
+            );
+        }
+        Ok(false) => (),
+        Err(err) => panic!("failed to move config files to new location: {}", err),
+    }
 
     debug!(
         "found {} pixbuf loaders",
