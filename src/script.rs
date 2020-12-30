@@ -231,7 +231,7 @@ mod tests {
                     \"api\":1,
                     \"name\":\"Counter\",
                     \"description\":\"Counts up\",
-                    \"author\":\"Ben\",
+                    \"author\":\"Zoey\",
                     \"icon\":\"html\",
                     \"tags\":\"count\"
                 }
@@ -267,7 +267,7 @@ mod tests {
                     "api": 1,
                     "name": "Test",
                     "description": "Test script",
-                    "author": "Ben",
+                    "author": "Zoey",
                     "icon": "html",
                     "tags": "test"
                 }

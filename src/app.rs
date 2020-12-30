@@ -53,18 +53,14 @@ pub struct App {
 impl App {
     pub(crate) fn new(config_dir: &Path, scripts: Arc<RwLock<ScriptMap>>) -> Self {
         let app = App {
-            widgets: AppWidgets::from_resource("/co/uk/mrbenshef/Boop-GTK/boop-gtk.glade")
+            widgets: AppWidgets::from_resource("/fyi/zoey/Boop-GTK/boop-gtk.glade")
                 .unwrap_or_else(|e| panic!("failed to load boop-gtk.glade: {}", e)),
             scripts,
             notification_source_id: Arc::new(RwLock::new(None)), // SourceId doesnt implement clone, so must be seperate from AppState
         };
 
         app.header_button.set_label(HEADER_BUTTON_GET_STARTED);
-        app.about_dialog.set_logo(
-            gdk_pixbuf::Pixbuf::from_resource("/co/uk/mrbenshef/Boop-GTK/boop-gtk.png")
-                .ok()
-                .as_ref(),
-        );
+
         app.widgets
             .about_dialog
             .set_version(Some(env!("CARGO_PKG_VERSION")));

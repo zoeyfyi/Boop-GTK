@@ -11,11 +11,11 @@
 <h2 align="center">A scriptable scratchpad for developers</h2>
 <p align="center">Port of <a href="https://github.com/IvanMathy"><b>@IvanMathy</b></a>'s <a href="https://github.com/IvanMathy/Boop">Boop</a> to GTK</p>
 
-![Continuous integration](https://github.com/mrbenshef/Boop-GTK/workflows/Continuous%20integration/badge.svg)
-![Release](https://github.com/mrbenshef/Boop-GTK/workflows/Release/badge.svg?branch=release)
+![Continuous integration](https://github.com/zoeyfyi/Boop-GTK/workflows/Continuous%20integration/badge.svg)
+![Release](https://github.com/zoeyfyi/Boop-GTK/workflows/Release/badge.svg?branch=release)
 [![Crates.io](https://img.shields.io/crates/v/boop-gtk)](https://crates.io/crates/boop-gtk)
 [![boop-gtk](https://snapcraft.io//boop-gtk/badge.svg)](https://snapcraft.io/boop-gtk)
-[![Flathub](https://img.shields.io/flathub/v/uk.co.mrbenshef.Boop-GTK)](https://flathub.org/apps/details/uk.co.mrbenshef.Boop-GTK)
+[![Flathub](https://img.shields.io/flathub/v/fyi.zoey.Boop-GTK)](https://flathub.org/apps/details/fyi.zoey.Boop-GTK)
 
 ### What is Boop-GTK?
 
@@ -41,14 +41,14 @@ There is also a quick demo on [youtube](https://youtu.be/WXDTsJ4cqO4).
 
 | Platform | Format | Link |
 | -------- | ------ | ---- |
-| Linux | Binary | <a href="https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.linux.amd64">boop-gtk.linux.amd64</a> |
-| | Flatpak | <a href="https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.flatpak">boop-gtk.flatpak</a> |
-|  | Snap | <a href="https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.snap">boop-gtk.snap</a> |
+| Linux | Binary | <a href="https://github.com/zoeyfyi/Boop-GTK/releases/latest/download/boop-gtk.linux.amd64">boop-gtk.linux.amd64</a> |
+| | Flatpak | <a href="https://github.com/zoeyfyi/Boop-GTK/releases/latest/download/boop-gtk.flatpak">boop-gtk.flatpak</a> |
+|  | Snap | <a href="https://github.com/zoeyfyi/Boop-GTK/releases/latest/download/boop-gtk.snap">boop-gtk.snap</a> |
 |  | AUR | <a href="https://aur.archlinux.org/packages/boop-gtk/"><code>boop-gtk</code></a> (thanks to qcasey), <a href="https://aur.archlinux.org/packages/boop-gtk-bin/"><code>boop-gtk-bin</code></a> (thanks to hvksmr1996) |
 |  | Snap Store | <a href="https://snapcraft.io/boop-gtk"><img src="https://snapcraft.io/static/images/badges/en/snap-store-black.svg" alt="Get it from the Snap Store"></a> |
-|  | Flathub | <a href="https://flathub.org/apps/details/uk.co.mrbenshef.Boop-GTK"><img width='190' alt='Download on Flathub' src='https://flathub.org/assets/badges/flathub-badge-en.png'></a> |
-| Windows | Installer | <a href="https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.windows.msi">boop-gtk.windows.msi</a> |
-| MacOS | Binary | You should really use <a href="https://github.com/IvanMathy/Boop">Boop</a>, but if you <i>really</i> want to: <a href="https://github.com/mrbenshef/Boop-GTK/releases/latest/download/boop-gtk.macos">boop-gtk.macos</a> |
+|  | Flathub | <a href="https://flathub.org/apps/details/fyi.zoey.Boop-GTK"><img width='190' alt='Download on Flathub' src='https://flathub.org/assets/badges/flathub-badge-en.png'></a> |
+| Windows | Installer | <a href="https://github.com/zoeyfyi/Boop-GTK/releases/latest/download/boop-gtk.windows.msi">boop-gtk.windows.msi</a> |
+| MacOS | Binary | You should really use <a href="https://github.com/IvanMathy/Boop">Boop</a>, but if you <i>really</i> want to: <a href="https://github.com/zoeyfyi/Boop-GTK/releases/latest/download/boop-gtk.macos">boop-gtk.macos</a> |
 
 ### Usage
 
@@ -93,8 +93,8 @@ sudo flatpak install -y flathub org.freedesktop.Platform//20.08 org.freedesktop.
 wget https://github.com/flatpak/flatpak-builder/releases/download/1.0.10/flatpak-builder-1.0.10.tar.xz && tar -xvf flatpak-builder-1.0.10.tar.xz && cd flatpak-builder-1.0.10 && ./configure --disable-documentation && make && sudo make install
 sudo apt-get install python3-toml
 bash flatpak/gen-sources.sh
-flatpak-builder --repo=repo build-dir flatpak/uk.co.mrbenshef.Boop-GTK.json
-flatpak build-bundle ./repo boop-gtk.flatpak uk.co.mrbenshef.Boop-GTK
+flatpak-builder --repo=repo build-dir flatpak/fyi.zoey.Boop-GTK.json
+flatpak build-bundle ./repo boop-gtk.flatpak fyi.zoey.Boop-GTK
 ```
 
 #### MacOS
