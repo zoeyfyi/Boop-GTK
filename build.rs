@@ -3,7 +3,7 @@ use std::{env, fs, io, path::Path, process::Command};
 
 const XML_HEADER: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 <gresources>
-    <gresource prefix="/co/uk/mrbenshef/Boop-GTK">
+    <gresource prefix="/fyi/zoey/Boop-GTK">
 "#;
 
 const XML_FOOTER: &str = r#"    </gresource>
@@ -18,7 +18,7 @@ fn add_files(xml: &mut String, folder: &str) {
             continue;
         }
 
-        if path.file_type().unwrap().is_file() {
+        if path.path().is_file() {
             xml.push_str(&format!(
                 "\t\t<file>{}</file>\n",
                 path.path()
@@ -27,7 +27,7 @@ fn add_files(xml: &mut String, folder: &str) {
                     .replace("\\", "/")
                     .trim_start_matches("resources/")
             ));
-        } else if path.file_type().unwrap().is_dir() {
+        } else if path.path().is_dir() {
             add_files(xml, &path.path().display().to_string());
         } else {
             panic!("expected file or folder");
@@ -63,11 +63,13 @@ fn main() {
     let mut file = fs::File::create(resource_xml).unwrap();
     file.write_all(xml.as_bytes()).unwrap();
 
-    let mut cmd = if cfg!(target_os = "windows") {
-        Command::new("glib-compile-resources.exe")
+    let mut cmd = Command::new(if let Ok(path) = env::var("GLIB_COMPILE_RESOURCES") {
+        path
+    } else if cfg!(target_os = "window") {
+        "glib-compile-resources.exe".to_owned()
     } else {
-        Command::new("glib-compile-resources")
-    };
+        "glib-compile-resources".to_owned()
+    });
 
     cmd.arg("resources.xml")
         .current_dir(resources)

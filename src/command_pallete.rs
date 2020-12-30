@@ -4,29 +4,37 @@ use gio::prelude::*;
 use gladis::Gladis;
 use gtk::prelude::*;
 use gtk::{Dialog, Entry, TreePath, TreeView, Window};
+use once_cell::unsync::OnceCell;
 use shrinkwraprs::Shrinkwrap;
 
-use crate::script::Script;
+use crate::{script::Script, scripts::ScriptMap};
 use glib::Type;
 use std::{
     collections::HashMap,
+    rc::Rc,
     sync::{Arc, RwLock},
 };
 
 const ICON_COLUMN: u32 = 0;
 const TEXT_COLUMN: u32 = 1;
-const ID_COLUMN: u32 = 2;
+const NAME_COLUMN: u32 = 2;
 const SCORE_COLUMN: u32 = 3;
 const VISIBLE_COLUMN: u32 = 4;
 
 const COLUMNS: [u32; 5] = [
     ICON_COLUMN,
     TEXT_COLUMN,
-    ID_COLUMN,
+    NAME_COLUMN,
     SCORE_COLUMN,
     VISIBLE_COLUMN,
 ];
-const COLUMN_TYPES: [Type; 5] = [Type::String, Type::String, Type::U64, Type::F64, Type::Bool];
+const COLUMN_TYPES: [Type; 5] = [
+    Type::String,
+    Type::String,
+    Type::String,
+    Type::F64,
+    Type::Bool,
+];
 
 const DIALOG_WIDTH: i32 = 300;
 const ICON_COLUMN_PADDING: i32 = 8;
@@ -46,19 +54,20 @@ pub struct CommandPalleteDialog {
     #[shrinkwrap(main_field)]
     widgets: CommandPalleteDialogWidgets,
 
-    scripts: Arc<RwLock<Vec<Script>>>,
+    scripts: Arc<RwLock<ScriptMap>>,
+    selected_script: Rc<OnceCell<String>>,
 }
 
 impl CommandPalleteDialog {
-    pub fn new<P: IsA<Window>>(window: &P, scripts: Arc<RwLock<Vec<Script>>>) -> Self {
-        let widgets = CommandPalleteDialogWidgets::from_resource(
-            "/co/uk/mrbenshef/Boop-GTK/command-pallete.glade",
-        )
-        .unwrap_or_else(|e| panic!("failed to load command-pallete.glade: {}", e));
+    pub(crate) fn new<P: IsA<Window>>(window: &P, scripts: Arc<RwLock<ScriptMap>>) -> Self {
+        let widgets =
+            CommandPalleteDialogWidgets::from_resource("/fyi/zoey/Boop-GTK/command-pallete.glade")
+                .unwrap_or_else(|e| panic!("failed to load command-pallete.glade: {}", e));
 
         let command_pallete_dialog = CommandPalleteDialog {
             widgets,
             scripts: scripts.clone(),
+            selected_script: Rc::new(OnceCell::new()),
         };
 
         command_pallete_dialog.set_transient_for(Some(window));
@@ -109,7 +118,7 @@ impl CommandPalleteDialog {
 
             #[cfg(debug_assertions)]
             {
-                for c in &[ID_COLUMN, SCORE_COLUMN] {
+                for c in &[NAME_COLUMN, SCORE_COLUMN] {
                     let renderer = gtk::CellRendererText::new();
 
                     let column = gtk::TreeViewColumn::new();
@@ -122,9 +131,10 @@ impl CommandPalleteDialog {
                 }
             }
 
-            for (index, script) in scripts
+            for (index, (name, script)) in scripts
                 .read()
                 .expect("scripts lock is poisoned")
+                .0
                 .iter()
                 .enumerate()
             {
@@ -138,13 +148,8 @@ impl CommandPalleteDialog {
                     script.metadata.description.to_string()
                 );
 
-                let values: [&dyn ToValue; 5] = [
-                    &icon_name,
-                    &entry_text,
-                    &(index as u64),
-                    &(-(index as i64)),
-                    &true,
-                ];
+                let values: [&dyn ToValue; 5] =
+                    [&icon_name, &entry_text, &name, &(-(index as i64)), &true];
                 store.set(&store.append(), &COLUMNS, &values);
             }
 
@@ -164,24 +169,45 @@ impl CommandPalleteDialog {
         command_pallete_dialog
     }
 
-    fn register_handlers(&self) {
-        let lb = self.dialog_tree_view.clone();
-        let dialog = self.dialog.clone();
-        self.dialog.connect_key_press_event(move |_, k| {
-            CommandPalleteDialog::on_key_press(k, &lb, &dialog)
-        });
-
-        let lb = self.dialog_tree_view.clone();
-        let scripts = self.scripts.clone();
-        self.search_bar
-            .connect_changed(move |s| CommandPalleteDialog::on_changed(s, &lb, scripts.clone()));
-
-        let dialog = self.dialog.clone();
-        self.dialog_tree_view
-            .connect_row_activated(move |tv, _, _| CommandPalleteDialog::on_click(tv, &dialog));
+    pub(crate) fn get_selected(&self) -> Option<&String> {
+        self.selected_script.get()
     }
 
-    fn on_key_press(key: &EventKey, dialog_tree_view: &TreeView, dialog: &Dialog) -> Inhibit {
+    fn register_handlers(&self) {
+        {
+            let lb = self.dialog_tree_view.clone();
+            let dialog = self.dialog.clone();
+            let selected = self.selected_script.clone();
+
+            self.dialog.connect_key_press_event(move |_, k| {
+                CommandPalleteDialog::on_key_press(k, &lb, &dialog, &selected)
+            });
+        }
+
+        {
+            let lb = self.dialog_tree_view.clone();
+            let scripts = self.scripts.clone();
+            self.search_bar.connect_changed(move |s| {
+                CommandPalleteDialog::on_changed(s, &lb, scripts.clone())
+            });
+        }
+
+        {
+            let dialog = self.dialog.clone();
+            let selected = self.selected_script.clone();
+            self.dialog_tree_view
+                .connect_row_activated(move |tv, _, _| {
+                    CommandPalleteDialog::on_click(tv, &dialog, &selected)
+                });
+        }
+    }
+
+    fn on_key_press(
+        key: &EventKey,
+        dialog_tree_view: &TreeView,
+        dialog: &Dialog,
+        selected: &OnceCell<String>,
+    ) -> Inhibit {
         let model: gtk::TreeModelFilter = dialog_tree_view.get_model().unwrap().downcast().unwrap();
         let result_count: i32 = model.iter_n_children(None);
 
@@ -213,7 +239,7 @@ impl CommandPalleteDialog {
 
             return Inhibit(true);
         } else if key == keys::constants::Return {
-            CommandPalleteDialog::on_click(dialog_tree_view, dialog);
+            CommandPalleteDialog::on_click(dialog_tree_view, dialog, selected);
         } else if key == keys::constants::Escape {
             dialog.close();
         }
@@ -221,7 +247,7 @@ impl CommandPalleteDialog {
         Inhibit(false)
     }
 
-    fn on_click(dialog_tree_view: &TreeView, dialog: &Dialog) {
+    fn on_click(dialog_tree_view: &TreeView, dialog: &Dialog, selected: &OnceCell<String>) {
         let model: gtk::TreeModelFilter = dialog_tree_view.get_model().unwrap().downcast().unwrap();
 
         if let (Some(path), _) = dialog_tree_view.get_cursor() {
@@ -229,67 +255,96 @@ impl CommandPalleteDialog {
                 &model
                     .get_iter(&path)
                     .unwrap_or_else(|| panic!("failed to get iter for path: {:?}", path)),
-                ID_COLUMN as i32,
+                NAME_COLUMN as i32,
             );
-            let v = value
-                .downcast::<u64>()
-                .expect("cannot downcast value to u64")
-                .get_some();
-            dialog.response(gtk::ResponseType::Other(v as u16));
+
+            let value_string = value
+                .downcast::<String>()
+                .expect("cannot downcast value to String")
+                .get();
+
+            if let Some(v) = value_string {
+                debug!("v: {}", v);
+                selected.set(v).unwrap();
+                debug!("selected: {:?}", selected.get());
+            }
+
+            dialog.response(gtk::ResponseType::Accept);
         }
     }
 
-    fn on_changed(
-        searchbar: &Entry,
-        dialog_tree_view: &TreeView,
-        scripts: Arc<RwLock<Vec<Script>>>,
-    ) {
+    fn on_changed(searchbar: &Entry, dialog_tree_view: &TreeView, scripts: Arc<RwLock<ScriptMap>>) {
         let filter_store: gtk::TreeModelFilter =
             dialog_tree_view.get_model().unwrap().downcast().unwrap();
         let store: gtk::ListStore = filter_store.get_model().unwrap().downcast().unwrap();
 
         // stop sorting
         // otherwise updating rows will trigger a sort making iterating over all rows difficult
+        // TODO: is it better to just rebuild the list?
         store.set_unsorted();
 
         let searchbar_text = searchbar.get_text().to_owned();
-
         let script_count = store.iter_n_children(None);
+        let scripts_ref = scripts.read().expect("scripts lock is poisoned");
+        let script_vec = scripts_ref.0.values().collect::<Vec<&Script>>();
 
-        let results: HashMap<usize, f64> = Fuse::default()
-            .search_text_in_fuse_list(
-                &searchbar_text,
-                &*scripts.read().expect("scripts lock is poisoned"),
-            )
-            .into_iter()
-            .map(|result| (result.index, result.score))
-            .collect();
+        if searchbar_text.is_empty() {
+            let script_order: HashMap<String, usize> = scripts_ref
+                .0
+                .iter()
+                .enumerate()
+                .map(|(idx, (name, _))| (name.clone(), idx))
+                .collect();
 
-        for i in 0..script_count {
-            let mut path = gtk::TreePath::new();
-            path.append_index(i);
+            for i in 0..script_count {
+                let mut path = gtk::TreePath::new();
+                path.append_index(i);
 
-            let iter = store
-                .get_iter(&path)
-                .unwrap_or_else(|| panic!("failed to get iter for path: {:?}", path));
+                let iter = store
+                    .get_iter(&path)
+                    .unwrap_or_else(|| panic!("failed to get iter for path: {:?}", path));
 
-            // TODO: use gtk_liststore_item crate
-            let script_id: u64 = store
-                .get_value(&iter, ID_COLUMN as i32)
-                .get()
-                .unwrap()
-                .unwrap();
+                // TODO: use gtk_liststore_item crate
+                let script_name: String = store
+                    .get_value(&iter, NAME_COLUMN as i32)
+                    .get()
+                    .unwrap()
+                    .unwrap();
 
-            let score = if searchbar_text.is_empty() {
-                script_id as f64
-            } else {
-                *results.get(&(script_id as usize)).unwrap_or(&0.0)
-            };
+                let score = script_order[&script_name] as f64;
+                let visible = true;
 
-            let visible = searchbar_text.is_empty() || results.contains_key(&(script_id as usize));
+                let values: [&dyn ToValue; 2] = [&score, &visible];
+                store.set(&iter, &[SCORE_COLUMN, VISIBLE_COLUMN], &values);
+            }
+        } else {
+            let results: HashMap<String, f64> = Fuse::default()
+                .search_text_in_fuse_list(&searchbar_text, &*script_vec)
+                .into_iter()
+                .map(|result| (script_vec[result.index].metadata.name.clone(), result.score))
+                .collect();
 
-            let values: [&dyn ToValue; 2] = [&score, &visible];
-            store.set(&iter, &[SCORE_COLUMN, VISIBLE_COLUMN], &values);
+            for i in 0..script_count {
+                let mut path = gtk::TreePath::new();
+                path.append_index(i);
+
+                let iter = store
+                    .get_iter(&path)
+                    .unwrap_or_else(|| panic!("failed to get iter for path: {:?}", path));
+
+                // TODO: use gtk_liststore_item crate
+                let script_name: String = store
+                    .get_value(&iter, NAME_COLUMN as i32)
+                    .get()
+                    .unwrap()
+                    .unwrap();
+
+                let score = *results.get(&script_name).unwrap_or(&0.0);
+                let visible = results.contains_key(&script_name);
+
+                let values: [&dyn ToValue; 2] = [&score, &visible];
+                store.set(&iter, &[SCORE_COLUMN, VISIBLE_COLUMN], &values);
+            }
         }
 
         // start sorting again

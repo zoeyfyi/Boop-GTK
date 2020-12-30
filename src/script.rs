@@ -54,30 +54,30 @@ impl Fuseable for Metadata {
         return vec![
             FuseProperty {
                 value: "name".to_string(),
-                weight: 0.9,
+                weight: 1.0,
             },
-            FuseProperty {
-                value: "description".to_string(),
-                weight: 0.2,
-            },
-            FuseProperty {
-                value: "tags".to_string(),
-                weight: 0.6,
-            },
+            // FuseProperty {
+            //     value: "description".to_string(),
+            //     weight: 0.2,
+            // },
+            // FuseProperty {
+            //     value: "tags".to_string(),
+            //     weight: 0.6,
+            // },
         ];
     }
 
     fn lookup(&self, key: &str) -> Option<&str> {
         match key {
             "name" => Some(&self.name),
-            "description" => Some(&self.description),
-            "tags" => self.tags.as_deref(),
+            // "description" => Some(&self.description),
+            // "tags" => self.tags.as_deref(),
             _ => None,
         }
     }
 }
 
-impl Fuseable for Script {
+impl Fuseable for &Script {
     fn properties(&self) -> Vec<FuseProperty> {
         self.metadata.properties()
     }
@@ -231,7 +231,7 @@ mod tests {
                     \"api\":1,
                     \"name\":\"Counter\",
                     \"description\":\"Counts up\",
-                    \"author\":\"Ben\",
+                    \"author\":\"Zoey\",
                     \"icon\":\"html\",
                     \"tags\":\"count\"
                 }
@@ -267,7 +267,7 @@ mod tests {
                     "api": 1,
                     "name": "Test",
                     "description": "Test script",
-                    "author": "Ben",
+                    "author": "Zoey",
                     "icon": "html",
                     "tags": "test"
                 }

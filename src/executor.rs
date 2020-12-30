@@ -1,4 +1,4 @@
-use crate::{Scripts, PROJECT_DIRS};
+use crate::{scripts::Scripts, PROJECT_DIRS};
 use dirty2::Dirty;
 use rusty_v8 as v8;
 use simple_error::SimpleError;
