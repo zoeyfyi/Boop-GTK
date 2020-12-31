@@ -9,10 +9,13 @@
 </div>
 
 <h1 align="center">Boop-GTK</h1>
-<h2 align="center">A scriptable scratchpad for developers</h2>
+<h3 align="center">A scriptable scratchpad for developers</h3>
 <p align="center">Port of <a href="https://github.com/IvanMathy"><b>@IvanMathy</b></a>'s <a href="https://github.com/IvanMathy/Boop">Boop</a> to GTK</p>
 
----
+<p align="center">
+  <a href="#what-is-boop-gtk">What is Boop-GTK?</a> • <a href="#features">Features</a> • <a href="#downloads">Downloads</a> • <a href="#screenshots">Screenshots</a> • <a href="#usage">Usage</a> • <a href="#additional-scripts">Additional Sripts</a> • <a href="#building">Building</a>
+</p>
+
 
 </br>
 
@@ -34,15 +37,7 @@ Boop-GTK is a port of Boop to GTK, so users on Linux and Windows can Boop it!
 - 100% script compatibility with [Boop](https://github.com/IvanMathy/Boop)
 - Completely crossplatform!
 
-### Screenshots
-
-| Linux | Windows |
-| :---: | :---: |
-| ![linux](screenshot.png) | ![windows](windows-screenshot.png) |
-
-There is also a quick demo on [youtube](https://youtu.be/WXDTsJ4cqO4).
-
-### Get Boop-GTK
+### Downloads
 
 | Platform | Format | Link |
 | -------- | ------ | ---- |
@@ -54,6 +49,14 @@ There is also a quick demo on [youtube](https://youtu.be/WXDTsJ4cqO4).
 |  | Flathub | <a href="https://flathub.org/apps/details/fyi.zoey.Boop-GTK"><img width='190' alt='Download on Flathub' src='https://flathub.org/assets/badges/flathub-badge-en.png'></a> |
 | Windows | Installer | <a href="https://github.com/zoeyfyi/Boop-GTK/releases/latest/download/boop-gtk.windows.msi">boop-gtk.windows.msi</a> |
 | MacOS | Binary | You should really use <a href="https://github.com/IvanMathy/Boop">Boop</a>, but if you <i>really</i> want to: <a href="https://github.com/zoeyfyi/Boop-GTK/releases/latest/download/boop-gtk.macos">boop-gtk.macos</a> |
+
+### Screenshots
+
+| Linux | Windows |
+| :---: | :---: |
+| ![linux](screenshot.png) | ![windows](windows-screenshot.png) |
+
+There is also a quick demo on [youtube](https://youtu.be/WXDTsJ4cqO4).
 
 ### Usage
 
