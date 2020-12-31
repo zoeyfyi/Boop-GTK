@@ -13,7 +13,7 @@
 <p align="center">Port of <a href="https://github.com/IvanMathy"><b>@IvanMathy</b></a>'s <a href="https://github.com/IvanMathy/Boop">Boop</a> to GTK</p>
 
 <p align="center">
-  <a href="#what-is-boop-gtk">What is Boop-GTK?</a> • <a href="#features">Features</a> • <a href="#downloads">Downloads</a> • <a href="#screenshots">Screenshots</a> • <a href="#usage">Usage</a> • <a href="#additional-scripts">Additional Sripts</a> • <a href="#building">Building</a>
+  <a href="#what-is-boop-gtk">What is Boop-GTK?</a> • <a href="#features">Features</a> • <a href="#downloads">Downloads</a> • <a href="#screenshots">Screenshots</a> • <a href="#usage">Usage</a> • <a href="#additional-scripts">Additional Scripts</a> • <a href="#building">Building</a>
 </p>
 
 
