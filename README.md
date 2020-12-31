@@ -1,15 +1,20 @@
 <p align="center">
-  <a href="https://youtu.be/WXDTsJ4cqO4"><img src="screenshot.png"></a>
+  <a href="https://youtu.be/WXDTsJ4cqO4"><img src="docs/demo.apng"></a>
 </p>
 
 </br>
 
 <div align="center">
-  <img height="80px" src="header.png" >
+  <img width="128px" src="data/fyi.zoey.Boop-GTK.svg" >
 </div>
 
+<h1 align="center">Boop-GTK</h1>
 <h2 align="center">A scriptable scratchpad for developers</h2>
 <p align="center">Port of <a href="https://github.com/IvanMathy"><b>@IvanMathy</b></a>'s <a href="https://github.com/IvanMathy/Boop">Boop</a> to GTK</p>
+
+---
+
+</br>
 
 ![Continuous integration](https://github.com/zoeyfyi/Boop-GTK/workflows/Continuous%20integration/badge.svg)
 ![Release](https://github.com/zoeyfyi/Boop-GTK/workflows/Release/badge.svg?branch=release)
