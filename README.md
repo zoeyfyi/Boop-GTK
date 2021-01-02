@@ -10,7 +10,7 @@
 
 <h1 align="center">Boop-GTK</h1>
 <h3 align="center">A scriptable scratchpad for developers. Port of <a href="https://github.com/IvanMathy"><b>@IvanMathy</b></a>'s <a href="https://github.com/IvanMathy/Boop">Boop</a> to GTK</h3>
-<p align="center"><i>Also checkout <a href="https://github.com/zoeyfyi/TeX-Match">TeX Match</a>: Find LaTeX symbols by sketchingn</i></p>
+<p align="center"><i>Also checkout <a href="https://github.com/zoeyfyi/TeX-Match">TeX Match</a>: Find LaTeX symbols by sketching</i></p>
 
 
 <p align="center">
