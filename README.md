@@ -25,6 +25,8 @@
 [![Crates.io](https://img.shields.io/crates/v/boop-gtk)](https://crates.io/crates/boop-gtk)
 [![boop-gtk](https://snapcraft.io//boop-gtk/badge.svg)](https://snapcraft.io/boop-gtk)
 [![Flathub](https://img.shields.io/flathub/v/fyi.zoey.Boop-GTK)](https://flathub.org/apps/details/fyi.zoey.Boop-GTK)
+![AUR version](https://img.shields.io/aur/version/boop-gtk?label=AUR%20boop-gtk)
+![AUR version](https://img.shields.io/aur/version/boop-gtk-bin?label=AUR%20boop-gtk-bin)
 
 ### What is Boop-GTK?
 
