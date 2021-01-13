@@ -74,7 +74,7 @@ features = ["v2_44"]
 winres = "0.1"
 
 [dev-dependencies]
-tempfile = "3.1.0"
+tempfile = "3.2.0"
 
 [build-dependencies]
 fs_extra = "1.2.0"
