@@ -52,7 +52,7 @@ fuse-rust = "0.1.3"
 # File system
 open = "1.4.0"
 directories = "3.0"
-notify = "5.0.0-pre.4"
+notify = "5.0.0-pre.5"
 # Misc utils
 lazy_static = "1.4.0"
 once_cell = "1.5.2"
