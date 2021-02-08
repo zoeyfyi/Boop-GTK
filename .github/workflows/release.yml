@@ -21,7 +21,7 @@ jobs:
         with:
           rust-version: 1.46.0
       # cache cargo
-      - uses: actions/cache@v2
+      - uses: actions/cache@v2.1.4
         with:
           path: |
             ~/.cargo/registry
@@ -50,7 +50,7 @@ jobs:
         with:
           rust-version: 1.46.0
       # cache cargo
-      - uses: actions/cache@v2
+      - uses: actions/cache@v2.1.4
         with:
           path: |
             ~/.cargo/registry
@@ -71,7 +71,7 @@ jobs:
         if: runner.os == 'windows'
         run: echo "C:\msys64\mingw64\bin" >> $GITHUB_PATH
       - name: Windows dependencies (cache gvsbuild)
-        uses: actions/cache@v2
+        uses: actions/cache@v2.1.4
         id: cache
         with:
           path: release\**
@@ -134,7 +134,7 @@ jobs:
         with:
           rust-version: 1.46.0
       # cache cargo
-      - uses: actions/cache@v2
+      - uses: actions/cache@v2.1.4
         with:
           path: |
             ~/.cargo/registry
@@ -208,7 +208,7 @@ jobs:
         with:
           rust-version: 1.46.0
       # cache cargo
-      - uses: actions/cache@v2
+      - uses: actions/cache@v2.1.4
         with:
           path: |
             ~/.cargo/registry
