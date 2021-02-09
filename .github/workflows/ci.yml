@@ -46,7 +46,7 @@ jobs:
         components: clippy, rustfmt
         rust-version: 1.46.0
     - name: Cache cargo
-      uses: actions/cache@v2
+      uses: actions/cache@v2.1.4
       if: runner.os != 'macOS'
       with:
         path: |
@@ -78,7 +78,7 @@ jobs:
       run: echo "C:\msys64\mingw64\bin" >> $GITHUB_PATH
     - name: Windows dependencies (cache gvsbuild)
       if: runner.os == 'windows'
-      uses: actions/cache@v2
+      uses: actions/cache@v2.1.4
       id: cache
       with:
         path: release\**
