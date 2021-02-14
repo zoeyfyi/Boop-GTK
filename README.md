@@ -32,7 +32,7 @@
 
 [Boop](https://github.com/IvanMathy) is a simple editor that allows you to execute scripts on the buffer. The idea is that you don’t have to paste potentially secret information into shady websites to do some simple transforms, like format json and decoding query strings.
 
-Boop-GTK is a port of Boop to GTK, so users on Linux and Windows can Boop it!
+Boop-GTK is a port of Boop to GTK, so users on Linux can Boop it!
 
 ### Features
 
