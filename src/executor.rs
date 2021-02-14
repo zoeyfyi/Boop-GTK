@@ -861,11 +861,8 @@ mod tests {
                 .unwrap_err(),
             ExecutorError::Execute(JSException {
                 exception_str:
-                    if cfg!(windows) {
-                        "Error: could not open \"this-script-does-not-exist.js\", The system cannot find the file specified. (os error 2)"
-                    } else {
                         "Error: could not open \"this-script-does-not-exist.js\", No such file or directory (os error 2)"
-                    }.to_string(),
+                    .to_string(),
                 resource_name: Some("undefined".to_string()),
                 source_line: Some("            let foo = require(\"this-script-does-not-exist.js\");".to_string()),
                 line_number: Some(2),

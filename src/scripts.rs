@@ -28,7 +28,6 @@ impl ScriptMap {
         scripts.load_internal();
 
         // TODO: use directories or one of its forks once this functionality is implemented
-        // TODO: add MacOS/Windows support
         if cfg!(target_os = "linux") {
             let env_var = std::env::var("XDG_CONFIG_DIRS")
                 .ok()
