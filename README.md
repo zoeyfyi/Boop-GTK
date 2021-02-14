@@ -32,7 +32,7 @@
 
 [Boop](https://github.com/IvanMathy) is a simple editor that allows you to execute scripts on the buffer. The idea is that you don’t have to paste potentially secret information into shady websites to do some simple transforms, like format json and decoding query strings.
 
-Boop-GTK is a port of Boop to GTK, so users on Linux and Windows can Boop it!
+Boop-GTK is a port of Boop to GTK, so users on Linux can Boop it!
 
 ### Features
 
@@ -50,14 +50,12 @@ Boop-GTK is a port of Boop to GTK, so users on Linux and Windows can Boop it!
 | | AUR | [`boop-gtk`](https://aur.archlinux.org/packages/boop-gtk/) (thanks to qcasey) </br> [`boop-gtk-bin`](https://aur.archlinux.org/packages/boop-gtk-bin/) </br>  [`boop-gtk-extra-scripts`](https://aur.archlinux.org/packages/boop-gtk-extra-scripts/) | 
 | | Snap Store | [![Get it from the Snap Store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/boop-gtk) | 
 | | Flathub | [<img width='190' alt='Download on Flathub' src='https://flathub.org/assets/badges/flathub-badge-en.png'>](https://flathub.org/apps/details/fyi.zoey.Boop-GTK) | 
-| Windows | Installer | [boop-gtk.windows.msi](https://github.com/zoeyfyi/Boop-GTK/releases/latest/download/boop-gtk.windows.msi) | 
-| MacOS | Binary | You should really use [Boop](https://github.com/IvanMathy/Boop), but if you _really_ want to: [boop-gtk.macos](https://github.com/zoeyfyi/Boop-GTK/releases/latest/download/boop-gtk.macos) |
+
+If you are looking for a Windows version check out [Woop](https://github.com/felixse/Woop) by @felixse. For MacOS check out [Boop](https://github.com/IvanMathy/Boop) by @IvanMathy, the project from which this is based.
 
 ### Screenshots
 
-| Linux | Windows |
-| :---: | :---: |
-| ![linux](screenshot.png) | ![windows](windows-screenshot.png) |
+![linux screenshot](screenshot.png)
 
 There is also a quick demo on [youtube](https://youtu.be/WXDTsJ4cqO4).
 
@@ -78,14 +76,14 @@ More scripts can be found in the [Boop repo](https://github.com/IvanMathy/Boop/t
 
 ### Building
 
-#### Linux
+#### Binary
 
 ```shell
 sudo apt-get install -y libgtk-3-dev libgtksourceview-3.0-dev
 cargo build
 ```
 
-#### Linux Snap
+#### Snap
 
 ```shell
 sudo apt-get install snap snapcraft
@@ -93,7 +91,7 @@ snapcraft snap
 sudo snap install boop-gtk_1.6.0_amd64.snap
 ```
 
-#### Linux Flatpak
+#### Flatpak
 
 ```shell
 sudo add-apt-repository ppa:alexlarsson/flatpak 
@@ -108,27 +106,3 @@ flatpak-builder --repo=repo build-dir flatpak/fyi.zoey.Boop-GTK.json
 flatpak build-bundle ./repo boop-gtk.flatpak fyi.zoey.Boop-GTK
 ```
 
-#### MacOS
-
-```shell
-brew install gtk+3 gtksourceview3
-cargo build
-```
-
-#### Windows
-
-I don't really understand why sourceview isn't picked up automatically by system-deps but [if you are curious](https://github.com/gdesmott/system-deps/issues/10).
-
-```powershell
-git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
-cd C:\gtk-build\github\gvsbuild; python .\build.py build -p=x64 --vs-ver=16 --msys-dir=C:\msys64 -k --enable-gi --py-wheel --py-egg gtk3 gdk-pixbuf gtksourceview3
-${Env:GTKSOURCEVIEW_3.0_NO_PKG_CONFIG}=1; ${Env:SYSTEM_DEPS_GTKSOURCEVIEW_3.0_LIB}="gtksourceview-3.0"; cargo build
-```
-
-#### Windows Installer
-
-```powershell
-# follow build steps above, then:
-cargo install cargo-wix 
-${Env:GTKSOURCEVIEW_3.0_NO_PKG_CONFIG}=1; ${Env:SYSTEM_DEPS_GTKSOURCEVIEW_3.0_LIB}="gtksourceview-3.0"; cargo wix -v
-```
