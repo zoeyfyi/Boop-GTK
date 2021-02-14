@@ -76,14 +76,14 @@ More scripts can be found in the [Boop repo](https://github.com/IvanMathy/Boop/t
 
 ### Building
 
-#### Linux
+#### Binary
 
 ```shell
 sudo apt-get install -y libgtk-3-dev libgtksourceview-3.0-dev
 cargo build
 ```
 
-#### Linux Snap
+#### Snap
 
 ```shell
 sudo apt-get install snap snapcraft
@@ -91,7 +91,7 @@ snapcraft snap
 sudo snap install boop-gtk_1.6.0_amd64.snap
 ```
 
-#### Linux Flatpak
+#### Flatpak
 
 ```shell
 sudo add-apt-repository ppa:alexlarsson/flatpak 
@@ -106,27 +106,3 @@ flatpak-builder --repo=repo build-dir flatpak/fyi.zoey.Boop-GTK.json
 flatpak build-bundle ./repo boop-gtk.flatpak fyi.zoey.Boop-GTK
 ```
 
-#### MacOS
-
-```shell
-brew install gtk+3 gtksourceview3
-cargo build
-```
-
-#### Windows
-
-I don't really understand why sourceview isn't picked up automatically by system-deps but [if you are curious](https://github.com/gdesmott/system-deps/issues/10).
-
-```powershell
-git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
-cd C:\gtk-build\github\gvsbuild; python .\build.py build -p=x64 --vs-ver=16 --msys-dir=C:\msys64 -k --enable-gi --py-wheel --py-egg gtk3 gdk-pixbuf gtksourceview3
-${Env:GTKSOURCEVIEW_3.0_NO_PKG_CONFIG}=1; ${Env:SYSTEM_DEPS_GTKSOURCEVIEW_3.0_LIB}="gtksourceview-3.0"; cargo build
-```
-
-#### Windows Installer
-
-```powershell
-# follow build steps above, then:
-cargo install cargo-wix 
-${Env:GTKSOURCEVIEW_3.0_NO_PKG_CONFIG}=1; ${Env:SYSTEM_DEPS_GTKSOURCEVIEW_3.0_LIB}="gtksourceview-3.0"; cargo wix -v
-```
