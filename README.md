@@ -50,14 +50,12 @@ Boop-GTK is a port of Boop to GTK, so users on Linux and Windows can Boop it!
 | | AUR | [`boop-gtk`](https://aur.archlinux.org/packages/boop-gtk/) (thanks to qcasey) </br> [`boop-gtk-bin`](https://aur.archlinux.org/packages/boop-gtk-bin/) </br>  [`boop-gtk-extra-scripts`](https://aur.archlinux.org/packages/boop-gtk-extra-scripts/) | 
 | | Snap Store | [![Get it from the Snap Store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/boop-gtk) | 
 | | Flathub | [<img width='190' alt='Download on Flathub' src='https://flathub.org/assets/badges/flathub-badge-en.png'>](https://flathub.org/apps/details/fyi.zoey.Boop-GTK) | 
-| Windows | Installer | [boop-gtk.windows.msi](https://github.com/zoeyfyi/Boop-GTK/releases/latest/download/boop-gtk.windows.msi) | 
-| MacOS | Binary | You should really use [Boop](https://github.com/IvanMathy/Boop), but if you _really_ want to: [boop-gtk.macos](https://github.com/zoeyfyi/Boop-GTK/releases/latest/download/boop-gtk.macos) |
+
+If you are looking for a Windows version check out [Woop](https://github.com/felixse/Woop) by @felixse. For MacOS check out [Boop](https://github.com/IvanMathy/Boop) by @IvanMathy, the project from which this is based.
 
 ### Screenshots
 
-| Linux | Windows |
-| :---: | :---: |
-| ![linux](screenshot.png) | ![windows](windows-screenshot.png) |
+![linux screenshot](screenshot.png)
 
 There is also a quick demo on [youtube](https://youtu.be/WXDTsJ4cqO4).
 
