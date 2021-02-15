@@ -196,7 +196,7 @@
         <property name="show_close_button">True</property>
         <child type="title">
           <object class="GtkButton" id="header_button">
-            <property name="label" translatable="yes">button</property>
+            <property name="label" translatable="yes">Open Command Pallete...</property>
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="receives_default">True</property>
