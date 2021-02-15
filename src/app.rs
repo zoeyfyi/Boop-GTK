@@ -35,6 +35,7 @@ pub struct AppWidgets {
     config_directory_button: ModelButton,
     more_scripts_button: ModelButton,
     about_button: ModelButton,
+    shortcuts_button: ModelButton,
 
     about_dialog: AboutDialog,
 }
@@ -138,6 +139,38 @@ impl App {
                 {
                     about_dialog.hide();
                 }
+            });
+        }
+
+        {
+            let window = app.window.clone();
+            app.shortcuts_button.connect_clicked(move |_| {
+                let window = gtk::ShortcutsWindowBuilder::new()
+                    .transient_for(&window)
+                    .build();
+
+                let section = gtk::ShortcutsSectionBuilder::new().visible(true).build();
+                let general_group = gtk::ShortcutsGroupBuilder::new()
+                    .title("General")
+                    .visible(true)
+                    .build();
+
+                let pallete_shortcut = gtk::ShortcutsShortcutBuilder::new()
+                    .title("Open Command Pallette")
+                    .accelerator("<Primary><Shift>P")
+                    .visible(true)
+                    .build();
+                let quit_shortcut = gtk::ShortcutsShortcutBuilder::new()
+                    .title("Quit")
+                    .accelerator("<Primary>Q")
+                    .visible(true)
+                    .build();
+
+                general_group.add(&pallete_shortcut);
+                general_group.add(&quit_shortcut);
+                section.add(&general_group);
+                window.add(&section);
+                window.show_all();
             });
         }
 
