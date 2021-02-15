@@ -17,9 +17,6 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-const HEADER_BUTTON_GET_STARTED: &str = "Open command pallete (Ctrl+Shift+P)";
-const HEADER_BUTTON_CHOOSE_ACTION: &str = "Select an action";
-
 pub const NOTIFICATION_LONG_DELAY: u32 = 5000;
 
 #[derive(Gladis, Clone, Shrinkwrap)]
@@ -58,8 +55,6 @@ impl App {
             scripts,
             notification_source_id: Arc::new(RwLock::new(None)), // SourceId doesnt implement clone, so must be seperate from AppState
         };
-
-        app.header_button.set_label(HEADER_BUTTON_GET_STARTED);
 
         app.widgets
             .about_dialog
@@ -239,8 +234,6 @@ impl App {
         let dialog = CommandPalleteDialog::new(&self.window, self.scripts.clone());
         dialog.show_all();
 
-        self.header_button.set_label(HEADER_BUTTON_CHOOSE_ACTION);
-
         if let gtk::ResponseType::Accept = dialog.run() {
             let selected: &str = dialog
                 .get_selected()
@@ -337,8 +330,6 @@ impl App {
                 }
             }
         }
-
-        self.header_button.set_label(HEADER_BUTTON_GET_STARTED);
 
         dialog.close();
     }
