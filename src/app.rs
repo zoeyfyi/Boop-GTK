@@ -175,21 +175,20 @@ impl App {
                 .visible(true)
                 .build();
 
-            group.add(
-                &gtk::ShortcutsShortcutBuilder::new()
-                    .title("Open Command Pallette")
-                    .accelerator("<Primary><Shift>P")
-                    .visible(true)
-                    .build(),
-            );
+            let shortcuts = [
+                ("Open Command Pallette", "<Primary><Shift>P"),
+                ("Quit", "<Primary>Q"),
+            ];
 
-            group.add(
-                &gtk::ShortcutsShortcutBuilder::new()
-                    .title("Quit")
-                    .accelerator("<Primary>Q")
-                    .visible(true)
-                    .build(),
-            );
+            for (title, accelerator) in &shortcuts {
+                group.add(
+                    &gtk::ShortcutsShortcutBuilder::new()
+                        .title(title)
+                        .accelerator(accelerator)
+                        .visible(true)
+                        .build(),
+                );
+            }
 
             section.add(&group);
         }
@@ -201,101 +200,30 @@ impl App {
                 .visible(true)
                 .build();
 
-            group.add(
-                &gtk::ShortcutsShortcutBuilder::new()
-                    .title("Undo")
-                    .accelerator("<Primary>Z")
-                    .visible(true)
-                    .build(),
-            );
+            let shortcuts = [
+                ("Undo", "<Primary>Z"),
+                ("Redo", "<Primary><Shift>Z"),
+                ("Move line up", "<Alt>Up"),
+                ("Move line down", "<Alt>Down"),
+                ("Move cursor backwards one word", "<Primary>Left"),
+                ("Move cursor forward one word", "<Primary>Right"),
+                ("Move cursor to beginning of previous line", "<Primary>Up"),
+                ("Move cursor to end of next line", "<Primary>Down"),
+                ("Move cursor to beginning of line", "<Primary>Page_Up"),
+                ("Move cursor to end of line", "<Primary>Page_Down"),
+                ("Move cursor to beginning of document", "<Primary>Home"),
+                ("Move cursor to end of document", "<Primary>End"),
+            ];
 
-            group.add(
-                &gtk::ShortcutsShortcutBuilder::new()
-                    .title("Redo")
-                    .accelerator("<Primary><Shift>Z")
-                    .visible(true)
-                    .build(),
-            );
-
-            group.add(
-                &gtk::ShortcutsShortcutBuilder::new()
-                    .title("Move line up")
-                    .accelerator("<Alt>Up")
-                    .visible(true)
-                    .build(),
-            );
-
-            group.add(
-                &gtk::ShortcutsShortcutBuilder::new()
-                    .title("Move line down")
-                    .accelerator("<Alt>Down")
-                    .visible(true)
-                    .build(),
-            );
-
-            group.add(
-                &gtk::ShortcutsShortcutBuilder::new()
-                    .title("Move cursor backwards one word")
-                    .accelerator("<Primary>Left")
-                    .visible(true)
-                    .build(),
-            );
-
-            group.add(
-                &gtk::ShortcutsShortcutBuilder::new()
-                    .title("Move cursor forward one word")
-                    .accelerator("<Primary>Right")
-                    .visible(true)
-                    .build(),
-            );
-
-            group.add(
-                &gtk::ShortcutsShortcutBuilder::new()
-                    .title("Move cursor to beginning of previous line")
-                    .accelerator("<Primary>Up")
-                    .visible(true)
-                    .build(),
-            );
-
-            group.add(
-                &gtk::ShortcutsShortcutBuilder::new()
-                    .title("Move cursor to end of next line")
-                    .accelerator("<Primary>Down")
-                    .visible(true)
-                    .build(),
-            );
-
-            group.add(
-                &gtk::ShortcutsShortcutBuilder::new()
-                    .title("Move cursor to beginning of line")
-                    .accelerator("<Primary>Page_Up")
-                    .visible(true)
-                    .build(),
-            );
-
-            group.add(
-                &gtk::ShortcutsShortcutBuilder::new()
-                    .title("Move cursor to end of line")
-                    .accelerator("<Primary>Page_Down")
-                    .visible(true)
-                    .build(),
-            );
-
-            group.add(
-                &gtk::ShortcutsShortcutBuilder::new()
-                    .title("Move cursor to beginning of document")
-                    .accelerator("<Primary>Home")
-                    .visible(true)
-                    .build(),
-            );
-
-            group.add(
-                &gtk::ShortcutsShortcutBuilder::new()
-                    .title("Move cursor to end of document")
-                    .accelerator("<Primary>End")
-                    .visible(true)
-                    .build(),
-            );
+            for (title, accelerator) in &shortcuts {
+                group.add(
+                    &gtk::ShortcutsShortcutBuilder::new()
+                        .title(title)
+                        .accelerator(accelerator)
+                        .visible(true)
+                        .build(),
+                );
+            }
 
             section.add(&group);
         }
