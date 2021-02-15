@@ -150,25 +150,139 @@ impl App {
                     .build();
 
                 let section = gtk::ShortcutsSectionBuilder::new().visible(true).build();
-                let general_group = gtk::ShortcutsGroupBuilder::new()
-                    .title("General")
-                    .visible(true)
-                    .build();
 
-                let pallete_shortcut = gtk::ShortcutsShortcutBuilder::new()
-                    .title("Open Command Pallette")
-                    .accelerator("<Primary><Shift>P")
-                    .visible(true)
-                    .build();
-                let quit_shortcut = gtk::ShortcutsShortcutBuilder::new()
-                    .title("Quit")
-                    .accelerator("<Primary>Q")
-                    .visible(true)
-                    .build();
+                // genral group
+                {
+                    let group = gtk::ShortcutsGroupBuilder::new()
+                        .title("General")
+                        .visible(true)
+                        .build();
 
-                general_group.add(&pallete_shortcut);
-                general_group.add(&quit_shortcut);
-                section.add(&general_group);
+                    group.add(
+                        &gtk::ShortcutsShortcutBuilder::new()
+                            .title("Open Command Pallette")
+                            .accelerator("<Primary><Shift>P")
+                            .visible(true)
+                            .build(),
+                    );
+
+                    group.add(
+                        &gtk::ShortcutsShortcutBuilder::new()
+                            .title("Quit")
+                            .accelerator("<Primary>Q")
+                            .visible(true)
+                            .build(),
+                    );
+
+                    section.add(&group);
+                }
+
+                // editor group
+                {
+                    let group = gtk::ShortcutsGroupBuilder::new()
+                        .title("Editor")
+                        .visible(true)
+                        .build();
+
+                    group.add(
+                        &gtk::ShortcutsShortcutBuilder::new()
+                            .title("Undo")
+                            .accelerator("<Primary>Z")
+                            .visible(true)
+                            .build(),
+                    );
+
+                    group.add(
+                        &gtk::ShortcutsShortcutBuilder::new()
+                            .title("Redo")
+                            .accelerator("<Primary><Shift>Z")
+                            .visible(true)
+                            .build(),
+                    );
+
+                    group.add(
+                        &gtk::ShortcutsShortcutBuilder::new()
+                            .title("Move line up")
+                            .accelerator("<Alt>Up")
+                            .visible(true)
+                            .build(),
+                    );
+
+                    group.add(
+                        &gtk::ShortcutsShortcutBuilder::new()
+                            .title("Move line down")
+                            .accelerator("<Alt>Down")
+                            .visible(true)
+                            .build(),
+                    );
+
+                    group.add(
+                        &gtk::ShortcutsShortcutBuilder::new()
+                            .title("Move cursor backwards one word")
+                            .accelerator("<Primary>Left")
+                            .visible(true)
+                            .build(),
+                    );
+
+                    group.add(
+                        &gtk::ShortcutsShortcutBuilder::new()
+                            .title("Move cursor forward one word")
+                            .accelerator("<Primary>Right")
+                            .visible(true)
+                            .build(),
+                    );
+
+                    group.add(
+                        &gtk::ShortcutsShortcutBuilder::new()
+                            .title("Move cursor to beginning of previous line")
+                            .accelerator("<Primary>Up")
+                            .visible(true)
+                            .build(),
+                    );
+
+                    group.add(
+                        &gtk::ShortcutsShortcutBuilder::new()
+                            .title("Move cursor to end of next line")
+                            .accelerator("<Primary>Down")
+                            .visible(true)
+                            .build(),
+                    );
+
+                    group.add(
+                        &gtk::ShortcutsShortcutBuilder::new()
+                            .title("Move cursor to beginning of line")
+                            .accelerator("<Primary>Page_Up")
+                            .visible(true)
+                            .build(),
+                    );
+
+                    group.add(
+                        &gtk::ShortcutsShortcutBuilder::new()
+                            .title("Move cursor to end of line")
+                            .accelerator("<Primary>Page_Down")
+                            .visible(true)
+                            .build(),
+                    );
+
+                    group.add(
+                        &gtk::ShortcutsShortcutBuilder::new()
+                            .title("Move cursor to beginning of document")
+                            .accelerator("<Primary>Home")
+                            .visible(true)
+                            .build(),
+                    );
+
+                    group.add(
+                        &gtk::ShortcutsShortcutBuilder::new()
+                            .title("Move cursor to end of document")
+                            .accelerator("<Primary>End")
+                            .visible(true)
+                            .build(),
+                    );
+
+                    section.add(&group);
+                }
+
                 window.add(&section);
                 window.show_all();
             });
