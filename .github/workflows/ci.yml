@@ -72,6 +72,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Dependencies
+        run: sudo apt-get install -y appstream-util
       - name: Validate data/fyi.zoey.Boop-GTK.metainfo.xml
         run: appstream-util validate-relax data/fyi.zoey.Boop-GTK.metainfo.xml
       - name: Validate data/fyi.zoey.Boop-GTK.desktop
