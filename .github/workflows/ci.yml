@@ -67,3 +67,14 @@ jobs:
       - uses: bilelmoussaoui/flatpak-github-actions@v2
         with:
           manifest-path: "flatpak/fyi.zoey.Boop-GTK.json"
+
+  metadata:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install org.freedesktop.appstream-glib
+        run: flatpak install -y org.freedesktop.appstream-glib
+      - name: Validate data/fyi.zoey.Boop-GTK.metainfo.xml
+        run: flatpak run org.freedesktop.appstream-glib validate data/fyi.zoey.Boop-GTK.metainfo.xml
+      - name: Validate data/fyi.zoey.Boop-GTK.desktop
+        run: desktop-file-validate data/fyi.zoey.Boop-GTK.desktop
