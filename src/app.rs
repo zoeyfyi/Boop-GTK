@@ -34,6 +34,7 @@ pub struct AppWidgets {
     notification_label: Label,
     notification_button: Button,
 
+    re_execute_last_script_button: ModelButton,
     reset_scripts_button: ModelButton,
     config_directory_button: ModelButton,
     more_scripts_button: ModelButton,
@@ -48,6 +49,7 @@ pub struct App {
     widgets: AppWidgets,
     scripts: Arc<RwLock<ScriptMap>>,
     notification_source_id: Arc<RwLock<Option<SourceId>>>,
+    last_script_executed: Arc<RwLock<Option<String>>>,
 }
 
 impl App {
@@ -56,7 +58,8 @@ impl App {
             widgets: AppWidgets::from_resource("/fyi/zoey/Boop-GTK/boop-gtk.glade")
                 .unwrap_or_else(|e| panic!("failed to load boop-gtk.glade: {}", e)),
             scripts,
-            notification_source_id: Arc::new(RwLock::new(None)), // SourceId doesnt implement clone, so must be seperate from AppState
+            notification_source_id: Arc::new(RwLock::new(None)),
+            last_script_executed: Arc::new(RwLock::new(None)),
         };
 
         app.header_button.set_label(HEADER_BUTTON_GET_STARTED);
@@ -88,6 +91,13 @@ impl App {
                     notification_revealer.set_reveal_child(false);
                     Inhibit(false)
                 });
+        }
+
+        // re-execute last script
+        {
+            let app_ = app.clone();
+            app.re_execute_last_script_button
+                .connect_clicked(move |_| app_.re_execute());
         }
 
         // reset the state of each script
@@ -246,101 +256,113 @@ impl App {
                 .get_selected()
                 .expect("dialog didn't return a selection");
 
-            let mut script_map = self.scripts.write().expect("scripts lock is poisoned");
-            let script: &mut Script =
-                &mut script_map.0.get_mut(selected).expect("script not in map");
-
-            info!("executing {}", script.metadata.name);
-
-            let buffer = &self.source_view.get_buffer().expect("failed to get buffer");
-
-            let buffer_text = buffer
-                .get_text(&buffer.get_start_iter(), &buffer.get_end_iter(), false)
-                .expect("failed to get buffer text");
-
-            let selection_text = buffer
-                .get_selection_bounds()
-                .map(|(start, end)| buffer.get_text(&start, &end, false))
-                .flatten()
-                .map(|s| s.to_string());
-
-            let status_result = script.execute(buffer_text.as_str(), selection_text.as_deref());
-
-            match status_result {
-                Ok(status) => {
-                    // TODO: how to handle multiple messages?
-                    if let Some(error) = status.error() {
-                        self.post_notification(
-                            &format!(
-                                r#"<span foreground="red" weight="bold">ERROR:</span> {}"#,
-                                error
-                            ),
-                            NOTIFICATION_LONG_DELAY,
-                        );
-                    } else if let Some(info) = status.info() {
-                        self.post_notification(&info, NOTIFICATION_LONG_DELAY);
-                    }
-                    self.do_replacement(status.into_replacement());
-                }
-                Err(err) => {
-                    warn!("Exception: {:?}", err);
-                    match err {
-                        executor::ExecutorError::SourceExceedsMaxLength => {
-                            self.post_notification_error(
-                                "Script exceeds max length",
-                                NOTIFICATION_LONG_DELAY,
-                            );
-                        }
-                        executor::ExecutorError::Compile(exception) => {
-                            let error_str = match (exception.line_number, exception.columns) {
-                                (Some(line_number), Some((left_column, right_column))) => format!(
-                                    r#"<span foreground="red" weight="bold">EXCEPTION:</span> {} ({}:{} - {}:{})"#,
-                                    exception.exception_str,
-                                    line_number,
-                                    left_column,
-                                    line_number,
-                                    right_column
-                                ),
-                                _ => format!(
-                                    r#"<span foreground="red" weight="bold">EXCEPTION:</span> {}"#,
-                                    exception.exception_str,
-                                ),
-                            };
-
-                            self.post_notification(&error_str, NOTIFICATION_LONG_DELAY);
-                        }
-                        executor::ExecutorError::Execute(exception) => {
-                            let error_str = match (exception.line_number, exception.columns) {
-                                (Some(line_number), Some((left_column, right_column))) => format!(
-                                    r#"<span foreground="red" weight="bold">EXCEPTION:</span> {} ({}:{} - {}:{})"#,
-                                    exception.exception_str,
-                                    line_number,
-                                    left_column,
-                                    line_number,
-                                    right_column
-                                ),
-                                _ => format!(
-                                    r#"<span foreground="red" weight="bold">EXCEPTION:</span> {}"#,
-                                    exception.exception_str,
-                                ),
-                            };
-
-                            self.post_notification(&error_str, NOTIFICATION_LONG_DELAY);
-                        }
-                        executor::ExecutorError::NoMain => {
-                            self.post_notification(
-                                r#"<span foreground="red">ERROR:</span> No main function"#,
-                                NOTIFICATION_LONG_DELAY,
-                            );
-                        }
-                    }
-                }
-            }
+            *self.last_script_executed.write().unwrap() = Some(String::from(selected));
+            self.execute_script(selected);
         }
 
         self.header_button.set_label(HEADER_BUTTON_GET_STARTED);
 
         dialog.close();
+    }
+
+    pub fn re_execute(&self) {
+        if let Some(script_key) = &*self.last_script_executed.read().unwrap() {
+            self.execute_script(&script_key);
+        } else {
+            warn!("no last script");
+        }
+    }
+
+    fn execute_script(&self, script_key: &str) {
+        let mut script_map = self.scripts.write().expect("scripts lock is poisoned");
+        let script: &mut Script = &mut script_map.0.get_mut(script_key).expect("script not in map");
+
+        info!("executing {}", script.metadata.name);
+
+        let buffer = &self.source_view.get_buffer().expect("failed to get buffer");
+
+        let buffer_text = buffer
+            .get_text(&buffer.get_start_iter(), &buffer.get_end_iter(), false)
+            .expect("failed to get buffer text");
+
+        let selection_text = buffer
+            .get_selection_bounds()
+            .map(|(start, end)| buffer.get_text(&start, &end, false))
+            .flatten()
+            .map(|s| s.to_string());
+
+        let status_result = script.execute(buffer_text.as_str(), selection_text.as_deref());
+
+        match status_result {
+            Ok(status) => {
+                // TODO: how to handle multiple messages?
+                if let Some(error) = status.error() {
+                    self.post_notification(
+                        &format!(
+                            r#"<span foreground="red" weight="bold">ERROR:</span> {}"#,
+                            error
+                        ),
+                        NOTIFICATION_LONG_DELAY,
+                    );
+                } else if let Some(info) = status.info() {
+                    self.post_notification(&info, NOTIFICATION_LONG_DELAY);
+                }
+                self.do_replacement(status.into_replacement());
+            }
+            Err(err) => {
+                warn!("Exception: {:?}", err);
+                match err {
+                    executor::ExecutorError::SourceExceedsMaxLength => {
+                        self.post_notification_error(
+                            "Script exceeds max length",
+                            NOTIFICATION_LONG_DELAY,
+                        );
+                    }
+                    executor::ExecutorError::Compile(exception) => {
+                        let error_str = match (exception.line_number, exception.columns) {
+                            (Some(line_number), Some((left_column, right_column))) => format!(
+                                r#"<span foreground="red" weight="bold">EXCEPTION:</span> {} ({}:{} - {}:{})"#,
+                                exception.exception_str,
+                                line_number,
+                                left_column,
+                                line_number,
+                                right_column
+                            ),
+                            _ => format!(
+                                r#"<span foreground="red" weight="bold">EXCEPTION:</span> {}"#,
+                                exception.exception_str,
+                            ),
+                        };
+
+                        self.post_notification(&error_str, NOTIFICATION_LONG_DELAY);
+                    }
+                    executor::ExecutorError::Execute(exception) => {
+                        let error_str = match (exception.line_number, exception.columns) {
+                            (Some(line_number), Some((left_column, right_column))) => format!(
+                                r#"<span foreground="red" weight="bold">EXCEPTION:</span> {} ({}:{} - {}:{})"#,
+                                exception.exception_str,
+                                line_number,
+                                left_column,
+                                line_number,
+                                right_column
+                            ),
+                            _ => format!(
+                                r#"<span foreground="red" weight="bold">EXCEPTION:</span> {}"#,
+                                exception.exception_str,
+                            ),
+                        };
+
+                        self.post_notification(&error_str, NOTIFICATION_LONG_DELAY);
+                    }
+                    executor::ExecutorError::NoMain => {
+                        self.post_notification(
+                            r#"<span foreground="red">ERROR:</span> No main function"#,
+                            NOTIFICATION_LONG_DELAY,
+                        );
+                    }
+                }
+            }
+        }
     }
 
     fn do_replacement(&self, replacement: TextReplacement) {

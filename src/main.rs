@@ -184,10 +184,21 @@ fn main() {
         }
 
         // add keyboard shortcut for opening command pallete
-        let command_pallete_action = gio::SimpleAction::new("command_pallete", None);
-        application.add_action(&command_pallete_action);
-        application.set_accels_for_action("app.command_pallete", &["<Primary><Shift>P"]);
-        command_pallete_action.connect_activate(move |_, _| app.open_command_pallete());
+        {
+            let app = app.clone();
+            let command_pallete_action = gio::SimpleAction::new("command_pallete", None);
+            application.add_action(&command_pallete_action);
+            application.set_accels_for_action("app.command_pallete", &["<Primary><Shift>P"]);
+            command_pallete_action.connect_activate(move |_, _| app.open_command_pallete());
+        }
+
+        {
+            let app = app.clone();
+            let reexecute_script_action = gio::SimpleAction::new("re_execute_script", None);
+            application.add_action(&reexecute_script_action);
+            application.set_accels_for_action("app.re_execute_script", &["<Primary><Shift>B"]);
+            reexecute_script_action.connect_activate(move |_, _| app.re_execute());
+        }
 
         // Ctrl+Q keyboard shortcut for exiting
         let quit_action = gio::SimpleAction::new("quit", None);
