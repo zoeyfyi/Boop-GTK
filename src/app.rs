@@ -17,7 +17,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-const HEADER_BUTTON_GET_STARTED: &str = "Press Ctrl+Shift+P to get started";
+const HEADER_BUTTON_GET_STARTED: &str = "Open command pallete (Ctrl+Shift+P)";
 const HEADER_BUTTON_CHOOSE_ACTION: &str = "Select an action";
 
 pub const NOTIFICATION_LONG_DELAY: u32 = 5000;
@@ -410,5 +410,7 @@ impl App {
                 info!("no text to replace");
             }
         }
+
+        self.source_view.grab_focus();
     }
 }
