@@ -155,11 +155,9 @@ impl App {
         }
 
         {
-            let window = app.window.clone();
-            app.shortcuts_button.connect_clicked(move |_| {
-                let shortcuts_window = App::new_shortcuts_window(&window);
-                shortcuts_window.show_all();
-            });
+            let app_ = app.clone();
+            app.shortcuts_button
+                .connect_clicked(move |_| app_.open_shortcuts_window());
         }
 
         {
@@ -322,6 +320,12 @@ impl App {
     // pub fn push_error(&self, error: impl std::fmt::Display) {
     //     App::push_error_(self.status_bar.clone(), self.context_id, error);
     // }
+
+    pub fn open_shortcuts_window(&self) {
+        let window = self.window.clone();
+        let shortcuts_window = App::new_shortcuts_window(&window);
+        shortcuts_window.show_all();
+    }
 
     pub fn open_command_pallete(&self) {
         let dialog = CommandPalleteDialog::new(&self.window, self.scripts.clone());
