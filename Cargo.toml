@@ -61,7 +61,7 @@ fs_extra = "1.2.0"
 
 [dependencies.gtk]
 version = "0.9"
-features = ["v3_16"]
+features = ["v3_20"]
 
 [dependencies.gio]
 version = "0.9"

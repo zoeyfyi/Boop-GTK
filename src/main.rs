@@ -55,7 +55,8 @@ impl Display for ScriptError {
 impl Error for ScriptError {}
 
 // extract language file, ideally we would use GResource for this but sourceview doesn't support that
-fn extract_language_file() {
+// returns true if the language file already existed, false otherwise
+fn extract_language_file() -> bool {
     let config_dir = PROJECT_DIRS.config_dir().to_path_buf();
     if !config_dir.exists() {
         info!("config directory does not exist, attempting to create it");
@@ -73,10 +74,14 @@ fn extract_language_file() {
         path
     };
 
+    let exists = lang_file_path.exists();
+
     let mut file = fs::File::create(&lang_file_path).expect("Could not create language file");
     file.write_all(include_bytes!("../boop.lang"))
         .expect("Failed to write language file");
     info!("language file written at: {}", lang_file_path.display());
+
+    exists
 }
 
 fn upgrade_config_files() -> Result<bool, fs_extra::error::Error> {
@@ -130,7 +135,8 @@ fn main() {
         gdk_pixbuf::Pixbuf::get_formats().len()
     );
 
-    extract_language_file();
+    let lang_file_existed = extract_language_file();
+    let is_first_launch = !lang_file_existed;
 
     glib::set_application_name("Boop-GTK");
 
@@ -178,6 +184,9 @@ fn main() {
         let app = App::new(&config_dir, scripts.clone());
         app.set_application(Some(application));
         app.show_all();
+        if is_first_launch {
+            app.open_shortcuts_window();
+        }
 
         if let Some(error) = &script_error {
             app.post_notification_error(&error.to_string(), NOTIFICATION_LONG_DELAY);

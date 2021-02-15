@@ -117,6 +117,19 @@
           </packing>
         </child>
         <child>
+          <object class="GtkModelButton" id="shortcuts_button">
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <property name="text" translatable="yes">Shortcuts</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">6</property>
+          </packing>
+        </child>
+        <child>
           <object class="GtkModelButton" id="about_button">
             <property name="visible">True</property>
             <property name="can-focus">True</property>
@@ -126,7 +139,7 @@
           <packing>
             <property name="expand">False</property>
             <property name="fill">True</property>
-            <property name="position">6</property>
+            <property name="position">7</property>
           </packing>
         </child>
       </object>
@@ -229,7 +242,7 @@
         <property name="show-close-button">True</property>
         <child type="title">
           <object class="GtkButton" id="header_button">
-            <property name="label" translatable="yes">button</property>
+            <property name="label" translatable="yes">Open Command Pallete...</property>
             <property name="visible">True</property>
             <property name="can-focus">True</property>
             <property name="receives-default">True</property>

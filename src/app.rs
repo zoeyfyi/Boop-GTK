@@ -7,7 +7,7 @@ use crate::{
 use gdk_pixbuf::prelude::*;
 use gladis::Gladis;
 use glib::SourceId;
-use gtk::{prelude::*, Label, Revealer};
+use gtk::{prelude::*, Label, Revealer, ShortcutsWindow};
 use sourceview::prelude::*;
 
 use executor::TextReplacement;
@@ -16,9 +16,6 @@ use std::{
     path::Path,
     sync::{Arc, RwLock},
 };
-
-const HEADER_BUTTON_GET_STARTED: &str = "Open command pallete (Ctrl+Shift+P)";
-const HEADER_BUTTON_CHOOSE_ACTION: &str = "Select an action";
 
 pub const NOTIFICATION_LONG_DELAY: u32 = 5000;
 
@@ -39,6 +36,7 @@ pub struct AppWidgets {
     config_directory_button: ModelButton,
     more_scripts_button: ModelButton,
     about_button: ModelButton,
+    shortcuts_button: ModelButton,
 
     about_dialog: AboutDialog,
 }
@@ -54,15 +52,15 @@ pub struct App {
 
 impl App {
     pub(crate) fn new(config_dir: &Path, scripts: Arc<RwLock<ScriptMap>>) -> Self {
+        let widgets = AppWidgets::from_resource("/fyi/zoey/Boop-GTK/boop-gtk.glade")
+            .unwrap_or_else(|e| panic!("failed to load boop-gtk.glade: {}", e));
+
         let app = App {
-            widgets: AppWidgets::from_resource("/fyi/zoey/Boop-GTK/boop-gtk.glade")
-                .unwrap_or_else(|e| panic!("failed to load boop-gtk.glade: {}", e)),
+            widgets,
             scripts,
             notification_source_id: Arc::new(RwLock::new(None)),
             last_script_executed: Arc::new(RwLock::new(None)),
         };
-
-        app.header_button.set_label(HEADER_BUTTON_GET_STARTED);
 
         app.widgets
             .about_dialog
@@ -158,11 +156,89 @@ impl App {
 
         {
             let app_ = app.clone();
+            app.shortcuts_button
+                .connect_clicked(move |_| app_.open_shortcuts_window());
+        }
+
+        {
+            let app_ = app.clone();
             app.header_button
                 .connect_clicked(move |_| app_.open_command_pallete());
         }
 
         app
+    }
+
+    fn new_shortcuts_window(window: &gtk::ApplicationWindow) -> ShortcutsWindow {
+        let shortcut_window = gtk::ShortcutsWindowBuilder::new()
+            .transient_for(window)
+            .build();
+
+        let section = gtk::ShortcutsSectionBuilder::new().visible(true).build();
+
+        // genral group
+        {
+            let group = gtk::ShortcutsGroupBuilder::new()
+                .title("General")
+                .visible(true)
+                .build();
+
+            let shortcuts = [
+                ("Open Command Pallette", "<Primary><Shift>P"),
+                ("Quit", "<Primary>Q"),
+            ];
+
+            for (title, accelerator) in &shortcuts {
+                group.add(
+                    &gtk::ShortcutsShortcutBuilder::new()
+                        .title(title)
+                        .accelerator(accelerator)
+                        .visible(true)
+                        .build(),
+                );
+            }
+
+            section.add(&group);
+        }
+
+        // editor group
+        {
+            let group = gtk::ShortcutsGroupBuilder::new()
+                .title("Editor")
+                .visible(true)
+                .build();
+
+            let shortcuts = [
+                ("Undo", "<Primary>Z"),
+                ("Redo", "<Primary><Shift>Z"),
+                ("Move line up", "<Alt>Up"),
+                ("Move line down", "<Alt>Down"),
+                ("Move cursor backwards one word", "<Primary>Left"),
+                ("Move cursor forward one word", "<Primary>Right"),
+                ("Move cursor to beginning of previous line", "<Primary>Up"),
+                ("Move cursor to end of next line", "<Primary>Down"),
+                ("Move cursor to beginning of line", "<Primary>Page_Up"),
+                ("Move cursor to end of line", "<Primary>Page_Down"),
+                ("Move cursor to beginning of document", "<Primary>Home"),
+                ("Move cursor to end of document", "<Primary>End"),
+            ];
+
+            for (title, accelerator) in &shortcuts {
+                group.add(
+                    &gtk::ShortcutsShortcutBuilder::new()
+                        .title(title)
+                        .accelerator(accelerator)
+                        .visible(true)
+                        .build(),
+                );
+            }
+
+            section.add(&group);
+        }
+
+        shortcut_window.add(&section);
+
+        shortcut_window
     }
 
     fn post_notification(&self, text: &str, delay: u32) {
@@ -245,11 +321,15 @@ impl App {
     //     App::push_error_(self.status_bar.clone(), self.context_id, error);
     // }
 
+    pub fn open_shortcuts_window(&self) {
+        let window = self.window.clone();
+        let shortcuts_window = App::new_shortcuts_window(&window);
+        shortcuts_window.show_all();
+    }
+
     pub fn open_command_pallete(&self) {
         let dialog = CommandPalleteDialog::new(&self.window, self.scripts.clone());
         dialog.show_all();
-
-        self.header_button.set_label(HEADER_BUTTON_CHOOSE_ACTION);
 
         if let gtk::ResponseType::Accept = dialog.run() {
             let selected: &str = dialog
@@ -259,8 +339,6 @@ impl App {
             *self.last_script_executed.write().unwrap() = Some(String::from(selected));
             self.execute_script(selected);
         }
-
-        self.header_button.set_label(HEADER_BUTTON_GET_STARTED);
 
         dialog.close();
     }
