@@ -7,8 +7,8 @@ use crate::{
 use gdk_pixbuf::prelude::*;
 use gladis::Gladis;
 use glib::SourceId;
-use gtk::{prelude::*, Label, Revealer, ShortcutsWindow};
-use sourceview::prelude::*;
+use gtk::{prelude::*, Dialog, Label, Revealer, ShortcutsWindow};
+use sourceview::{prelude::*, Language};
 
 use executor::TextReplacement;
 use gtk::{AboutDialog, ApplicationWindow, Button, ModelButton};
@@ -35,10 +35,14 @@ pub struct AppWidgets {
     reset_scripts_button: ModelButton,
     config_directory_button: ModelButton,
     more_scripts_button: ModelButton,
-    about_button: ModelButton,
+    source_view_theme_button: ModelButton,
     shortcuts_button: ModelButton,
+    about_button: ModelButton,
 
     about_dialog: AboutDialog,
+    theme_dialog: Dialog,
+    theme_chooser_widget: sourceview::StyleSchemeChooserWidget,
+    theme_ok_button: Button,
 }
 
 #[derive(Clone, Shrinkwrap)]
@@ -52,6 +56,11 @@ pub struct App {
 
 impl App {
     pub(crate) fn new(config_dir: &Path, scripts: Arc<RwLock<ScriptMap>>) -> Self {
+        // must be fetched _before_ widgets are proccessed since the language managers search path must
+        // be immediantly after creation:
+        // https://developer.gnome.org/gtksourceview/stable/GtkSourceLanguageManager.html#gtk-source-language-manager-set-search-path
+        let boop_language = App::get_boop_language(config_dir);
+
         let widgets = AppWidgets::from_resource("/fyi/zoey/Boop-GTK/boop-gtk.glade")
             .unwrap_or_else(|e| panic!("failed to load boop-gtk.glade: {}", e));
 
@@ -79,7 +88,7 @@ impl App {
             }
         }
 
-        app.setup_syntax_highlighting(config_dir);
+        app.setup_syntax_highlighting(boop_language);
 
         // close notification on dismiss
         {
@@ -111,6 +120,42 @@ impl App {
                     script.kill_thread();
                 }
             });
+        }
+
+        // open sourceview theme dialog
+        {
+            let theme_dialog: Dialog = app.theme_dialog.clone();
+            app.source_view_theme_button.connect_clicked(move |_| {
+                let responce = theme_dialog.run();
+                if responce == gtk::ResponseType::DeleteEvent
+                    || responce == gtk::ResponseType::Cancel
+                {
+                    theme_dialog.hide();
+                }
+            });
+        }
+
+        // close sourceview theme dialog
+        {
+            let theme_dialog: Dialog = app.theme_dialog.clone();
+            app.theme_ok_button.connect_clicked(move |_| {
+                theme_dialog.hide();
+            });
+        }
+
+        {
+            let source_view: sourceview::View = app.source_view.clone();
+            app.theme_chooser_widget
+                .connect_property_style_scheme_notify(
+                    move |theme_chooser_widget: &sourceview::StyleSchemeChooserWidget| {
+                        let buffer: sourceview::Buffer = source_view
+                            .get_buffer()
+                            .expect("failed to get buffer")
+                            .downcast::<sourceview::Buffer>()
+                            .expect("faild to downcast TextBuffer to sourceview Buffer");
+                        buffer.set_style_scheme(theme_chooser_widget.get_style_scheme().as_ref());
+                    },
+                );
         }
 
         // launch config directory in default file manager
@@ -281,7 +326,7 @@ impl App {
         );
     }
 
-    fn setup_syntax_highlighting(&self, config_dir: &Path) {
+    fn get_boop_language(config_dir: &Path) -> Option<Language> {
         let language_manager =
             sourceview::LanguageManager::get_default().expect("failed to get language manager");
 
@@ -294,7 +339,10 @@ impl App {
 
         info!("language manager search directorys: {}", dirs.join(":"));
 
-        let boop_language = language_manager.get_language("boop");
+        language_manager.get_language("boop")
+    }
+
+    fn setup_syntax_highlighting(&self, boop_language: Option<Language>) {
         if boop_language.is_none() {
             self.post_notification(
                 r#"<span foreground="red">ERROR:</span> failed to load language file"#,
@@ -312,14 +360,6 @@ impl App {
         buffer.set_highlight_syntax(true);
         buffer.set_language(boop_language.as_ref());
     }
-
-    // fn push_error_(status_bar: gtk::Statusbar, context_id: u32, error: impl std::fmt::Display) {
-    //     status_bar.push(context_id, &format!("ERROR: {}", error));
-    // }
-
-    // pub fn push_error(&self, error: impl std::fmt::Display) {
-    //     App::push_error_(self.status_bar.clone(), self.context_id, error);
-    // }
 
     pub fn open_shortcuts_window(&self) {
         let window = self.window.clone();

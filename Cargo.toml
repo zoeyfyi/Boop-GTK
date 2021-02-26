@@ -31,7 +31,7 @@ glib = "0.10"
 gdk = "0.13"
 gdk-pixbuf = "0.9"
 pango = "0.9"
-sourceview = "0.9"
+sourceview = { version = "0.9", features = ["v3_16"] }
 # GTK utils
 gladis = "0.4.1"
 gladis_proc_macro = "0.4.1"
