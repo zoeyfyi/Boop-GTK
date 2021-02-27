@@ -2,7 +2,6 @@ use core::fmt;
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use rust_embed::RustEmbed;
 use std::{
-    borrow::Cow,
     collections::{BTreeMap, HashMap},
     fmt::Display,
     fs,
@@ -50,15 +49,10 @@ impl ScriptMap {
     // load scripts included in the binary
     fn load_internal(&mut self) {
         for file in Scripts::iter() {
-            let file: Cow<'_, str> = file;
             // scripts are internal, so we can unwrap "safely"
-            let source: Cow<'static, [u8]> = Scripts::get(&file)
-                .unwrap_or_else(|| panic!("failed to get file: {}", file.to_string()));
-            let script_source = String::from_utf8(source.to_vec())
-                .unwrap_or_else(|e| panic!("{} is not UTF8: {}", file, e));
-            if let Ok(script) = Script::from_source(script_source, PathBuf::new()) {
-                self.0.insert(script.metadata.name.clone(), script);
-            }
+            let script_source = String::from_utf8(Scripts::get(&file).unwrap().to_vec()).unwrap();
+            let script = Script::from_source(script_source, PathBuf::new()).unwrap();
+            self.0.insert(script.metadata.name.clone(), script);
         }
 
         info!("loaded {} internal scripts", Scripts::iter().count());
