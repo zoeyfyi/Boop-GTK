@@ -26,33 +26,12 @@ impl ScriptMap {
 
         scripts.load_internal();
 
-        // TODO: use directories or one of its forks once this functionality is implemented
-        if cfg!(target_os = "linux") {
-            let env_var = std::env::var("XDG_CONFIG_DIRS")
-                .ok()
-                .filter(|value| value.is_empty());
+        for mut dir in XDG_DIRS.get_config_dirs() {
+            dir.push("scripts");
 
-            match env_var {
-                Some(dirs) => {
-                    // $XDG_CONFIG_DIRS is a ":" seperated list of directories
-                    for dir in dirs.split(':') {
-                        let path_str = format!("{}/boop-gtk/scripts", dir);
-                        let path = Path::new(&path_str);
-                        if std::fs::read_dir(path).is_ok() {
-                            // load scripts (overrides any internal scripts)
-                            scripts.load_path(path).ok();
-                        }
-                    }
-                }
-                None => {
-                    warn!("$XDG_CONFIG_DIRS is not set, defaulting to /etc/xdg");
-                    // default for $XDG_CONFIG_DIRS is /etc/xdg
-                    // https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
-                    let path = Path::new("/etc/xdg/boop-gtk/scripts");
-                    if std::fs::read_dir(path).is_ok() {
-                        scripts.load_path(path).ok();
-                    }
-                }
+            if std::fs::read_dir(&dir).is_ok() {
+                // load scripts (overrides any internal scripts)
+                scripts.load_path(&dir).ok();
             }
         }
 
