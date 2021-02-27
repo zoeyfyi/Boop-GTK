@@ -12,8 +12,7 @@ use std::{
     time::Duration,
 };
 
-use crate::script::Script;
-use crate::PROJECT_DIRS;
+use crate::{script::Script, XDG_DIRS};
 
 pub(crate) struct ScriptMap(pub BTreeMap<String, Script>);
 
@@ -64,7 +63,7 @@ impl ScriptMap {
     }
 
     fn user_scripts_dir() -> PathBuf {
-        let mut dir = PROJECT_DIRS.config_dir().to_path_buf();
+        let mut dir = XDG_DIRS.get_config_home();
         dir.push("scripts");
         dir
     }

@@ -19,11 +19,9 @@ use glib;
 use gtk::{prelude::*, Application, Window};
 use scripts::{LoadScriptError, ScriptMap};
 
-use fs_extra::dir::move_dir;
 use std::{fmt, path::PathBuf};
 
 use app::{App, NOTIFICATION_LONG_DELAY};
-use directories::ProjectDirs;
 use fmt::Display;
 use std::{
     error::Error,
@@ -34,9 +32,11 @@ use std::{
 };
 
 lazy_static! {
-    static ref PROJECT_DIRS: directories::ProjectDirs =
-        ProjectDirs::from("fyi", "zoey", "boop-gtk")
-            .expect("Unable to find a configuration location for your platform");
+    static ref XDG_DIRS: xdg::BaseDirectories = match xdg::BaseDirectories::with_prefix("boop-gtk")
+    {
+        Ok(dirs) => dirs,
+        Err(err) => panic!("Unable to find XDG directorys: {}", err),
+    };
 }
 
 #[derive(Debug)]
@@ -57,78 +57,24 @@ impl Error for ScriptError {}
 // extract language file, ideally we would use GResource for this but sourceview doesn't support that
 // returns true if the language file already existed, false otherwise
 fn extract_language_file() -> bool {
-    let config_dir = PROJECT_DIRS.config_dir().to_path_buf();
-    if !config_dir.exists() {
-        info!("config directory does not exist, attempting to create it");
-        match fs::create_dir_all(&config_dir) {
-            Ok(()) => info!("created config directory"),
-            Err(e) => panic!("could not create config directory: {}", e),
-        }
-    }
-
-    info!("configuration directory at: {}", config_dir.display());
-
-    let lang_file_path = {
-        let mut path = config_dir;
-        path.push("boop.lang");
-        path
+    let lang_file_path = match XDG_DIRS.place_config_file("boop.lang") {
+        Ok(path) => path,
+        Err(err) => panic!("Could not construct language file path: {}", err),
     };
 
     let exists = lang_file_path.exists();
 
-    let mut file = fs::File::create(&lang_file_path).expect("Could not create language file");
-    file.write_all(include_bytes!("../boop.lang"))
-        .expect("Failed to write language file");
-    info!("language file written at: {}", lang_file_path.display());
+    if let Err(err) = fs::File::create(&lang_file_path)
+        .and_then(|mut file| file.write_all(include_bytes!("../boop.lang")))
+    {
+        panic!("Could not create language file: {}", err)
+    }
 
     exists
 }
 
-fn upgrade_config_files() -> Result<bool, fs_extra::error::Error> {
-    let old_project_dirs: directories::ProjectDirs =
-        ProjectDirs::from("uk.co", "mrbenshef", "boop-gtk")
-            .expect("Unable to find a configuration location for your platform");
-
-    if !old_project_dirs.config_dir().exists() {
-        return Ok(false);
-    }
-
-    if old_project_dirs.config_dir() == PROJECT_DIRS.config_dir() {
-        debug!("old project path same as new project path, skipping upgrade");
-        return Ok(false); // config dirs are the same on this platform
-    }
-
-    if PROJECT_DIRS.config_dir().exists() {
-        warn!(
-            "old and new config files exists, old: {}, new: {}",
-            old_project_dirs.config_dir().display(),
-            PROJECT_DIRS.config_dir().display()
-        );
-        return Ok(false); // just use new config files
-    }
-
-    move_dir(old_project_dirs.config_dir(), PROJECT_DIRS.config_dir(), &{
-        let mut options = fs_extra::dir::CopyOptions::new();
-        options.copy_inside = true;
-        options.overwrite = false;
-        options
-    })
-    .map(|_| true)
-}
-
 fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
-
-    match upgrade_config_files() {
-        Ok(true) => {
-            info!(
-                "old config files moved to {}",
-                PROJECT_DIRS.config_dir().display()
-            );
-        }
-        Ok(false) => (),
-        Err(err) => panic!("failed to move config files to new location: {}", err),
-    }
 
     debug!(
         "found {} pixbuf loaders",
@@ -140,10 +86,8 @@ fn main() {
 
     glib::set_application_name("Boop-GTK");
 
-    let config_dir = PROJECT_DIRS.config_dir().to_path_buf();
-
     // create user scripts directory
-    let scripts_dir: PathBuf = config_dir.join("scripts");
+    let scripts_dir: PathBuf = XDG_DIRS.get_config_home().join("scripts");
     let mut script_error = fs::create_dir_all(&scripts_dir)
         .map_err(|_| LoadScriptError::FailedToCreateScriptDirectory)
         .map_err(ScriptError::LoadError)
@@ -181,7 +125,7 @@ fn main() {
 
         Window::set_default_icon_name("fyi.zoey.Boop-GTK");
 
-        let app = App::new(&config_dir, scripts.clone());
+        let app = App::new(&XDG_DIRS.get_config_home(), scripts.clone());
         app.set_application(Some(application));
         app.show_all();
         if is_first_launch {
@@ -220,4 +164,24 @@ fn main() {
     });
 
     application.run(&[]);
+}
+
+#[cfg(test)]
+mod tests {
+    use directories::ProjectDirs;
+    use super::*;
+
+    lazy_static! {
+        static ref PROJECT_DIRS: directories::ProjectDirs =
+            ProjectDirs::from("fyi", "zoey", "boop-gtk")
+                .expect("Unable to find a configuration location for your platform");
+    }
+
+    #[test]
+    fn test_project_dirs_dependency_change() {
+        assert_eq!(
+            PROJECT_DIRS.config_dir().to_path_buf(),
+            XDG_DIRS.get_config_home()
+        );
+    }
 }
