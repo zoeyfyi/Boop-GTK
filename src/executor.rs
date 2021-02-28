@@ -1,4 +1,4 @@
-use crate::{scripts::Scripts, PROJECT_DIRS};
+use crate::{scripts::Scripts, XDG_DIRS};
 use dirty2::Dirty;
 use rusty_v8 as v8;
 use simple_error::SimpleError;
@@ -239,7 +239,7 @@ impl Executor {
         let mut external_path = if cfg!(test) {
             env::temp_dir()
         } else {
-            let mut path = PROJECT_DIRS.config_dir().to_path_buf();
+            let mut path = XDG_DIRS.get_config_home();
             path.push("scripts");
             path
         };

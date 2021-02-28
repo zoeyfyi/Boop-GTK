@@ -2,7 +2,6 @@ use core::fmt;
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use rust_embed::RustEmbed;
 use std::{
-    borrow::Cow,
     collections::{BTreeMap, HashMap},
     fmt::Display,
     fs,
@@ -12,8 +11,7 @@ use std::{
     time::Duration,
 };
 
-use crate::script::Script;
-use crate::PROJECT_DIRS;
+use crate::{script::Script, XDG_DIRS};
 
 pub(crate) struct ScriptMap(pub BTreeMap<String, Script>);
 
@@ -27,33 +25,12 @@ impl ScriptMap {
 
         scripts.load_internal();
 
-        // TODO: use directories or one of its forks once this functionality is implemented
-        if cfg!(target_os = "linux") {
-            let env_var = std::env::var("XDG_CONFIG_DIRS")
-                .ok()
-                .filter(|value| value.is_empty());
+        for mut dir in XDG_DIRS.get_config_dirs() {
+            dir.push("scripts");
 
-            match env_var {
-                Some(dirs) => {
-                    // $XDG_CONFIG_DIRS is a ":" seperated list of directories
-                    for dir in dirs.split(':') {
-                        let path_str = format!("{}/boop-gtk/scripts", dir);
-                        let path = Path::new(&path_str);
-                        if std::fs::read_dir(path).is_ok() {
-                            // load scripts (overrides any internal scripts)
-                            scripts.load_path(path).ok();
-                        }
-                    }
-                }
-                None => {
-                    warn!("$XDG_CONFIG_DIRS is not set, defaulting to /etc/xdg");
-                    // default for $XDG_CONFIG_DIRS is /etc/xdg
-                    // https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
-                    let path = Path::new("/etc/xdg/boop-gtk/scripts");
-                    if std::fs::read_dir(path).is_ok() {
-                        scripts.load_path(path).ok();
-                    }
-                }
+            if std::fs::read_dir(&dir).is_ok() {
+                // load scripts (overrides any internal scripts)
+                scripts.load_path(&dir).ok();
             }
         }
 
@@ -64,7 +41,7 @@ impl ScriptMap {
     }
 
     fn user_scripts_dir() -> PathBuf {
-        let mut dir = PROJECT_DIRS.config_dir().to_path_buf();
+        let mut dir = XDG_DIRS.get_config_home();
         dir.push("scripts");
         dir
     }
@@ -72,15 +49,10 @@ impl ScriptMap {
     // load scripts included in the binary
     fn load_internal(&mut self) {
         for file in Scripts::iter() {
-            let file: Cow<'_, str> = file;
             // scripts are internal, so we can unwrap "safely"
-            let source: Cow<'static, [u8]> = Scripts::get(&file)
-                .unwrap_or_else(|| panic!("failed to get file: {}", file.to_string()));
-            let script_source = String::from_utf8(source.to_vec())
-                .unwrap_or_else(|e| panic!("{} is not UTF8: {}", file, e));
-            if let Ok(script) = Script::from_source(script_source, PathBuf::new()) {
-                self.0.insert(script.metadata.name.clone(), script);
-            }
+            let script_source = String::from_utf8(Scripts::get(&file).unwrap().to_vec()).unwrap();
+            let script = Script::from_source(script_source, PathBuf::new()).unwrap();
+            self.0.insert(script.metadata.name.clone(), script);
         }
 
         info!("loaded {} internal scripts", Scripts::iter().count());
