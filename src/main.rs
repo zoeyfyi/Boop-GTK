@@ -21,7 +21,7 @@ use glib;
 use gtk::{prelude::*, Application, Window};
 use scripts::{LoadScriptError, ScriptMap};
 
-use std::{fmt, fs::File, path::PathBuf};
+use std::{fmt, path::PathBuf};
 
 use app::{App, NOTIFICATION_LONG_DELAY};
 use fmt::Display;
