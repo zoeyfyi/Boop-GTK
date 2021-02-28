@@ -10,16 +10,18 @@ extern crate fs_extra;
 
 mod app;
 mod command_pallete;
+mod config;
 mod executor;
 mod script;
 mod scripts;
 
+use crate::config::Config;
 use gio::prelude::*;
 use glib;
 use gtk::{prelude::*, Application, Window};
 use scripts::{LoadScriptError, ScriptMap};
 
-use std::{fmt, path::PathBuf};
+use std::{fmt, fs::File, path::PathBuf};
 
 use app::{App, NOTIFICATION_LONG_DELAY};
 use fmt::Display;
@@ -76,15 +78,9 @@ fn extract_language_file() -> bool {
 fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    debug!(
-        "found {} pixbuf loaders",
-        gdk_pixbuf::Pixbuf::get_formats().len()
-    );
+    let (config, config_file_created) = Config::load();
 
-    let lang_file_existed = extract_language_file();
-    let is_first_launch = !lang_file_existed;
-
-    glib::set_application_name("Boop-GTK");
+    extract_language_file();
 
     // create user scripts directory
     let scripts_dir: PathBuf = XDG_DIRS.get_config_home().join("scripts");
@@ -108,6 +104,8 @@ fn main() {
     // needed on windows
     sourceview::View::static_type();
 
+    glib::set_application_name("Boop-GTK");
+
     let application = Application::new(Some("fyi.zoey.Boop-GTK"), Default::default())
         .expect("failed to initialize GTK application");
 
@@ -128,7 +126,8 @@ fn main() {
         let app = App::new(&XDG_DIRS.get_config_home(), scripts.clone());
         app.set_application(Some(application));
         app.show_all();
-        if is_first_launch {
+        if config_file_created || config.show_shortcuts_on_open {
+            // open shortcut on first launch
             app.open_shortcuts_window();
         }
 
