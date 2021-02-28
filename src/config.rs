@@ -1,16 +1,16 @@
 use std::{fs::File, io::Write};
 
 use crate::XDG_DIRS;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Default, Deserialize)]
+#[derive(Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
     pub show_shortcuts_on_open: bool,
     pub editor: EditorConfig,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct EditorConfig {
     pub colour_scheme: String,
 }
@@ -36,7 +36,7 @@ impl Config {
 
             // no config file, write default
             let mut file = File::create(&config_path).expect("Failed to create config file");
-            file.write_all(include_bytes!("../config/default.toml"))
+            file.write_all(toml::to_string_pretty(&Config::default()).unwrap().as_bytes())
                 .expect("Failed to write to config file");
         }
 

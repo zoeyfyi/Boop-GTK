@@ -41,6 +41,7 @@ rusty_v8 = "0.20.0"
 # JSON
 serde = { version = "1.0", features = ["derive"] }
 serde_jsonrc = "0.1"
+toml = "0.5"
 # Logging
 log = "0.4.14"
 env_logger = "0.8.3"

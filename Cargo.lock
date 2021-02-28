@@ -131,6 +131,7 @@ dependencies = [
  "simple-error",
  "sourceview",
  "tempfile",
+ "toml 0.5.8",
  "xdg",
 ]
 
