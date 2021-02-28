@@ -168,8 +168,8 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use directories::ProjectDirs;
     use super::*;
+    use directories::ProjectDirs;
 
     lazy_static! {
         static ref PROJECT_DIRS: directories::ProjectDirs =
