@@ -2,15 +2,17 @@ use crate::{
     command_pallete::CommandPalleteDialog,
     executor::{self},
     script::Script,
-    scripts::ScriptMap,
+    scriptmap::ScriptMap,
+    util::StringExt,
 };
+use eyre::{Context, Result};
 use gdk_pixbuf::prelude::*;
 use gladis::Gladis;
 use glib::SourceId;
 use gtk::{prelude::*, Label, Revealer, ShortcutsWindow};
 use sourceview::prelude::*;
 
-use executor::TextReplacement;
+use executor::{ExecutorError, TextReplacement};
 use gtk::{AboutDialog, ApplicationWindow, Button, ModelButton};
 use std::{
     path::Path,
@@ -51,9 +53,9 @@ pub struct App {
 }
 
 impl App {
-    pub(crate) fn new(config_dir: &Path, scripts: Arc<RwLock<ScriptMap>>) -> Self {
+    pub(crate) fn new(config_dir: &Path, scripts: Arc<RwLock<ScriptMap>>) -> Result<Self> {
         let widgets = AppWidgets::from_resource("/fyi/zoey/Boop-GTK/boop-gtk.glade")
-            .unwrap_or_else(|e| panic!("failed to load boop-gtk.glade: {}", e));
+            .wrap_err("Failed to load boop-gtk.glade")?;
 
         let app = App {
             widgets,
@@ -69,7 +71,7 @@ impl App {
         for (_, script) in app
             .scripts
             .read()
-            .expect("scripts lock is poisoned")
+            .expect("Scripts lock is poisoned")
             .0
             .iter()
         {
@@ -79,7 +81,7 @@ impl App {
             }
         }
 
-        app.setup_syntax_highlighting(config_dir);
+        app.setup_syntax_highlighting(config_dir)?;
 
         // close notification on dismiss
         {
@@ -95,7 +97,7 @@ impl App {
         {
             let app_ = app.clone();
             app.re_execute_last_script_button
-                .connect_clicked(move |_| app_.re_execute());
+                .connect_clicked(move |_| app_.re_execute().expect("Failed to re-execute script"));
         }
 
         // reset the state of each script
@@ -104,7 +106,7 @@ impl App {
             app.reset_scripts_button.connect_clicked(move |_| {
                 for (_, script) in scripts
                     .write()
-                    .expect("scripts lock is poisoned")
+                    .expect("Scripts lock is poisoned")
                     .0
                     .iter_mut()
                 {
@@ -162,11 +164,13 @@ impl App {
 
         {
             let app_ = app.clone();
-            app.header_button
-                .connect_clicked(move |_| app_.open_command_pallete());
+            app.header_button.connect_clicked(move |_| {
+                app_.run_command_pallete()
+                    .expect("Failed to run command pallete")
+            });
         }
 
-        app
+        Ok(app)
     }
 
     fn new_shortcuts_window(window: &gtk::ApplicationWindow) -> ShortcutsWindow {
@@ -175,6 +179,32 @@ impl App {
             .build();
 
         let section = gtk::ShortcutsSectionBuilder::new().visible(true).build();
+
+        {
+            let group = gtk::ShortcutsGroupBuilder::new()
+                .title("Test")
+                .visible(true)
+                .build();
+
+            group.add(
+                &gtk::ShortcutsShortcutBuilder::new()
+                    .action_name("app.command_pallete")
+                    .visible(true)
+                    .build(),
+            );
+            group.add(
+                &gtk::ShortcutsShortcutBuilder::new()
+                    .action_name("app.re_execute_script")
+                    .visible(true)
+                    .build(),
+            );
+            group.add(
+                &gtk::ShortcutsShortcutBuilder::new()
+                    .action_name("app.quit")
+                    .visible(true)
+                    .build(),
+            );
+        }
 
         // genral group
         {
@@ -281,9 +311,9 @@ impl App {
         );
     }
 
-    fn setup_syntax_highlighting(&self, config_dir: &Path) {
-        let language_manager =
-            sourceview::LanguageManager::get_default().expect("failed to get language manager");
+    fn setup_syntax_highlighting(&self, config_dir: &Path) -> Result<()> {
+        let language_manager = sourceview::LanguageManager::get_default()
+            .ok_or(eyre!("Failed to get language manager"))?;
 
         // add config_dir to language manager's search path
         let dirs = language_manager.get_search_path();
@@ -306,11 +336,13 @@ impl App {
         let buffer: sourceview::Buffer = self
             .source_view
             .get_buffer()
-            .expect("failed to get buffer")
+            .ok_or(eyre!("Failed to get buffer"))?
             .downcast::<sourceview::Buffer>()
-            .expect("faild to downcast TextBuffer to sourceview Buffer");
+            .map_err(|_| eyre!("Failed to downcast TextBuffer to sourceview Buffer"))?;
         buffer.set_highlight_syntax(true);
         buffer.set_language(boop_language.as_ref());
+
+        Ok(())
     }
 
     // fn push_error_(status_bar: gtk::Statusbar, context_id: u32, error: impl std::fmt::Display) {
@@ -327,41 +359,51 @@ impl App {
         shortcuts_window.show_all();
     }
 
-    pub fn open_command_pallete(&self) {
-        let dialog = CommandPalleteDialog::new(&self.window, self.scripts.clone());
+    pub fn run_command_pallete(&self) -> Result<()> {
+        let dialog = CommandPalleteDialog::new(&self.window, self.scripts.clone())?;
         dialog.show_all();
 
         if let gtk::ResponseType::Accept = dialog.run() {
             let selected: &str = dialog
                 .get_selected()
-                .expect("dialog didn't return a selection");
+                .ok_or(eyre!("Command pallete dialog didn't return a selection"))?;
 
             *self.last_script_executed.write().unwrap() = Some(String::from(selected));
-            self.execute_script(selected);
+            self.execute_script(selected)?;
         }
 
         dialog.close();
+
+        Ok(())
     }
 
-    pub fn re_execute(&self) {
+    pub fn re_execute(&self) -> Result<()> {
         if let Some(script_key) = &*self.last_script_executed.read().unwrap() {
-            self.execute_script(&script_key);
+            self.execute_script(&script_key)
+                .wrap_err("Failed to execute script")
         } else {
             warn!("no last script");
+            Ok(())
         }
     }
 
-    fn execute_script(&self, script_key: &str) {
-        let mut script_map = self.scripts.write().expect("scripts lock is poisoned");
-        let script: &mut Script = &mut script_map.0.get_mut(script_key).expect("script not in map");
+    fn execute_script(&self, script_key: &str) -> Result<()> {
+        let mut script_map = self.scripts.write().expect("Scripts lock is poisoned");
+        let script: &mut Script = script_map
+            .0
+            .get_mut(script_key)
+            .ok_or(eyre!("Script not in map"))?;
 
         info!("executing {}", script.metadata.name);
 
-        let buffer = &self.source_view.get_buffer().expect("failed to get buffer");
+        let buffer = &self
+            .source_view
+            .get_buffer()
+            .ok_or(eyre!("Failed to get buffer"))?;
 
         let buffer_text = buffer
             .get_text(&buffer.get_start_iter(), &buffer.get_end_iter(), false)
-            .expect("failed to get buffer text");
+            .ok_or(eyre!("Failed to get buffer text"))?;
 
         let selection_text = buffer
             .get_selection_bounds()
@@ -385,96 +427,50 @@ impl App {
                 } else if let Some(info) = status.info() {
                     self.post_notification(&info, NOTIFICATION_LONG_DELAY);
                 }
-                self.do_replacement(status.into_replacement());
+                self.do_replacement(status.clone().into_replacement())
+                    .wrap_err_with(|| format!("Failed to make replacement: {:?}", status))?;
             }
             Err(err) => {
-                warn!("Exception: {:?}", err);
-                match err {
-                    executor::ExecutorError::SourceExceedsMaxLength => {
-                        self.post_notification_error(
-                            "Script exceeds max length",
-                            NOTIFICATION_LONG_DELAY,
-                        );
-                    }
-                    executor::ExecutorError::Compile(exception) => {
-                        let error_str = match (exception.line_number, exception.columns) {
-                            (Some(line_number), Some((left_column, right_column))) => format!(
-                                r#"<span foreground="red" weight="bold">EXCEPTION:</span> {} ({}:{} - {}:{})"#,
-                                exception.exception_str,
-                                line_number,
-                                left_column,
-                                line_number,
-                                right_column
-                            ),
-                            _ => format!(
-                                r#"<span foreground="red" weight="bold">EXCEPTION:</span> {}"#,
-                                exception.exception_str,
-                            ),
-                        };
+                let executor_err = err.downcast::<ExecutorError>().unwrap(); // can't recover from other errors
 
-                        self.post_notification(&error_str, NOTIFICATION_LONG_DELAY);
-                    }
-                    executor::ExecutorError::Execute(exception) => {
-                        let error_str = match (exception.line_number, exception.columns) {
-                            (Some(line_number), Some((left_column, right_column))) => format!(
-                                r#"<span foreground="red" weight="bold">EXCEPTION:</span> {} ({}:{} - {}:{})"#,
-                                exception.exception_str,
-                                line_number,
-                                left_column,
-                                line_number,
-                                right_column
-                            ),
-                            _ => format!(
-                                r#"<span foreground="red" weight="bold">EXCEPTION:</span> {}"#,
-                                exception.exception_str,
-                            ),
-                        };
-
-                        self.post_notification(&error_str, NOTIFICATION_LONG_DELAY);
-                    }
-                    executor::ExecutorError::NoMain => {
-                        self.post_notification(
-                            r#"<span foreground="red">ERROR:</span> No main function"#,
-                            NOTIFICATION_LONG_DELAY,
-                        );
-                    }
-                }
+                error!("Exception: {:?}", executor_err);
+                self.post_notification_error(
+                    &executor_err.to_notification_string(),
+                    NOTIFICATION_LONG_DELAY,
+                );
             }
         }
+
+        Ok(())
     }
 
-    fn do_replacement(&self, replacement: TextReplacement) {
-        let buffer = &self.source_view.get_buffer().expect("failed to get buffer");
+    fn do_replacement(&self, replacement: TextReplacement) -> Result<()> {
+        let buffer = &self
+            .source_view
+            .get_buffer()
+            .ok_or(eyre!("Failed to get buffer"))?;
 
         match replacement {
             TextReplacement::Full(text) => {
                 info!("replacing full text");
 
-                let text = String::from_utf8(
-                    text.into_bytes()
-                        .into_iter()
-                        .filter(|b| *b != 0)
-                        .collect::<Vec<u8>>(),
-                )
-                .expect("failed to remove null bytes from text");
+                let safe_text = text
+                    .remove_null_bytes()
+                    .wrap_err("Failed to remove null bytes from text")?;
 
-                buffer.set_text(&text);
+                buffer.set_text(&safe_text);
             }
             TextReplacement::Selection(text) => {
                 info!("replacing selection");
 
-                let text = String::from_utf8(
-                    text.into_bytes()
-                        .into_iter()
-                        .filter(|b| *b != 0)
-                        .collect::<Vec<u8>>(),
-                )
-                .expect("failed to remove null bytes from text");
+                let safe_text = text
+                    .remove_null_bytes()
+                    .wrap_err("Failed to remove null bytes from text")?;
 
                 match &mut buffer.get_selection_bounds() {
                     Some((start, end)) => {
                         buffer.delete(start, end);
-                        buffer.insert(start, &text);
+                        buffer.insert(start, &safe_text);
                     }
                     None => {
                         error!("tried to do a selection replacement, but no text is selected!");
@@ -485,24 +481,19 @@ impl App {
                 let insert_text = insertions.join("");
                 info!("inserting {} bytes", insert_text.len());
 
-                let insert_text = String::from_utf8(
-                    insert_text
-                        .into_bytes()
-                        .into_iter()
-                        .filter(|b| *b != 0)
-                        .collect::<Vec<u8>>(),
-                )
-                .expect("failed to remove null bytes from text");
+                let safe_text = insert_text
+                    .remove_null_bytes()
+                    .wrap_err("Failed to remove null bytes from text")?;
 
                 match &mut buffer.get_selection_bounds() {
                     Some((start, end)) => {
                         buffer.delete(start, end);
-                        buffer.insert(start, &insert_text);
+                        buffer.insert(start, &safe_text);
                     }
                     None => {
                         let mut insert_point =
                             buffer.get_iter_at_offset(buffer.get_property_cursor_position());
-                        buffer.insert(&mut insert_point, &insert_text)
+                        buffer.insert(&mut insert_point, &safe_text)
                     }
                 }
             }
@@ -512,5 +503,7 @@ impl App {
         }
 
         self.source_view.grab_focus();
+
+        Ok(())
     }
 }

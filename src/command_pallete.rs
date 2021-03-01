@@ -1,14 +1,16 @@
+use eyre::{Context, ContextCompat, Result};
 use fuse_rust::Fuse;
 use gdk::{keys, EventKey};
 use gio::prelude::*;
 use gladis::Gladis;
+use glib::Type;
 use gtk::prelude::*;
 use gtk::{Dialog, Entry, TreePath, TreeView, Window};
 use once_cell::unsync::OnceCell;
 use shrinkwraprs::Shrinkwrap;
 
-use crate::{script::Script, scripts::ScriptMap};
-use glib::Type;
+use crate::{script::Script, scriptmap::ScriptMap};
+
 use std::{
     collections::HashMap,
     rc::Rc,
@@ -59,10 +61,10 @@ pub struct CommandPalleteDialog {
 }
 
 impl CommandPalleteDialog {
-    pub(crate) fn new<P: IsA<Window>>(window: &P, scripts: Arc<RwLock<ScriptMap>>) -> Self {
+    pub(crate) fn new<P: IsA<Window>>(window: &P, scripts: Arc<RwLock<ScriptMap>>) -> Result<Self> {
         let widgets =
             CommandPalleteDialogWidgets::from_resource("/fyi/zoey/Boop-GTK/command-pallete.glade")
-                .unwrap_or_else(|e| panic!("failed to load command-pallete.glade: {}", e));
+                .wrap_err("Failed to load command-pallete.glade")?;
 
         let command_pallete_dialog = CommandPalleteDialog {
             widgets,
@@ -166,7 +168,7 @@ impl CommandPalleteDialog {
         );
 
         command_pallete_dialog.register_handlers();
-        command_pallete_dialog
+        Ok(command_pallete_dialog)
     }
 
     pub(crate) fn get_selected(&self) -> Option<&String> {
@@ -181,6 +183,7 @@ impl CommandPalleteDialog {
 
             self.dialog.connect_key_press_event(move |_, k| {
                 CommandPalleteDialog::on_key_press(k, &lb, &dialog, &selected)
+                    .expect("On key press handler failed")
             });
         }
 
@@ -189,6 +192,7 @@ impl CommandPalleteDialog {
             let scripts = self.scripts.clone();
             self.search_bar.connect_changed(move |s| {
                 CommandPalleteDialog::on_changed(s, &lb, scripts.clone())
+                    .expect("On change handler failed")
             });
         }
 
@@ -198,6 +202,7 @@ impl CommandPalleteDialog {
             self.dialog_tree_view
                 .connect_row_activated(move |tv, _, _| {
                     CommandPalleteDialog::on_click(tv, &dialog, &selected)
+                        .expect("On click handler failed")
                 });
         }
     }
@@ -207,7 +212,7 @@ impl CommandPalleteDialog {
         dialog_tree_view: &TreeView,
         dialog: &Dialog,
         selected: &OnceCell<String>,
-    ) -> Inhibit {
+    ) -> Result<Inhibit> {
         let model: gtk::TreeModelFilter = dialog_tree_view.get_model().unwrap().downcast().unwrap();
         let result_count: i32 = model.iter_n_children(None);
 
@@ -237,30 +242,35 @@ impl CommandPalleteDialog {
                 dialog_tree_view.set_cursor(&path, gtk::NONE_TREE_VIEW_COLUMN, false);
             }
 
-            return Inhibit(true);
+            return Ok(Inhibit(true));
         } else if key == keys::constants::Return {
-            CommandPalleteDialog::on_click(dialog_tree_view, dialog, selected);
+            CommandPalleteDialog::on_click(dialog_tree_view, dialog, selected)?;
         } else if key == keys::constants::Escape {
             dialog.close();
         }
 
-        Inhibit(false)
+        Ok(Inhibit(false))
     }
 
-    fn on_click(dialog_tree_view: &TreeView, dialog: &Dialog, selected: &OnceCell<String>) {
+    fn on_click(
+        dialog_tree_view: &TreeView,
+        dialog: &Dialog,
+        selected: &OnceCell<String>,
+    ) -> Result<()> {
         let model: gtk::TreeModelFilter = dialog_tree_view.get_model().unwrap().downcast().unwrap();
 
         if let (Some(path), _) = dialog_tree_view.get_cursor() {
             let value = model.get_value(
                 &model
                     .get_iter(&path)
-                    .unwrap_or_else(|| panic!("failed to get iter for path: {:?}", path)),
+                    .wrap_err_with(|| format!("failed to get iter for path: {:?}", path))?,
                 NAME_COLUMN as i32,
             );
 
             let value_string = value
                 .downcast::<String>()
-                .expect("cannot downcast value to String")
+                .map_err(|value| eyre!("Value: {:?}", value))
+                .wrap_err("Cannot downcast value to String")?
                 .get();
 
             if let Some(v) = value_string {
@@ -271,9 +281,15 @@ impl CommandPalleteDialog {
 
             dialog.response(gtk::ResponseType::Accept);
         }
+
+        Ok(())
     }
 
-    fn on_changed(searchbar: &Entry, dialog_tree_view: &TreeView, scripts: Arc<RwLock<ScriptMap>>) {
+    fn on_changed(
+        searchbar: &Entry,
+        dialog_tree_view: &TreeView,
+        scripts: Arc<RwLock<ScriptMap>>,
+    ) -> Result<()> {
         let filter_store: gtk::TreeModelFilter =
             dialog_tree_view.get_model().unwrap().downcast().unwrap();
         let store: gtk::ListStore = filter_store.get_model().unwrap().downcast().unwrap();
@@ -302,7 +318,7 @@ impl CommandPalleteDialog {
 
                 let iter = store
                     .get_iter(&path)
-                    .unwrap_or_else(|| panic!("failed to get iter for path: {:?}", path));
+                    .ok_or_else(|| eyre!("failed to get iter for path: {:?}", path))?;
 
                 // TODO: use gtk_liststore_item crate
                 let script_name: String = store
@@ -330,7 +346,7 @@ impl CommandPalleteDialog {
 
                 let iter = store
                     .get_iter(&path)
-                    .unwrap_or_else(|| panic!("failed to get iter for path: {:?}", path));
+                    .wrap_err_with(|| format!("failed to get iter for path: {:?}", path))?;
 
                 // TODO: use gtk_liststore_item crate
                 let script_name: String = store
@@ -355,5 +371,7 @@ impl CommandPalleteDialog {
 
         // reset selection to first row
         dialog_tree_view.set_cursor(&TreePath::new_first(), gtk::NONE_TREE_VIEW_COLUMN, false);
+
+        Ok(())
     }
 }

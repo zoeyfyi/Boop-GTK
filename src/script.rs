@@ -1,5 +1,6 @@
 use crate::executor::{ExecutionStatus, Executor, ExecutorError};
 use crossbeam::channel::{bounded, Receiver, Sender};
+use eyre::{Context, Result};
 use fuse_rust::{FuseProperty, Fuseable};
 use serde::Deserialize;
 use std::{fmt, fs, path::PathBuf, thread};
@@ -134,14 +135,17 @@ impl Script {
                     {
                         ExecutorJob::Request((full_text, selection)) => {
                             if executor.is_none() {
-                                let exe = Executor::new(&t_source);
-
-                                if let Err(ref err) = exe {
-                                    warn!("failed to create executor");
-                                    t_sender.send(ExecutorJob::Responce(Err(err.clone()))).unwrap();
+                                executor = match Executor::new(&t_source) {
+                                    Ok(executor) => Some(executor),
+                                    Err(err) => {
+                                        warn!("failed to create executor");
+                                        let executor_err = err.downcast::<ExecutorError>().unwrap(); // anything else is unrecoverable
+                                        t_sender.send(ExecutorJob::Responce(Err(executor_err)))
+                                            .wrap_err("Failed to send error responce")
+                                            .unwrap();        
+                                        None
+                                    }
                                 }
-
-                                executor = exe.ok();
                             }
 
                             if let Some(executor) = executor.as_mut() {
@@ -150,7 +154,9 @@ impl Script {
                                     full_text.len(),
                                     selection.as_ref().map(|s| s.len()).unwrap_or(0),
                                 );
-                                let result = executor.execute(&full_text, selection.as_deref());
+                                let result = executor
+                                    .execute(&full_text, selection.as_deref())
+                                    .map_err(|err| err.downcast::<ExecutorError>().unwrap());
                                 t_sender.send(ExecutorJob::Responce(result)).unwrap(); // blocks until send
                             }
                         }
@@ -182,13 +188,13 @@ impl Script {
         &mut self,
         full_text: &str,
         selection: Option<&str>,
-    ) -> Result<ExecutionStatus, ExecutorError> {
+    ) -> Result<ExecutionStatus> {
         if self.channel.is_none() {
             self.init_executor_thread();
         }
         assert!(self.channel.is_some());
 
-        let channel = self.channel.as_ref().expect("channel is none");
+        let channel = self.channel.as_ref().ok_or_else(|| eyre!("Channel is none"))?;
 
         // send request
         channel
@@ -197,22 +203,22 @@ impl Script {
                 full_text.to_owned(),
                 selection.map(|s| s.to_owned()),
             )))
-            .expect("channel is disconnected");
+            .wrap_err("Channel is disconnected")?;
 
         // receive result
         let result = channel
             .receiver
             .recv()
-            .expect("receive channel is empty and disconnected");
+            .wrap_err("Receive channel is empty and disconnected")?;
 
         if let ExecutorJob::Responce(status) = result {
-            return status;
+            return status.map_err(|err| eyre::Report::from(err));
         }
 
-        panic!(
-            "expected a responce on channel, but got a request: {:?}",
+        Err(eyre!(
+            "Expected a responce on channel, but got a request: {:?}",
             result
-        );
+        ))
     }
 }
 
