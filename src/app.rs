@@ -214,7 +214,8 @@ impl App {
                     }
 
                     source_view
-                        .get_sourceview_buffer().expect("Failed to get sourceview")
+                        .get_sourceview_buffer()
+                        .expect("Failed to get sourceview")
                         .set_style_scheme(scheme.as_ref());
                 });
         }
