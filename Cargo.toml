@@ -55,13 +55,14 @@ lazy_static = "1.4.0"
 once_cell = "1.7.0"
 rust-embed = { version = "5.9.0", features = ["debug-embed"] }
 dirty2 = "0.1.0"
-simple-error = "0.2"
+eyre = "0.6.5"
+color-eyre = "0.5.10"
 crossbeam = "0.8.0"
 fs_extra = "1.2.0"
 
 [dependencies.gtk]
 version = "0.9"
-features = ["v3_20"]
+features = ["v3_22"]
 
 [dependencies.gio]
 version = "0.9"
