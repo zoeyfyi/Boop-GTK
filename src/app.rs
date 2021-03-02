@@ -1,9 +1,10 @@
-use crate::config::Config;
 use crate::{
     command_pallete::CommandPalleteDialog,
+    config::Config,
     executor::{self},
     script::Script,
     scriptmap::ScriptMap,
+    util::SourceViewExt,
     util::StringExt,
 };
 use eyre::{Context, Result};
@@ -98,15 +99,9 @@ impl App {
                 warn!("Could not find style scheme with id '{}'", scheme_id);
             }
 
-            let buffer = app
-                .source_view
-                .get_buffer()
-                .ok_or_else(|| eyre!("Failed to get buffer"))
-                .unwrap()
-                .downcast::<sourceview::Buffer>()
-                .map_err(|_| eyre!("Failed to downcast TextBuffer to sourceview Buffer"))
-                .unwrap();
-            buffer.set_style_scheme(scheme.as_ref());
+            app.source_view
+                .get_sourceview_buffer()?
+                .set_style_scheme(scheme.as_ref());
 
             if let Some(scheme) = scheme {
                 app.color_scheme_button.set_style_scheme(&scheme);
@@ -147,12 +142,7 @@ impl App {
         match boop_language {
             Ok(language) => {
                 // set language
-                let buffer: sourceview::Buffer = app
-                    .source_view
-                    .get_buffer()
-                    .ok_or(eyre!("Failed to get buffer"))?
-                    .downcast::<sourceview::Buffer>()
-                    .map_err(|_| eyre!("Failed to downcast TextBuffer to sourceview Buffer"))?;
+                let buffer = app.source_view.get_sourceview_buffer()?;
                 buffer.set_highlight_syntax(true);
                 buffer.set_language(Some(&language));
             }
@@ -223,15 +213,9 @@ impl App {
                         config.save().expect("Failed to save config");
                     }
 
-                    let buffer = source_view
-                        .get_buffer()
-                        .ok_or_else(|| eyre!("Failed to get buffer"))
-                        .unwrap()
-                        .downcast::<sourceview::Buffer>()
-                        .map_err(|_| eyre!("Failed to downcast TextBuffer to sourceview Buffer"))
-                        .unwrap();
-
-                    buffer.set_style_scheme(scheme.as_ref());
+                    source_view
+                        .get_sourceview_buffer().expect("Failed to get sourceview")
+                        .set_style_scheme(scheme.as_ref());
                 });
         }
 
