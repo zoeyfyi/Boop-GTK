@@ -142,7 +142,7 @@ impl Script {
                                         let executor_err = err.downcast::<ExecutorError>().unwrap(); // anything else is unrecoverable
                                         t_sender.send(ExecutorJob::Responce(Err(executor_err)))
                                             .wrap_err("Failed to send error responce")
-                                            .unwrap();        
+                                            .unwrap();
                                         None
                                     }
                                 }
@@ -184,17 +184,16 @@ impl Script {
         self.channel = None;
     }
 
-    pub fn execute(
-        &mut self,
-        full_text: &str,
-        selection: Option<&str>,
-    ) -> Result<ExecutionStatus> {
+    pub fn execute(&mut self, full_text: &str, selection: Option<&str>) -> Result<ExecutionStatus> {
         if self.channel.is_none() {
             self.init_executor_thread();
         }
         assert!(self.channel.is_some());
 
-        let channel = self.channel.as_ref().ok_or_else(|| eyre!("Channel is none"))?;
+        let channel = self
+            .channel
+            .as_ref()
+            .ok_or_else(|| eyre!("Channel is none"))?;
 
         // send request
         channel
