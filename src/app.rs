@@ -1,3 +1,4 @@
+use crate::config::Config;
 use crate::{
     command_pallete::CommandPalleteDialog,
     executor::{self},
@@ -9,7 +10,7 @@ use eyre::{Context, Result};
 use gdk_pixbuf::prelude::*;
 use gladis::Gladis;
 use glib::SourceId;
-use gtk::{prelude::*, Dialog, Label, Revealer, ShortcutsWindow};
+use gtk::{prelude::*, Dialog, Label, Revealer, ShortcutsWindow, Switch};
 use sourceview::{prelude::*, Language};
 
 use executor::{ExecutorError, TextReplacement};
@@ -35,16 +36,17 @@ pub struct AppWidgets {
 
     re_execute_last_script_button: ModelButton,
     reset_scripts_button: ModelButton,
+    preferences_button: ModelButton,
     config_directory_button: ModelButton,
     more_scripts_button: ModelButton,
-    source_view_theme_button: ModelButton,
     shortcuts_button: ModelButton,
     about_button: ModelButton,
 
     about_dialog: AboutDialog,
-    theme_dialog: Dialog,
-    theme_chooser_widget: sourceview::StyleSchemeChooserWidget,
-    theme_ok_button: Button,
+    preference_dialog: Dialog,
+
+    color_scheme_button: sourceview::StyleSchemeChooserButton,
+    shortcut_switch: Switch,
 }
 
 #[derive(Clone, Shrinkwrap)]
@@ -54,10 +56,15 @@ pub struct App {
     scripts: Arc<RwLock<ScriptMap>>,
     notification_source_id: Arc<RwLock<Option<SourceId>>>,
     last_script_executed: Arc<RwLock<Option<String>>>,
+    config: Arc<RwLock<Config>>,
 }
 
 impl App {
-    pub(crate) fn new(config_dir: &Path, scripts: Arc<RwLock<ScriptMap>>) -> Result<Self> {
+    pub(crate) fn new(
+        config_dir: &Path,
+        scripts: Arc<RwLock<ScriptMap>>,
+        config: Arc<RwLock<Config>>,
+    ) -> Result<Self> {
         // must be fetched _before_ widgets are proccessed since the language managers search path must
         // be immediantly after creation:
         // https://developer.gnome.org/gtksourceview/stable/GtkSourceLanguageManager.html#gtk-source-language-manager-set-search-path
@@ -69,14 +76,60 @@ impl App {
         let app = App {
             widgets,
             scripts,
+            config,
             notification_source_id: Arc::new(RwLock::new(None)),
             last_script_executed: Arc::new(RwLock::new(None)),
         };
 
+        // load color scheme from config
+        {
+            let scheme_id = &app
+                .config
+                .read()
+                .expect("Config lock is poisoned")
+                .editor
+                .colour_scheme_id;
+
+            let manager = sourceview::StyleSchemeManager::get_default()
+                .ok_or_else(|| eyre!("Failed to get default style scheme manager"))?;
+
+            let scheme = manager.get_scheme(scheme_id);
+            if scheme.is_none() {
+                warn!("Could not find style scheme with id '{}'", scheme_id);
+            }
+
+            let buffer = app
+                .source_view
+                .get_buffer()
+                .ok_or_else(|| eyre!("Failed to get buffer"))
+                .unwrap()
+                .downcast::<sourceview::Buffer>()
+                .map_err(|_| eyre!("Failed to downcast TextBuffer to sourceview Buffer"))
+                .unwrap();
+            buffer.set_style_scheme(scheme.as_ref());
+
+            if let Some(scheme) = scheme {
+                app.color_scheme_button.set_style_scheme(&scheme);
+            }
+        }
+
+        // load shortcut startup from config
+        {
+            let state = app
+                .config
+                .read()
+                .expect("Config lock is poisoned")
+                .show_shortcuts_on_open;
+
+            app.shortcut_switch.set_state(state);
+        }
+
+        // add version to about
         app.widgets
             .about_dialog
             .set_version(Some(env!("CARGO_PKG_VERSION")));
 
+        // add authors of scripts to about section
         for (_, script) in app
             .scripts
             .read()
@@ -146,38 +199,51 @@ impl App {
 
         // open sourceview theme dialog
         {
-            let theme_dialog: Dialog = app.theme_dialog.clone();
-            app.source_view_theme_button.connect_clicked(move |_| {
-                let responce = theme_dialog.run();
+            let preference_dialog: Dialog = app.preference_dialog.clone();
+            app.preferences_button.connect_clicked(move |_| {
+                let responce = preference_dialog.run();
                 if responce == gtk::ResponseType::DeleteEvent
                     || responce == gtk::ResponseType::Cancel
                 {
-                    theme_dialog.hide();
+                    preference_dialog.hide();
                 }
-            });
-        }
-
-        // close sourceview theme dialog
-        {
-            let theme_dialog: Dialog = app.theme_dialog.clone();
-            app.theme_ok_button.connect_clicked(move |_| {
-                theme_dialog.hide();
             });
         }
 
         {
             let source_view: sourceview::View = app.source_view.clone();
-            app.theme_chooser_widget
-                .connect_property_style_scheme_notify(
-                    move |theme_chooser_widget: &sourceview::StyleSchemeChooserWidget| {
-                        let buffer: sourceview::Buffer = source_view
-                            .get_buffer()
-                            .expect("failed to get buffer")
-                            .downcast::<sourceview::Buffer>()
-                            .expect("faild to downcast TextBuffer to sourceview Buffer");
-                        buffer.set_style_scheme(theme_chooser_widget.get_style_scheme().as_ref());
-                    },
-                );
+            let config = app.config.clone();
+            app.color_scheme_button
+                .connect_property_style_scheme_notify(move |button| {
+                    let scheme = button.get_style_scheme();
+
+                    if let Some(id) = scheme.clone().and_then(|s| s.get_id()) {
+                        let mut config = config.write().expect("Config lock is poisoned");
+                        config.editor.set_colour_scheme_id(id.as_str());
+                        config.save().expect("Failed to save config");
+                    }
+
+                    let buffer = source_view
+                        .get_buffer()
+                        .ok_or_else(|| eyre!("Failed to get buffer"))
+                        .unwrap()
+                        .downcast::<sourceview::Buffer>()
+                        .map_err(|_| eyre!("Failed to downcast TextBuffer to sourceview Buffer"))
+                        .unwrap();
+
+                    buffer.set_style_scheme(scheme.as_ref());
+                });
+        }
+
+        {
+            let config = app.config.clone();
+            app.shortcut_switch.connect_state_set(move |_, state| {
+                let mut config = config.write().expect("Config lock is poisoned");
+                config.set_show_shortcuts_on_open(state);
+                config.save().expect("Failed to save config");
+
+                Inhibit(false)
+            });
         }
 
         // launch config directory in default file manager

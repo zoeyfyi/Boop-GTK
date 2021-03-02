@@ -64,7 +64,8 @@ fn main() -> Result<()> {
     color_eyre::install()?;
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    let (config, config_file_created) = Config::load();
+    let (config, config_file_created) = Config::load()?;
+    let config = Arc::new(RwLock::new(config));
 
     extract_language_file()?;
 
@@ -110,14 +111,19 @@ fn main() -> Result<()> {
 
         Window::set_default_icon_name("fyi.zoey.Boop-GTK");
 
-        let app = App::new(&XDG_DIRS.get_config_home(), scripts.clone())
+        let app = App::new(&XDG_DIRS.get_config_home(), scripts.clone(), config.clone())
             .expect("Failed to construct App");
         app.set_application(Some(application));
         app.show_all();
 
         register_actions(&application, &app);
 
-        if config_file_created || config.show_shortcuts_on_open {
+        if config_file_created
+            || config
+                .read()
+                .expect("Config lock is poisoned")
+                .show_shortcuts_on_open
+        {
             app.open_shortcuts_window();
         }
 

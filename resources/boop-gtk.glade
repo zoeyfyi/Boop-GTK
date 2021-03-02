@@ -3,7 +3,7 @@
 <interface>
   <requires lib="gtk+" version="3.22"/>
   <requires lib="gtksourceview" version="4.0"/>
-  <object class="GtkDialog">
+  <object class="GtkDialog" id="preference_dialog">
     <property name="can-focus">False</property>
     <property name="type-hint">dialog</property>
     <child internal-child="vbox">
@@ -26,88 +26,64 @@
           </packing>
         </child>
         <child>
-          <object class="GtkBox">
+          <!-- n-columns=2 n-rows=2 -->
+          <object class="GtkGrid">
             <property name="visible">True</property>
             <property name="can-focus">False</property>
-            <property name="orientation">vertical</property>
+            <property name="margin-start">12</property>
+            <property name="margin-end">12</property>
+            <property name="margin-top">12</property>
+            <property name="margin-bottom">12</property>
+            <property name="row-spacing">12</property>
+            <property name="column-spacing">12</property>
             <child>
               <object class="GtkLabel">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
-                <property name="label" translatable="yes">&lt;b&gt;Editor Colour Scheme&lt;/b&gt;</property>
-                <property name="use-markup">True</property>
-                <property name="xalign">0</property>
+                <property name="label" translatable="yes">Colour Scheme:</property>
+                <property name="xalign">1</property>
               </object>
               <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="padding">6</property>
-                <property name="position">1</property>
+                <property name="left-attach">0</property>
+                <property name="top-attach">0</property>
               </packing>
             </child>
             <child>
-              <object class="GtkSourceStyleSchemeChooserButton">
+              <object class="GtkSourceStyleSchemeChooserButton" id="color_scheme_button">
                 <property name="label" translatable="yes">Classic</property>
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
                 <property name="receives-default">True</property>
-                <property name="margin-start">8</property>
-                <property name="margin-end">8</property>
+                <property name="hexpand">True</property>
               </object>
               <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">2</property>
+                <property name="left-attach">1</property>
+                <property name="top-attach">0</property>
               </packing>
             </child>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">True</property>
-            <property name="position">1</property>
-          </packing>
-        </child>
-      </object>
-    </child>
-  </object>
-  <object class="GtkDialog" id="theme_dialog">
-    <property name="can-focus">False</property>
-    <property name="type-hint">dialog</property>
-    <child internal-child="vbox">
-      <object class="GtkBox">
-        <property name="can-focus">False</property>
-        <property name="orientation">vertical</property>
-        <property name="spacing">2</property>
-        <child internal-child="action_area">
-          <object class="GtkButtonBox">
-            <property name="can-focus">False</property>
-            <property name="layout-style">end</property>
             <child>
-              <object class="GtkButton" id="theme_ok_button">
-                <property name="label">gtk-ok</property>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="label" translatable="yes">Open Shortcuts on Startup:</property>
+                <property name="xalign">1</property>
+              </object>
+              <packing>
+                <property name="left-attach">0</property>
+                <property name="top-attach">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkSwitch" id="shortcut_switch">
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
-                <property name="receives-default">True</property>
-                <property name="double-buffered">False</property>
-                <property name="use-stock">True</property>
+                <property name="halign">start</property>
               </object>
               <packing>
-                <property name="expand">True</property>
-                <property name="fill">True</property>
-                <property name="position">0</property>
+                <property name="left-attach">1</property>
+                <property name="top-attach">1</property>
               </packing>
             </child>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">False</property>
-            <property name="position">0</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkSourceStyleSchemeChooserWidget" id="theme_chooser_widget">
-            <property name="visible">True</property>
-            <property name="can-focus">False</property>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -195,6 +171,19 @@
           </packing>
         </child>
         <child>
+          <object class="GtkModelButton" id="preferences_button">
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <property name="text" translatable="yes">Preferences...</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">3</property>
+          </packing>
+        </child>
+        <child>
           <object class="GtkModelButton" id="config_directory_button">
             <property name="visible">True</property>
             <property name="can-focus">True</property>
@@ -204,7 +193,7 @@
           <packing>
             <property name="expand">False</property>
             <property name="fill">True</property>
-            <property name="position">3</property>
+            <property name="position">4</property>
           </packing>
         </child>
         <child>
@@ -213,19 +202,6 @@
             <property name="can-focus">True</property>
             <property name="receives-default">True</property>
             <property name="text" translatable="yes">Get More Scripts...</property>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">True</property>
-            <property name="position">4</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkModelButton" id="source_view_theme_button">
-            <property name="visible">True</property>
-            <property name="can-focus">True</property>
-            <property name="receives-default">True</property>
-            <property name="text" translatable="yes">Set Source View Theme...</property>
           </object>
           <packing>
             <property name="expand">False</property>
