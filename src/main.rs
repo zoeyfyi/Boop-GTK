@@ -14,6 +14,7 @@ mod app;
 mod command_pallete;
 mod config;
 mod executor;
+mod preferences_dialog;
 mod script;
 mod scriptmap;
 mod util;
