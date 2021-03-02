@@ -10,17 +10,15 @@ extern crate log;
 extern crate eyre;
 extern crate fs_extra;
 
-mod app;
-mod command_pallete;
 mod config;
 mod executor;
-mod preferences_dialog;
 mod script;
 mod scriptmap;
+mod ui;
 mod util;
 
-use app::{App, NOTIFICATION_LONG_DELAY};
 use scriptmap::ScriptMap;
+use ui::app::{App, NOTIFICATION_LONG_DELAY};
 
 use crate::config::Config;
 use eyre::{Context, Result};

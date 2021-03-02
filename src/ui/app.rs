@@ -1,10 +1,10 @@
 use crate::{
-    command_pallete::CommandPalleteDialog,
     config::Config,
     executor::{self},
-    preferences_dialog::PreferencesDialog,
     script::Script,
     scriptmap::ScriptMap,
+    ui::command_pallete::CommandPalleteDialog,
+    ui::preferences_dialog::PreferencesDialog,
     util::SourceViewExt,
     util::StringExt,
 };
@@ -45,10 +45,6 @@ pub struct AppWidgets {
     about_button: ModelButton,
 
     about_dialog: AboutDialog,
-    // preference_dialog: Dialog,
-
-    // color_scheme_button: sourceview::StyleSchemeChooserButton,
-    // shortcut_switch: Switch,
 }
 
 #[derive(Clone, Shrinkwrap)]
