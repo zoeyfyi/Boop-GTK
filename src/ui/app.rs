@@ -16,11 +16,13 @@ use gtk::{prelude::*, Label, Revealer, ShortcutsWindow};
 use sourceview::{prelude::*, Language};
 
 use executor::{ExecutorError, TextReplacement};
-use gtk::{AboutDialog, ApplicationWindow, Button, ModelButton};
+use gtk::{ApplicationWindow, Button, ModelButton};
 use std::{
     path::Path,
     sync::{Arc, RwLock},
 };
+
+use super::about_dialog::AboutDialog;
 
 pub const NOTIFICATION_LONG_DELAY: u32 = 5000;
 
@@ -43,8 +45,6 @@ pub struct AppWidgets {
     more_scripts_button: ModelButton,
     shortcuts_button: ModelButton,
     about_button: ModelButton,
-
-    about_dialog: AboutDialog,
 }
 
 #[derive(Clone, Shrinkwrap)]
@@ -52,6 +52,7 @@ pub struct App {
     #[shrinkwrap(main_field)]
     widgets: AppWidgets,
     preferences_dialog: PreferencesDialog,
+    about_dialog: AboutDialog,
 
     scripts: Arc<RwLock<ScriptMap>>,
     notification_source_id: Arc<RwLock<Option<SourceId>>>,
@@ -71,11 +72,13 @@ impl App {
         let boop_language = App::get_boop_language(config_dir);
 
         let preferences_dialog = PreferencesDialog::new(config.clone())?;
+        let about_dialog = AboutDialog::new(scripts.clone())?;
         let widgets = AppWidgets::from_resource("/fyi/zoey/Boop-GTK/boop-gtk.glade")
             .wrap_err("Failed to load boop-gtk.glade")?;
         let app = App {
             widgets,
             preferences_dialog,
+            about_dialog,
             scripts,
             config,
             notification_source_id: Arc::new(RwLock::new(None)),
@@ -104,40 +107,6 @@ impl App {
             app.source_view
                 .get_sourceview_buffer()?
                 .set_style_scheme(scheme.as_ref());
-
-            // if let Some(scheme) = scheme {
-            //     app.color_scheme_button.set_style_scheme(&scheme);
-            // }
-        }
-
-        // load shortcut startup from config
-        // {
-        //     let state = app
-        //         .config
-        //         .read()
-        //         .expect("Config lock is poisoned")
-        //         .show_shortcuts_on_open;
-
-        //     app.shortcut_switch.set_state(state);
-        // }
-
-        // add version to about
-        app.widgets
-            .about_dialog
-            .set_version(Some(env!("CARGO_PKG_VERSION")));
-
-        // add authors of scripts to about section
-        for (_, script) in app
-            .scripts
-            .read()
-            .expect("Scripts lock is poisoned")
-            .0
-            .iter()
-        {
-            if let Some(author) = &script.metadata.author {
-                app.about_dialog
-                    .add_credit_section(&format!("{} script", &script.metadata.name), &[author]);
-            }
         }
 
         // setup syntax highlighting
@@ -202,36 +171,6 @@ impl App {
             });
         }
 
-        // {
-        //     let source_view: sourceview::View = app.source_view.clone();
-        //     let config = app.config.clone();
-        //     app.color_scheme_button
-        //         .connect_property_style_scheme_notify(move |button| {
-        //             let scheme = button.get_style_scheme();
-
-        //             if let Some(id) = scheme.clone().and_then(|s| s.get_id()) {
-        //                 let mut config = config.write().expect("Config lock is poisoned");
-        //                 config.editor.set_colour_scheme_id(id.as_str());
-        //                 config.save().expect("Failed to save config");
-        //             }
-
-        //             source_view
-        //                 .get_sourceview_buffer()
-        //                 .expect("Failed to get sourceview")
-        //                 .set_style_scheme(scheme.as_ref());
-        //         });
-
-        //     app.color_scheme_button
-        //         .connect_property_style_scheme_notify(move |_| {
-        //             debug!("Hello their");
-        //         });
-
-        //     app.color_scheme_button
-        //         .connect_property_style_scheme_notify(move |_| {
-        //             debug!("General Knopey?!");
-        //         });
-        // }
-
         {
             let source_view: sourceview::View = app.source_view.clone();
             app.preferences_dialog
@@ -242,17 +181,6 @@ impl App {
                         .set_style_scheme(scheme.as_ref())
                 });
         }
-
-        // {
-        //     let config = app.config.clone();
-        //     app.shortcut_switch.connect_state_set(move |_, state| {
-        //         let mut config = config.write().expect("Config lock is poisoned");
-        //         config.set_show_shortcuts_on_open(state);
-        //         config.save().expect("Failed to save config");
-
-        //         Inhibit(false)
-        //     });
-        // }
 
         // launch config directory in default file manager
         {
