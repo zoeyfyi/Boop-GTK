@@ -1,9 +1,8 @@
-use core::fmt;
+use eyre::{Context, Report, Result};
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use rust_embed::RustEmbed;
 use std::{
     collections::{BTreeMap, HashMap},
-    fmt::Display,
     fs,
     path::{Path, PathBuf},
     sync::{Arc, RwLock},
@@ -20,7 +19,7 @@ pub(crate) struct ScriptMap(pub BTreeMap<String, Script>);
 pub(crate) struct Scripts;
 
 impl ScriptMap {
-    pub(crate) fn new() -> (Self, Option<LoadScriptError>) {
+    pub(crate) fn new() -> (Self, Option<Report>) {
         let mut scripts = ScriptMap(BTreeMap::new());
 
         scripts.load_internal();
@@ -35,9 +34,9 @@ impl ScriptMap {
         }
 
         // load user scripts overriding internal and global scripts
-        let load_err = scripts.load_path(&ScriptMap::user_scripts_dir());
+        let load_result = scripts.load_path(&ScriptMap::user_scripts_dir());
 
-        (scripts, load_err.err())
+        (scripts, load_result.err())
     }
 
     fn user_scripts_dir() -> PathBuf {
@@ -60,8 +59,9 @@ impl ScriptMap {
     }
 
     // load scripts from a path
-    fn load_path(&mut self, dir: &Path) -> Result<(), LoadScriptError> {
-        let paths = fs::read_dir(dir).map_err(|_| LoadScriptError::FailedToReadScriptDirectory)?;
+    fn load_path(&mut self, dir: &Path) -> Result<()> {
+        let paths = fs::read_dir(dir)
+            .wrap_err_with(|| format!("Failed to read scripts directory: {}", dir.display()))?;
 
         let scripts: HashMap<String, Script> = paths
             .filter_map(Result::ok)
@@ -153,25 +153,6 @@ impl ScriptMap {
             }
             Err(watcher_error) => {
                 error!("couldn't create watcher: {}", watcher_error);
-            }
-        }
-    }
-}
-
-#[derive(Debug)]
-pub(crate) enum LoadScriptError {
-    FailedToCreateScriptDirectory,
-    FailedToReadScriptDirectory,
-}
-
-impl Display for LoadScriptError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            LoadScriptError::FailedToCreateScriptDirectory => {
-                write!(f, "Can't create scripts directory, check your permissions")
-            }
-            LoadScriptError::FailedToReadScriptDirectory => {
-                write!(f, "Can't read scripts directory, check your premissions")
             }
         }
     }
