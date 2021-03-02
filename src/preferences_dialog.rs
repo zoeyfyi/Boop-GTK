@@ -4,9 +4,7 @@ use eyre::{Context, Result};
 use gladis::Gladis;
 use glib::SignalHandlerId;
 use gtk::{prelude::*, Dialog, Switch};
-use sourceview::{
-    StyleScheme, StyleSchemeChooserExt, StyleSchemeExt, StyleSchemeManagerExt,
-};
+use sourceview::{StyleScheme, StyleSchemeChooserExt, StyleSchemeExt, StyleSchemeManagerExt};
 
 use crate::config::Config;
 
@@ -55,7 +53,7 @@ impl PreferencesDialog {
             let mut config = config.write().expect("Config lock poisoned");
             config.set_show_shortcuts_on_open(enabled);
             config.save().expect("Failed to save config");
-            
+
             Inhibit(false)
         });
 
