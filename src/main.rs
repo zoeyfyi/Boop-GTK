@@ -24,7 +24,6 @@ use crate::config::Config;
 use eyre::{Context, Result};
 use fs::File;
 use gio::prelude::*;
-use glib;
 use gtk::{prelude::*, Application, Window};
 
 use std::{

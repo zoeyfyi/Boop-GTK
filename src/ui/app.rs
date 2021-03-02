@@ -380,7 +380,7 @@ impl App {
 
     fn get_boop_language(config_dir: &Path) -> Result<Language> {
         let language_manager = sourceview::LanguageManager::get_default()
-            .ok_or(eyre!("Failed to get language manager"))?;
+            .ok_or_else(|| eyre!("Failed to get language manager"))?;
 
         // add config_dir to language manager's search path
         let dirs = language_manager.get_search_path();
@@ -409,7 +409,7 @@ impl App {
         if let gtk::ResponseType::Accept = dialog.run() {
             let selected: &str = dialog
                 .get_selected()
-                .ok_or(eyre!("Command pallete dialog didn't return a selection"))?;
+                .ok_or_else(|| eyre!("Command pallete dialog didn't return a selection"))?;
 
             *self.last_script_executed.write().unwrap() = Some(String::from(selected));
             self.execute_script(selected)?;
@@ -435,18 +435,18 @@ impl App {
         let script: &mut Script = script_map
             .0
             .get_mut(script_key)
-            .ok_or(eyre!("Script not in map"))?;
+            .ok_or_else(|| eyre!("Script not in map"))?;
 
         info!("executing {}", script.metadata.name);
 
         let buffer = &self
             .source_view
             .get_buffer()
-            .ok_or(eyre!("Failed to get buffer"))?;
+            .ok_or_else(|| eyre!("Failed to get buffer"))?;
 
         let buffer_text = buffer
             .get_text(&buffer.get_start_iter(), &buffer.get_end_iter(), false)
-            .ok_or(eyre!("Failed to get buffer text"))?;
+            .ok_or_else(|| eyre!("Failed to get buffer text"))?;
 
         let selection_text = buffer
             .get_selection_bounds()
@@ -478,7 +478,7 @@ impl App {
 
                 error!("Exception: {:?}", executor_err);
                 self.post_notification_error(
-                    &executor_err.to_notification_string(),
+                    &executor_err.into_notification_string(),
                     NOTIFICATION_LONG_DELAY,
                 );
             }
@@ -491,7 +491,7 @@ impl App {
         let buffer = &self
             .source_view
             .get_buffer()
-            .ok_or(eyre!("Failed to get buffer"))?;
+            .ok_or_else(|| eyre!("Failed to get buffer"))?;
 
         match replacement {
             TextReplacement::Full(text) => {
