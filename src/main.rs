@@ -19,7 +19,10 @@ mod util;
 
 use scriptmap::ScriptMap;
 use sourceview::{Language, LanguageManagerExt};
-use ui::{app::{App, NOTIFICATION_LONG_DELAY}, shortcuts_window::ShortcutsWindow};
+use ui::{
+    app::{App, NOTIFICATION_LONG_DELAY},
+    shortcuts_window::ShortcutsWindow,
+};
 
 use crate::config::Config;
 use eyre::{Context, Result};
