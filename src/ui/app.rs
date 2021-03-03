@@ -7,20 +7,18 @@ use crate::{
     ui::{preferences_dialog::PreferencesDialog, shortcuts_window::ShortcutsWindow},
     util::SourceViewExt,
     util::StringExt,
+    XDG_DIRS,
 };
 use eyre::{Context, Result};
 use gdk_pixbuf::prelude::*;
 use gladis::Gladis;
 use glib::SourceId;
-use gtk::{prelude::*, Label, Revealer, ShortcutType};
+use gtk::{prelude::*, Label, Revealer};
 use sourceview::{prelude::*, Language};
 
 use executor::{ExecutorError, TextReplacement};
 use gtk::{ApplicationWindow, Button, ModelButton};
-use std::{
-    path::Path,
-    sync::{Arc, RwLock},
-};
+use std::sync::{Arc, RwLock};
 
 use super::about_dialog::AboutDialog;
 
@@ -29,7 +27,7 @@ pub const NOTIFICATION_LONG_DELAY: u32 = 5000;
 #[derive(Gladis, Clone, Shrinkwrap)]
 pub struct AppWidgets {
     #[shrinkwrap(main_field)]
-    window: ApplicationWindow,
+    pub window: ApplicationWindow,
 
     header_button: Button,
     source_view: sourceview::View,
@@ -50,7 +48,7 @@ pub struct AppWidgets {
 #[derive(Clone, Shrinkwrap)]
 pub struct App {
     #[shrinkwrap(main_field)]
-    widgets: AppWidgets,
+    pub widgets: AppWidgets,
     preferences_dialog: PreferencesDialog,
     about_dialog: AboutDialog,
 
@@ -62,15 +60,10 @@ pub struct App {
 
 impl App {
     pub(crate) fn new(
-        config_dir: &Path,
+        boop_language: Language,
         scripts: Arc<RwLock<ScriptMap>>,
         config: Arc<RwLock<Config>>,
     ) -> Result<Self> {
-        // must be fetched _before_ widgets are proccessed since the language managers search path must
-        // be set immediantly after creation:
-        // https://developer.gnome.org/gtksourceview/stable/GtkSourceLanguageManager.html#gtk-source-language-manager-set-search-path
-        let boop_language = App::get_boop_language(config_dir)?; // TODO: move out into main
-
         let app = App {
             widgets: AppWidgets::from_resource("/fyi/zoey/Boop-GTK/boop-gtk.glade")
                 .wrap_err("Failed to load boop-gtk.glade")?,
@@ -143,7 +136,7 @@ impl App {
 
         // launch config directory in default file manager
         {
-            let config_dir_str = config_dir.display().to_string();
+            let config_dir_str = XDG_DIRS.get_config_home().to_string_lossy().to_string();
             let app_ = app.clone();
             app.config_directory_button.connect_clicked(move |_| {
                 if let Err(open_err) = open::that(config_dir_str.clone()) {
@@ -184,8 +177,11 @@ impl App {
 
         {
             let app_ = app.clone();
-            app.shortcuts_button
-                .connect_clicked(move |_| app_.open_shortcuts_window());
+            app.shortcuts_button.connect_clicked(move |_| {
+                let shortcuts_window = ShortcutsWindow::new();
+                shortcuts_window.set_transient_for(Some(&app_.window));
+                shortcuts_window.show_all();
+            });
         }
 
         {
@@ -267,30 +263,6 @@ impl App {
             ),
             delay,
         );
-    }
-
-    fn get_boop_language(config_dir: &Path) -> Result<Language> {
-        let language_manager = sourceview::LanguageManager::get_default()
-            .ok_or_else(|| eyre!("Failed to get language manager"))?;
-
-        // add config_dir to language manager's search path
-        let dirs = language_manager.get_search_path();
-        let mut dirs: Vec<&str> = dirs.iter().map(|s| s.as_ref()).collect();
-        let config_dir_path = config_dir.to_string_lossy().to_string();
-        dirs.push(&config_dir_path);
-        language_manager.set_search_path(&dirs);
-
-        info!("language manager search directorys: {}", dirs.join(":"));
-
-        language_manager
-            .get_language("boop")
-            .ok_or_else(|| eyre!("'boop' language not found in language manager"))
-    }
-
-    pub fn open_shortcuts_window(&self) {
-        let shortcuts_window = ShortcutsWindow::new();
-        shortcuts_window.set_transient_for(Some(&self.window));
-        shortcuts_window.show_all();
     }
 
     pub fn run_command_pallete(&self) -> Result<()> {

@@ -18,7 +18,8 @@ mod ui;
 mod util;
 
 use scriptmap::ScriptMap;
-use ui::app::{App, NOTIFICATION_LONG_DELAY};
+use sourceview::{Language, LanguageManagerExt};
+use ui::{app::{App, NOTIFICATION_LONG_DELAY}, shortcuts_window::ShortcutsWindow};
 
 use crate::config::Config;
 use eyre::{Context, Result};
@@ -109,7 +110,29 @@ fn main() -> Result<()> {
 
         Window::set_default_icon_name("fyi.zoey.Boop-GTK");
 
-        let app = App::new(&XDG_DIRS.get_config_home(), scripts.clone(), config.clone())
+        // must be fetched _before_ widgets are proccessed since the language managers search path must
+        // be set immediantly after creation:
+        // https://developer.gnome.org/gtksourceview/stable/GtkSourceLanguageManager.html#gtk-source-language-manager-set-search-path
+        let boop_language = || -> Result<Language> {
+            let language_manager = sourceview::LanguageManager::get_default()
+                .ok_or_else(|| eyre!("Failed to get language manager"))?;
+
+            // add config_dir to language manager's search path
+            let dirs = language_manager.get_search_path();
+            let mut dirs: Vec<&str> = dirs.iter().map(|s| s.as_ref()).collect();
+            let config_dir_path = XDG_DIRS.get_config_home().to_string_lossy().to_string();
+            dirs.push(&config_dir_path);
+            language_manager.set_search_path(&dirs);
+
+            info!("language manager search directorys: {}", dirs.join(":"));
+
+            language_manager
+                .get_language("boop")
+                .ok_or_else(|| eyre!("'boop' language not found in language manager"))
+        }()
+        .expect("Failed to load boop language");
+
+        let app = App::new(boop_language, scripts.clone(), config.clone())
             .expect("Failed to construct App");
         app.set_application(Some(application));
         app.show_all();
@@ -122,7 +145,9 @@ fn main() -> Result<()> {
                 .expect("Config lock is poisoned")
                 .show_shortcuts_on_open
         {
-            app.open_shortcuts_window();
+            let shortcuts_window = ShortcutsWindow::new();
+            shortcuts_window.set_transient_for(Some(&app.window));
+            shortcuts_window.show_all();
         }
 
         if let Some(error) = &load_script_error {
@@ -136,6 +161,7 @@ fn main() -> Result<()> {
 
 fn register_actions(application: &Application, app: &App) {
     // opening command pallete action
+    // TODO: move to app
     {
         let app = app.clone();
         let command_pallete_action = gio::SimpleAction::new("command_pallete", None);
