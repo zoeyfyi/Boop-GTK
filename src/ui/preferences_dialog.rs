@@ -26,42 +26,25 @@ pub struct PreferencesDialog {
 
 impl PreferencesDialog {
     pub(crate) fn new(config: Arc<RwLock<Config>>) -> Result<Self> {
-        let widgets = PreferencesDialogWidgets::from_resource("/fyi/zoey/Boop-GTK/boop-gtk.glade")
-            .wrap_err("Failed to load boop-gtk.glade")?;
-        let mut dialog = PreferencesDialog { widgets, config };
+        let mut dialog = PreferencesDialog {
+            widgets: PreferencesDialogWidgets::from_resource("/fyi/zoey/Boop-GTK/boop-gtk.glade")
+                .wrap_err("Failed to load boop-gtk.glade")?,
+            config: config.clone(),
+        };
 
-        dialog.update_widgets()?;
-        dialog.register_handlers()?;
+        dialog.update_state_from_config()?;
+        dialog.connect_config_style_scheme_notify(
+            PreferencesDialog::on_config_style_scheme_notify(config.clone()),
+        );
+        dialog.connect_config_open_shortcuts_on_startup_notify(
+            PreferencesDialog::on_config_open_shortcuts_on_startup_notify(config.clone()),
+        );
 
         Ok(dialog)
     }
 
-    pub fn register_handlers(&mut self) -> Result<()> {
-        let config = self.config.clone();
-        self.connect_config_style_scheme_notify(move |scheme| {
-            if let Some(scheme_id) = scheme.and_then(|s| s.get_id()) {
-                let mut config = config.write().expect("Config lock poisoned");
-                config.editor.set_colour_scheme_id(scheme_id.as_str());
-                config.save().expect("Failed to save config");
-            } else {
-                error!("Style scheme is None");
-            }
-        });
-
-        let config = self.config.clone();
-        self.connect_config_open_shortcuts_on_startup_notify(move |enabled| {
-            let mut config = config.write().expect("Config lock poisoned");
-            config.set_show_shortcuts_on_open(enabled);
-            config.save().expect("Failed to save config");
-
-            Inhibit(false)
-        });
-
-        Ok(())
-    }
-
     // update the controls with values from config
-    pub fn update_widgets(&mut self) -> Result<()> {
+    pub fn update_state_from_config(&mut self) -> Result<()> {
         let config = self
             .config
             .read()
@@ -80,6 +63,30 @@ impl PreferencesDialog {
             .set_state(config.show_shortcuts_on_open);
 
         Ok(())
+    }
+
+    fn on_config_style_scheme_notify(config: Arc<RwLock<Config>>) -> impl Fn(Option<StyleScheme>) {
+        move |scheme: Option<StyleScheme>| {
+            if let Some(scheme_id) = scheme.and_then(|s| s.get_id()) {
+                let mut config = config.write().expect("Config lock poisoned");
+                config.editor.set_colour_scheme_id(scheme_id.as_str());
+                config.save().expect("Failed to save config");
+            } else {
+                error!("Style scheme is None");
+            }
+        }
+    }
+
+    fn on_config_open_shortcuts_on_startup_notify(
+        config: Arc<RwLock<Config>>,
+    ) -> impl Fn(bool) -> Inhibit {
+        move |enabled| {
+            let mut config = config.write().expect("Config lock poisoned");
+            config.set_show_shortcuts_on_open(enabled);
+            config.save().expect("Failed to save config");
+
+            Inhibit(false)
+        }
     }
 
     pub fn connect_config_style_scheme_notify<F: Fn(Option<StyleScheme>) + 'static>(

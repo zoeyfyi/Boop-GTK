@@ -4,7 +4,7 @@ use crate::{
     script::Script,
     scriptmap::ScriptMap,
     ui::command_pallete::CommandPalleteDialog,
-    ui::preferences_dialog::PreferencesDialog,
+    ui::{preferences_dialog::PreferencesDialog, shortcuts_window::ShortcutsWindow},
     util::SourceViewExt,
     util::StringExt,
 };
@@ -12,7 +12,7 @@ use eyre::{Context, Result};
 use gdk_pixbuf::prelude::*;
 use gladis::Gladis;
 use glib::SourceId;
-use gtk::{prelude::*, Label, Revealer, ShortcutsWindow};
+use gtk::{prelude::*, Label, Revealer, ShortcutType};
 use sourceview::{prelude::*, Language};
 
 use executor::{ExecutorError, TextReplacement};
@@ -67,64 +67,23 @@ impl App {
         config: Arc<RwLock<Config>>,
     ) -> Result<Self> {
         // must be fetched _before_ widgets are proccessed since the language managers search path must
-        // be immediantly after creation:
+        // be set immediantly after creation:
         // https://developer.gnome.org/gtksourceview/stable/GtkSourceLanguageManager.html#gtk-source-language-manager-set-search-path
-        let boop_language = App::get_boop_language(config_dir);
+        let boop_language = App::get_boop_language(config_dir)?; // TODO: move out into main
 
-        let preferences_dialog = PreferencesDialog::new(config.clone())?;
-        let about_dialog = AboutDialog::new(scripts.clone())?;
-        let widgets = AppWidgets::from_resource("/fyi/zoey/Boop-GTK/boop-gtk.glade")
-            .wrap_err("Failed to load boop-gtk.glade")?;
         let app = App {
-            widgets,
-            preferences_dialog,
-            about_dialog,
+            widgets: AppWidgets::from_resource("/fyi/zoey/Boop-GTK/boop-gtk.glade")
+                .wrap_err("Failed to load boop-gtk.glade")?,
+            preferences_dialog: PreferencesDialog::new(config.clone())?,
+            about_dialog: AboutDialog::new(scripts.clone())?,
             scripts,
-            config,
             notification_source_id: Arc::new(RwLock::new(None)),
             last_script_executed: Arc::new(RwLock::new(None)),
+            config,
         };
 
-        app.preferences_dialog.set_transient_for(Some(&app.window));
-
-        // load color scheme from config
-        {
-            let scheme_id = &app
-                .config
-                .read()
-                .expect("Config lock is poisoned")
-                .editor
-                .colour_scheme_id;
-
-            let manager = sourceview::StyleSchemeManager::get_default()
-                .ok_or_else(|| eyre!("Failed to get default style scheme manager"))?;
-
-            let scheme = manager.get_scheme(scheme_id);
-            if scheme.is_none() {
-                warn!("Could not find style scheme with id '{}'", scheme_id);
-            }
-
-            app.source_view
-                .get_sourceview_buffer()?
-                .set_style_scheme(scheme.as_ref());
-        }
-
-        // setup syntax highlighting
-        match boop_language {
-            Ok(language) => {
-                // set language
-                let buffer = app.source_view.get_sourceview_buffer()?;
-                buffer.set_highlight_syntax(true);
-                buffer.set_language(Some(&language));
-            }
-            Err(err) => {
-                error!("Failed to load language file: {:#}", err);
-                app.post_notification(
-                    r#"<span foreground="red">ERROR:</span> failed to load language file"#,
-                    NOTIFICATION_LONG_DELAY,
-                );
-            }
-        };
+        app.configure(boop_language)?;
+        app.update_state_from_config()?;
 
         // close notification on dismiss
         {
@@ -240,102 +199,34 @@ impl App {
         Ok(app)
     }
 
-    fn new_shortcuts_window(window: &gtk::ApplicationWindow) -> ShortcutsWindow {
-        let shortcut_window = gtk::ShortcutsWindowBuilder::new()
-            .transient_for(window)
-            .build();
+    fn configure(&self, boop_language: Language) -> Result<()> {
+        self.preferences_dialog
+            .set_transient_for(Some(&self.window));
 
-        let section = gtk::ShortcutsSectionBuilder::new().visible(true).build();
+        // update source_view syntax highlighting
+        let buffer = self.source_view.get_sourceview_buffer()?;
+        buffer.set_highlight_syntax(true);
+        buffer.set_language(Some(&boop_language));
 
-        {
-            let group = gtk::ShortcutsGroupBuilder::new()
-                .title("Test")
-                .visible(true)
-                .build();
+        Ok(())
+    }
 
-            group.add(
-                &gtk::ShortcutsShortcutBuilder::new()
-                    .action_name("app.command_pallete")
-                    .visible(true)
-                    .build(),
-            );
-            group.add(
-                &gtk::ShortcutsShortcutBuilder::new()
-                    .action_name("app.re_execute_script")
-                    .visible(true)
-                    .build(),
-            );
-            group.add(
-                &gtk::ShortcutsShortcutBuilder::new()
-                    .action_name("app.quit")
-                    .visible(true)
-                    .build(),
-            );
-        }
+    fn update_state_from_config(&self) -> Result<()> {
+        let config = self
+            .config
+            .read()
+            .map_err(|e| eyre!("Config lock poisoned: {}", e))?;
 
-        // genral group
-        {
-            let group = gtk::ShortcutsGroupBuilder::new()
-                .title("General")
-                .visible(true)
-                .build();
+        // update source_view style scheme
+        let scheme_id = &config.editor.colour_scheme_id;
+        let scheme = sourceview::StyleSchemeManager::get_default()
+            .ok_or_else(|| eyre!("Failed to get default style scheme manager"))?
+            .get_scheme(scheme_id);
+        self.source_view
+            .get_sourceview_buffer()?
+            .set_style_scheme(scheme.as_ref());
 
-            let shortcuts = [
-                ("Open Command Pallette", "<Primary><Shift>P"),
-                ("Quit", "<Primary>Q"),
-            ];
-
-            for (title, accelerator) in &shortcuts {
-                group.add(
-                    &gtk::ShortcutsShortcutBuilder::new()
-                        .title(title)
-                        .accelerator(accelerator)
-                        .visible(true)
-                        .build(),
-                );
-            }
-
-            section.add(&group);
-        }
-
-        // editor group
-        {
-            let group = gtk::ShortcutsGroupBuilder::new()
-                .title("Editor")
-                .visible(true)
-                .build();
-
-            let shortcuts = [
-                ("Undo", "<Primary>Z"),
-                ("Redo", "<Primary><Shift>Z"),
-                ("Move line up", "<Alt>Up"),
-                ("Move line down", "<Alt>Down"),
-                ("Move cursor backwards one word", "<Primary>Left"),
-                ("Move cursor forward one word", "<Primary>Right"),
-                ("Move cursor to beginning of previous line", "<Primary>Up"),
-                ("Move cursor to end of next line", "<Primary>Down"),
-                ("Move cursor to beginning of line", "<Primary>Page_Up"),
-                ("Move cursor to end of line", "<Primary>Page_Down"),
-                ("Move cursor to beginning of document", "<Primary>Home"),
-                ("Move cursor to end of document", "<Primary>End"),
-            ];
-
-            for (title, accelerator) in &shortcuts {
-                group.add(
-                    &gtk::ShortcutsShortcutBuilder::new()
-                        .title(title)
-                        .accelerator(accelerator)
-                        .visible(true)
-                        .build(),
-                );
-            }
-
-            section.add(&group);
-        }
-
-        shortcut_window.add(&section);
-
-        shortcut_window
+        Ok(())
     }
 
     fn post_notification(&self, text: &str, delay: u32) {
@@ -397,8 +288,8 @@ impl App {
     }
 
     pub fn open_shortcuts_window(&self) {
-        let window = self.window.clone();
-        let shortcuts_window = App::new_shortcuts_window(&window);
+        let shortcuts_window = ShortcutsWindow::new();
+        shortcuts_window.set_transient_for(Some(&self.window));
         shortcuts_window.show_all();
     }
 
