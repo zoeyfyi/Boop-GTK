@@ -1,5 +1,4 @@
 #![forbid(unsafe_code)]
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // don't spawn command line on windows
 
 #[macro_use]
 extern crate lazy_static;
@@ -7,148 +6,84 @@ extern crate lazy_static;
 extern crate shrinkwraprs;
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate eyre;
 extern crate fs_extra;
 
-mod app;
-mod command_pallete;
+mod config;
 mod executor;
 mod script;
-mod scripts;
+mod scriptmap;
+mod ui;
+mod util;
 
+use scriptmap::ScriptMap;
+use sourceview::{Language, LanguageManagerExt};
+use ui::{
+    app::{App, NOTIFICATION_LONG_DELAY},
+    shortcuts_window::ShortcutsWindow,
+};
+
+use crate::config::Config;
+use eyre::{Context, Result};
+use fs::File;
 use gio::prelude::*;
-use glib;
 use gtk::{prelude::*, Application, Window};
-use scripts::{LoadScriptError, ScriptMap};
 
-use fs_extra::dir::move_dir;
-use std::{fmt, path::PathBuf};
-
-use app::{App, NOTIFICATION_LONG_DELAY};
-use directories::ProjectDirs;
-use fmt::Display;
 use std::{
-    error::Error,
     fs,
     io::prelude::*,
+    path::PathBuf,
     sync::{Arc, RwLock},
     thread,
 };
 
 lazy_static! {
-    static ref PROJECT_DIRS: directories::ProjectDirs =
-        ProjectDirs::from("fyi", "zoey", "boop-gtk")
-            .expect("Unable to find a configuration location for your platform");
+    static ref XDG_DIRS: xdg::BaseDirectories = match xdg::BaseDirectories::with_prefix("boop-gtk")
+    {
+        Ok(dirs) => dirs,
+        Err(err) => panic!("Unable to find XDG directorys: {}", err),
+    };
 }
-
-#[derive(Debug)]
-enum ScriptError {
-    LoadError(LoadScriptError),
-}
-
-impl Display for ScriptError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ScriptError::LoadError(e) => write!(f, "{}", e),
-        }
-    }
-}
-
-impl Error for ScriptError {}
 
 // extract language file, ideally we would use GResource for this but sourceview doesn't support that
-fn extract_language_file() {
-    let config_dir = PROJECT_DIRS.config_dir().to_path_buf();
-    if !config_dir.exists() {
-        info!("config directory does not exist, attempting to create it");
-        match fs::create_dir_all(&config_dir) {
-            Ok(()) => info!("created config directory"),
-            Err(e) => panic!("could not create config directory: {}", e),
-        }
-    }
+// returns true if the language file already existed, false otherwise
+fn extract_language_file() -> Result<()> {
+    let lang_file_path = XDG_DIRS
+        .place_config_file("boop.lang")
+        .wrap_err("Failed to construct language file path")?;
 
-    info!("configuration directory at: {}", config_dir.display());
+    let mut lang_file = File::create(&lang_file_path).wrap_err("Failed to create language file")?;
 
-    let lang_file_path = {
-        let mut path = config_dir;
-        path.push("boop.lang");
-        path
-    };
+    lang_file
+        .write_all(include_bytes!("../boop.lang"))
+        .wrap_err("Failed to write default language file")?;
 
-    let mut file = fs::File::create(&lang_file_path).expect("Could not create language file");
-    file.write_all(include_bytes!("../boop.lang"))
-        .expect("Failed to write language file");
-    info!("language file written at: {}", lang_file_path.display());
+    Ok(())
 }
 
-fn upgrade_config_files() -> Result<bool, fs_extra::error::Error> {
-    let old_project_dirs: directories::ProjectDirs =
-        ProjectDirs::from("uk.co", "mrbenshef", "boop-gtk")
-            .expect("Unable to find a configuration location for your platform");
-
-    if !old_project_dirs.config_dir().exists() {
-        return Ok(false);
-    }
-
-    if old_project_dirs.config_dir() == PROJECT_DIRS.config_dir() {
-        debug!("old project path same as new project path, skipping upgrade");
-        return Ok(false); // config dirs are the same on this platform
-    }
-
-    if PROJECT_DIRS.config_dir().exists() {
-        warn!(
-            "old and new config files exists, old: {}, new: {}",
-            old_project_dirs.config_dir().display(),
-            PROJECT_DIRS.config_dir().display()
-        );
-        return Ok(false); // just use new config files
-    }
-
-    move_dir(old_project_dirs.config_dir(), PROJECT_DIRS.config_dir(), &{
-        let mut options = fs_extra::dir::CopyOptions::new();
-        options.copy_inside = true;
-        options.overwrite = false;
-        options
-    })
-    .map(|_| true)
-}
-
-fn main() {
+fn main() -> Result<()> {
+    color_eyre::install()?;
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    match upgrade_config_files() {
-        Ok(true) => {
-            info!(
-                "old config files moved to {}",
-                PROJECT_DIRS.config_dir().display()
-            );
-        }
-        Ok(false) => (),
-        Err(err) => panic!("failed to move config files to new location: {}", err),
-    }
+    let (config, config_file_created) = Config::load()?;
+    let config = Arc::new(RwLock::new(config));
 
-    debug!(
-        "found {} pixbuf loaders",
-        gdk_pixbuf::Pixbuf::get_formats().len()
-    );
-
-    extract_language_file();
-
-    glib::set_application_name("Boop-GTK");
-
-    let config_dir = PROJECT_DIRS.config_dir().to_path_buf();
+    extract_language_file()?;
 
     // create user scripts directory
-    let scripts_dir: PathBuf = config_dir.join("scripts");
-    let mut script_error = fs::create_dir_all(&scripts_dir)
-        .map_err(|_| LoadScriptError::FailedToCreateScriptDirectory)
-        .map_err(ScriptError::LoadError)
-        .err();
+    let scripts_dir: PathBuf = XDG_DIRS.get_config_home().join("scripts");
+    fs::create_dir_all(&scripts_dir).wrap_err_with(|| {
+        format!(
+            "Failed to create scripts directory in config: {}",
+            scripts_dir.display()
+        )
+    })?;
 
-    let (scripts, err) = ScriptMap::new();
-    script_error = script_error.or(err.map(ScriptError::LoadError));
+    let (scripts_map, load_script_error) = ScriptMap::new();
+    let scripts = Arc::new(RwLock::new(scripts_map));
 
     // watch scripts folder for changes
-    let scripts = Arc::new(RwLock::new(scripts));
     {
         let scripts = scripts.clone();
         thread::spawn(move || {
@@ -159,8 +94,10 @@ fn main() {
     // needed on windows
     sourceview::View::static_type();
 
+    glib::set_application_name("Boop-GTK");
+
     let application = Application::new(Some("fyi.zoey.Boop-GTK"), Default::default())
-        .expect("failed to initialize GTK application");
+        .wrap_err("Failed to initialize GTK application")?;
 
     application.connect_activate(move |application| {
         // resources.gresources is created by build.rs
@@ -171,34 +108,110 @@ fn main() {
         gio::resources_register(&gio::Resource::from_data(&resource_data).unwrap());
 
         // add embedeed icons to theme
-        let icon_theme = gtk::IconTheme::get_default().expect("failed to get default icon theme");
+        let icon_theme = gtk::IconTheme::get_default().expect("Failed to get default icon theme");
         icon_theme.add_resource_path("/fyi/zoey/Boop-GTK/icons");
 
         Window::set_default_icon_name("fyi.zoey.Boop-GTK");
 
-        let app = App::new(&config_dir, scripts.clone());
+        // must be fetched _before_ widgets are proccessed since the language managers search path must
+        // be set immediantly after creation:
+        // https://developer.gnome.org/gtksourceview/stable/GtkSourceLanguageManager.html#gtk-source-language-manager-set-search-path
+        let boop_language = || -> Result<Language> {
+            let language_manager = sourceview::LanguageManager::get_default()
+                .ok_or_else(|| eyre!("Failed to get language manager"))?;
+
+            // add config_dir to language manager's search path
+            let dirs = language_manager.get_search_path();
+            let mut dirs: Vec<&str> = dirs.iter().map(|s| s.as_ref()).collect();
+            let config_dir_path = XDG_DIRS.get_config_home().to_string_lossy().to_string();
+            dirs.push(&config_dir_path);
+            language_manager.set_search_path(&dirs);
+
+            info!("language manager search directorys: {}", dirs.join(":"));
+
+            language_manager
+                .get_language("boop")
+                .ok_or_else(|| eyre!("'boop' language not found in language manager"))
+        }()
+        .expect("Failed to load boop language");
+
+        let app = App::new(boop_language, scripts.clone(), config.clone())
+            .expect("Failed to construct App");
         app.set_application(Some(application));
         app.show_all();
 
-        if let Some(error) = &script_error {
-            app.post_notification_error(&error.to_string(), NOTIFICATION_LONG_DELAY);
+        register_actions(&application, &app);
+
+        if config_file_created
+            || config
+                .read()
+                .expect("Config lock is poisoned")
+                .show_shortcuts_on_open
+        {
+            let shortcuts_window = ShortcutsWindow::new();
+            shortcuts_window.set_transient_for(Some(&app.window));
+            shortcuts_window.show_all();
         }
 
-        // add keyboard shortcut for opening command pallete
-        let command_pallete_action = gio::SimpleAction::new("command_pallete", None);
-        application.add_action(&command_pallete_action);
-        application.set_accels_for_action("app.command_pallete", &["<Primary><Shift>P"]);
-        command_pallete_action.connect_activate(move |_, _| app.open_command_pallete());
-
-        // Ctrl+Q keyboard shortcut for exiting
-        let quit_action = gio::SimpleAction::new("quit", None);
-        application.add_action(&quit_action);
-        application.set_accels_for_action("app.quit", &["<Primary>Q"]);
-        {
-            let application = application.clone();
-            quit_action.connect_activate(move |_, _| application.quit());
+        if let Some(error) = &load_script_error {
+            app.post_notification_error(&error.to_string(), NOTIFICATION_LONG_DELAY);
         }
     });
 
     application.run(&[]);
+    Ok(())
+}
+
+fn register_actions(application: &Application, app: &App) {
+    // opening command pallete action
+    // TODO: move to app
+    {
+        let app = app.clone();
+        let command_pallete_action = gio::SimpleAction::new("command_pallete", None);
+        application.add_action(&command_pallete_action);
+        application.set_accels_for_action("app.command_pallete", &["<Primary><Shift>P"]);
+        command_pallete_action.connect_activate(move |_, _| {
+            app.run_command_pallete()
+                .expect("Failed to run command pallete")
+        });
+    }
+
+    // re-execute script action
+    {
+        let app = app.clone();
+        let reexecute_script_action = gio::SimpleAction::new("re_execute_script", None);
+        application.add_action(&reexecute_script_action);
+        application.set_accels_for_action("app.re_execute_script", &["<Primary><Shift>B"]);
+        reexecute_script_action
+            .connect_activate(move |_, _| app.re_execute().expect("Failed to re-execute script"));
+    }
+
+    // quit action
+    {
+        let quit_action = gio::SimpleAction::new("quit", None);
+        application.add_action(&quit_action);
+        application.set_accels_for_action("app.quit", &["<Primary>Q"]);
+        let application = application.clone();
+        quit_action.connect_activate(move |_, _| application.quit());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use directories::ProjectDirs;
+
+    lazy_static! {
+        static ref PROJECT_DIRS: directories::ProjectDirs =
+            ProjectDirs::from("fyi", "zoey", "boop-gtk")
+                .expect("Unable to find a configuration location for your platform");
+    }
+
+    #[test]
+    fn test_project_dirs_dependency_change() {
+        assert_eq!(
+            PROJECT_DIRS.config_dir().to_path_buf(),
+            XDG_DIRS.get_config_home()
+        );
+    }
 }

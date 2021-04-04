@@ -1,7 +1,7 @@
-use crate::{scripts::Scripts, PROJECT_DIRS};
+use crate::{scriptmap::Scripts, XDG_DIRS};
 use dirty2::Dirty;
+use eyre::{Context, ContextCompat, Result};
 use rusty_v8 as v8;
-use simple_error::SimpleError;
 use std::{
     cell::RefCell,
     convert::TryFrom,
@@ -169,8 +169,36 @@ impl Display for ExecutorError {
 
 impl Error for ExecutorError {}
 
+impl ExecutorError {
+    fn format_exception(exception: JSException) -> String {
+        match (exception.line_number, exception.columns) {
+            (Some(line_number), Some(columns)) => format!(
+                r#"<span foreground="red" weight="bold">EXCEPTION:</span> {} ({}:{} - {}:{})"#,
+                exception.exception_str, line_number, columns.0, line_number, columns.1
+            ),
+            _ => format!(
+                r#"<span foreground="red" weight="bold">EXCEPTION:</span> {}"#,
+                exception.exception_str,
+            ),
+        }
+    }
+
+    pub fn into_notification_string(self) -> String {
+        match self {
+            ExecutorError::SourceExceedsMaxLength => {
+                String::from(r#"<span foreground="red">ERROR:</span> Script exceeds max length"#)
+            }
+            ExecutorError::Compile(exception) => ExecutorError::format_exception(exception),
+            ExecutorError::Execute(exception) => ExecutorError::format_exception(exception),
+            ExecutorError::NoMain => {
+                String::from(r#"<span foreground="red">ERROR:</span> No main function"#)
+            }
+        }
+    }
+}
+
 impl Executor {
-    pub fn new(source: &str) -> Result<Self, ExecutorError> {
+    pub fn new(source: &str) -> eyre::Result<Self> {
         INIT_V8.call_once(|| {
             let start = Instant::now();
 
@@ -214,7 +242,7 @@ impl Executor {
     }
 
     // load source code from internal files or external filesystem depending on the path
-    fn load_raw_source(path: String) -> Result<String, SimpleError> {
+    fn load_raw_source(path: String) -> Result<String> {
         if path.starts_with("@boop/") {
             // script is internal
 
@@ -226,12 +254,10 @@ impl Executor {
 
             let raw_source = String::from_utf8(
                 Scripts::get(&internal_path)
-                    .ok_or_else(|| {
-                        SimpleError::new(format!("no internal script with path \"{}\"", path))
-                    })?
+                    .ok_or_else(|| eyre!("No internal script with path \"{}\"", path))?
                     .to_vec(),
             )
-            .map_err(|e| SimpleError::with("problem with file encoding", e))?;
+            .wrap_err("Problem with file encoding")?;
 
             return Ok(raw_source);
         }
@@ -239,7 +265,7 @@ impl Executor {
         let mut external_path = if cfg!(test) {
             env::temp_dir()
         } else {
-            let mut path = PROJECT_DIRS.config_dir().to_path_buf();
+            let mut path = XDG_DIRS.get_config_home();
             path.push("scripts");
             path
         };
@@ -252,9 +278,9 @@ impl Executor {
 
         let mut raw_source = String::new();
         File::open(external_path)
-            .map_err(|e| SimpleError::with(&format!("could not open \"{}\"", path), e))?
+            .wrap_err_with(|| format!("Could not open \"{}\"", path))?
             .read_to_string(&mut raw_source)
-            .map_err(|e| SimpleError::with("problem reading file", e))?;
+            .wrap_err("Problem reading file")?;
 
         Ok(raw_source)
     }
@@ -262,16 +288,16 @@ impl Executor {
     fn initialize_context<'s>(
         source: &str,
         scope: &mut v8::HandleScope<'s, ()>,
-    ) -> Result<(v8::Local<'s, v8::Context>, v8::Global<v8::Function>), ExecutorError> {
+    ) -> eyre::Result<(v8::Local<'s, v8::Context>, v8::Global<v8::Function>)> {
         let scope = &mut v8::EscapableHandleScope::new(scope);
         let context = v8::Context::new(scope);
         let global = context.global(scope);
         let scope = &mut v8::ContextScope::new(scope, context);
 
         let require_key =
-            v8::String::new(scope, "require").expect("failed to created 'require' string");
+            v8::String::new(scope, "require").wrap_err("failed to created 'require' string")?;
         let require_val = v8::Function::new(scope, Executor::global_require)
-            .expect("failed to created require function");
+            .wrap_err("failed to created require function")?;
         global.set(scope, require_key.into(), require_val.into());
 
         // complile and run script
@@ -295,7 +321,7 @@ impl Executor {
 
         // extract main function
         let main_key =
-            v8::String::new(tc_scope, "main").expect("failed to create JS string 'main'");
+            v8::String::new(tc_scope, "main").wrap_err("failed to create JS string 'main'")?;
         let main_function =
             v8::Local::<v8::Function>::try_from(global.get(tc_scope, main_key.into()).unwrap())
                 .map_err(|_e| ExecutorError::NoMain)?;
@@ -304,17 +330,13 @@ impl Executor {
         Ok((tc_scope.escape(context), main_function))
     }
 
-    pub fn execute(
-        &mut self,
-        full_text: &str,
-        selection: Option<&str>,
-    ) -> Result<ExecutionStatus, ExecutorError> {
+    pub fn execute(&mut self, full_text: &str, selection: Option<&str>) -> Result<ExecutionStatus> {
         // setup execution status
         {
             let status_slot = self
                 .isolate
                 .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
-                .expect("failed to get mutable access to status slot");
+                .wrap_err("failed to get mutable access to status slot")?;
 
             let mut status = status_slot.borrow_mut();
 
@@ -335,14 +357,14 @@ impl Executor {
             let state_slot = self
                 .isolate
                 .get_slot_mut::<Rc<RefCell<ExecutorState>>>()
-                .expect("failed to get mutable access to state slot")
+                .wrap_err("Failed to get mutable access to state slot")?
                 .clone();
             let state_slot = state_slot.borrow();
 
             let context = state_slot
                 .global_context
                 .as_ref()
-                .expect("global_context is not initalizied");
+                .wrap_err("global_context is not initalizied")?;
             let scope = &mut v8::HandleScope::with_context(&mut self.isolate, context);
 
             // payload is the object passed into function main
@@ -351,23 +373,23 @@ impl Executor {
             // value: isSelection
             {
                 let is_selection_key = v8::String::new(scope, "isSelection")
-                    .expect("failed to construct 'isSelection' JS string");
+                    .wrap_err("Failed to construct 'isSelection' JS string")?;
 
                 let is_selection_value = v8::Boolean::new(scope, selection.is_some());
 
                 payload
                     .set(scope, is_selection_key.into(), is_selection_value.into())
-                    .expect("failed to set 'isSelection' value");
+                    .wrap_err("Failed to set 'isSelection' value")?;
             }
 
             // getter/setters: full_text, text, selection
             {
                 let full_text_key = v8::String::new(scope, "fullText")
-                    .expect("failed to construct 'fullText' JS string");
-                let text_key =
-                    v8::String::new(scope, "text").expect("failed to construct 'text' JS string");
+                    .wrap_err("Failed to construct 'fullText' JS string")?;
+                let text_key = v8::String::new(scope, "text")
+                    .wrap_err("Failed to construct 'text' JS string")?;
                 let selection_key = v8::String::new(scope, "selection")
-                    .expect("failed to construct 'selection' JS string");
+                    .wrap_err("Failed to construct 'selection' JS string")?;
 
                 payload
                     .set_accessor_with_setter(
@@ -376,7 +398,7 @@ impl Executor {
                         Executor::payload_full_text_getter,
                         Executor::payload_full_text_setter,
                     )
-                    .expect("failed to set 'full_text' accessor");
+                    .wrap_err("Failed to set 'full_text' accessor")?;
                 payload
                     .set_accessor_with_setter(
                         scope,
@@ -384,7 +406,7 @@ impl Executor {
                         Executor::payload_text_getter,
                         Executor::payload_text_setter,
                     )
-                    .expect("failed to set 'text' accessor");
+                    .wrap_err("Failed to set 'text' accessor")?;
                 payload
                     .set_accessor_with_setter(
                         scope,
@@ -392,39 +414,39 @@ impl Executor {
                         Executor::payload_selection_getter,
                         Executor::payload_selection_setter,
                     )
-                    .expect("failed to set 'selection' accessor");
+                    .wrap_err("Failed to set 'selection' accessor")?;
             }
 
             // functions: post_info, post_error, insert
 
-            let post_info_key =
-                v8::String::new(scope, "postInfo").expect("failed to create JS string 'postInfo'");
+            let post_info_key = v8::String::new(scope, "postInfo")
+                .wrap_err("Failed to create JS string 'postInfo'")?;
             let post_error_key = v8::String::new(scope, "postError")
-                .expect("failed to create JS string 'postError'");
+                .wrap_err("Failed to create JS string 'postError'")?;
             let insert_key =
-                v8::String::new(scope, "insert").expect("failed to create JS string 'insert'");
+                v8::String::new(scope, "insert").wrap_err("Failed to create JS string 'insert'")?;
 
             let post_info_val = v8::Function::new(scope, Executor::payload_post_info)
-                .expect("failed to convert post_info function");
+                .wrap_err("Failed to convert post_info function")?;
             let post_error_val = v8::Function::new(scope, Executor::payload_post_error)
-                .expect("failed to create post_error function");
+                .wrap_err("Failed to create post_error function")?;
             let insert_val = v8::Function::new(scope, Executor::payload_insert)
-                .expect("failed to create payload_insert function");
+                .wrap_err("Failed to create payload_insert function")?;
 
             payload
                 .set(scope, post_info_key.into(), post_info_val.into())
-                .expect("failed to set 'post_info' function");
+                .wrap_err("Failed to set 'post_info' function")?;
             payload
                 .set(scope, post_error_key.into(), post_error_val.into())
-                .expect("failed to set 'post_error' function");
+                .wrap_err("Failed to set 'post_error' function")?;
             payload
                 .set(scope, insert_key.into(), insert_val.into())
-                .expect("failed to set 'insert' function");
+                .wrap_err("Failed to set 'insert' function")?;
 
             let main_function = state_slot
                 .main_function
                 .as_ref()
-                .expect("main_function not initialized")
+                .wrap_err("main_function not initialized")?
                 .get(scope);
             let escape_scope = &mut v8::EscapableHandleScope::new(scope);
             let tc_scope = &mut v8::TryCatch::new(escape_scope);
@@ -434,7 +456,8 @@ impl Executor {
                 .ok_or_else(|| {
                     ExecutorError::Execute(
                         Executor::extract_exception(tc_scope)
-                            .expect("exception occored but no exception was caught"),
+                            .wrap_err("Exception occored but no exception was caught")
+                            .unwrap(),
                     )
                 })?;
         }
@@ -444,9 +467,9 @@ impl Executor {
             let status_slot = self
                 .isolate
                 .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
-                .expect("failed to get mutable access to status slot");
+                .ok_or_else(|| eyre!("Failed to get mutable access to status slot"))?;
 
-            let status = (status_slot).borrow();
+            let status = status_slot.borrow();
 
             Ok(status.clone())
         }
@@ -454,24 +477,25 @@ impl Executor {
 
     fn extract_exception(
         tc_scope: &mut v8::TryCatch<v8::EscapableHandleScope>,
-    ) -> Option<JSException> {
+    ) -> Result<JSException> {
         let exception_str = tc_scope
-            .exception()?
+            .exception()
+            .ok_or_else(|| eyre!("No exception caught"))?
             .to_string(tc_scope)
-            .expect("exception is not a string")
+            .wrap_err("Exception is not a string")?
             .to_rust_string_lossy(tc_scope);
 
         let message = match tc_scope.message() {
             Some(message) => message,
             None => {
-                return Some(JSException {
+                return Ok(JSException {
                     exception_str,
                     ..Default::default()
                 });
             }
         };
 
-        Some(JSException {
+        Ok(JSException {
             exception_str,
             resource_name: message
                 .get_script_resource_name(tc_scope)
@@ -493,7 +517,7 @@ impl Executor {
         let code = args
             .get(0)
             .to_string(scope)
-            .ok_or_else(|| SimpleError::new("argument to require is not a string"))
+            .ok_or_else(|| eyre!("argument to require is not a string"))
             .map(|string_arg| string_arg.to_rust_string_lossy(scope))
             .map(|mut path| {
                 if !path.ends_with(".js") {
@@ -509,7 +533,7 @@ impl Executor {
             // create JS string
             .and_then(|source| {
                 v8::String::new(scope, &source)
-                    .ok_or_else(|| SimpleError::new("failed to create JS string from source"))
+                    .ok_or_else(|| eyre!("failed to create JS string from source"))
             });
 
         if let Err(err) = code {
@@ -525,11 +549,11 @@ impl Executor {
         let code = code.unwrap();
 
         let export = v8::Script::compile(scope, code, None)
-            .ok_or_else(|| SimpleError::new("failed to compile JS"))
+            .ok_or_else(|| eyre!("failed to compile JS"))
             .and_then(|script| {
                 script
                     .run(scope)
-                    .ok_or_else(|| SimpleError::new("failed to execute JS"))
+                    .ok_or_else(|| eyre!("failed to execute JS"))
             });
 
         match export {
@@ -755,7 +779,10 @@ mod tests {
         init();
         let source = "0".repeat(1 << 29);
         let result = Executor::new(&source);
-        assert_eq!(result.unwrap_err(), ExecutorError::SourceExceedsMaxLength);
+        assert_eq!(
+            result.unwrap_err().downcast::<ExecutorError>().unwrap(),
+            ExecutorError::SourceExceedsMaxLength
+        );
     }
 
     #[test]
@@ -764,7 +791,7 @@ mod tests {
         let source = "this won't compile!";
         let result = Executor::new(&source);
         assert_eq!(
-            result.unwrap_err(),
+            result.unwrap_err().downcast::<ExecutorError>().unwrap(),
             ExecutorError::Compile(JSException {
                 exception_str: "SyntaxError: Unexpected identifier".to_string(),
                 resource_name: Some("undefined".to_string()),
@@ -781,7 +808,7 @@ mod tests {
         let source = r#"throw "Woo! Exception!";"#;
         let result = Executor::new(source);
         assert_eq!(
-            result.unwrap_err(),
+            result.unwrap_err().downcast::<ExecutorError>().unwrap(),
             ExecutorError::Execute(JSException {
                 exception_str: "Woo! Exception!".to_string(),
                 resource_name: Some("undefined".to_string()),
@@ -797,7 +824,13 @@ mod tests {
         init();
         let source = r#"let i = 100;"#;
 
-        assert_eq!(Executor::new(source).unwrap_err(), ExecutorError::NoMain)
+        assert_eq!(
+            Executor::new(source)
+                .unwrap_err()
+                .downcast::<ExecutorError>()
+                .unwrap(),
+            ExecutorError::NoMain
+        )
     }
 
     #[test]
@@ -811,7 +844,9 @@ mod tests {
             Executor::new(source)
                 .unwrap()
                 .execute("full_text", None)
-                .unwrap_err(),
+                .unwrap_err()
+                .downcast::<ExecutorError>()
+                .unwrap(),
             ExecutorError::Execute(JSException {
                 exception_str: "(╯°□°）╯︵ ┻━┻".to_string(),
                 resource_name: Some("undefined".to_string()),
@@ -833,9 +868,11 @@ mod tests {
             Executor::new(source)
                 .unwrap()
                 .execute("full_text", None)
-                .unwrap_err(),
+                .unwrap_err()
+                .downcast::<ExecutorError>()
+                .unwrap(),
             ExecutorError::Execute(JSException {
-                exception_str: "Error: no internal script with path \"@boop/non-existant.js\""
+                exception_str: "Error: No internal script with path \"@boop/non-existant.js\""
                     .to_string(),
                 resource_name: Some("undefined".to_string()),
                 source_line: Some(
@@ -858,16 +895,16 @@ mod tests {
             Executor::new(source)
                 .unwrap()
                 .execute("full_text", None)
-                .unwrap_err(),
+                .unwrap_err()
+                .downcast::<ExecutorError>()
+                .unwrap(),
             ExecutorError::Execute(JSException {
-                exception_str:
-                    if cfg!(windows) {
-                        "Error: could not open \"this-script-does-not-exist.js\", The system cannot find the file specified. (os error 2)"
-                    } else {
-                        "Error: could not open \"this-script-does-not-exist.js\", No such file or directory (os error 2)"
-                    }.to_string(),
+                exception_str: "Error: Could not open \"this-script-does-not-exist.js\""
+                    .to_string(),
                 resource_name: Some("undefined".to_string()),
-                source_line: Some("            let foo = require(\"this-script-does-not-exist.js\");".to_string()),
+                source_line: Some(
+                    "            let foo = require(\"this-script-does-not-exist.js\");".to_string()
+                ),
                 line_number: Some(2),
                 columns: Some((22, 23))
             }),
@@ -894,7 +931,9 @@ mod tests {
             Executor::new(&source)
                 .unwrap()
                 .execute("full_text", None)
-                .unwrap_err(),
+                .unwrap_err()
+                .downcast::<ExecutorError>()
+                .unwrap(),
             ExecutorError::Execute(JSException {
                 exception_str: "SyntaxError: Invalid or unexpected token".to_string(),
                 resource_name: Some("undefined".to_string()),
@@ -929,7 +968,9 @@ mod tests {
             Executor::new(&source)
                 .unwrap()
                 .execute("full_text", None)
-                .unwrap_err(),
+                .unwrap_err()
+                .downcast::<ExecutorError>()
+                .unwrap(),
             ExecutorError::Execute(JSException {
                 exception_str: "༼ﾉຈل\u{35c}ຈ༽ﾉ︵┻━┻".to_string(),
                 resource_name: Some("undefined".to_string()),

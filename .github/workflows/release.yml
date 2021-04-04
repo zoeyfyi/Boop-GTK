@@ -21,7 +21,7 @@ jobs:
         with:
           rust-version: 1.46.0
       # cache cargo
-      - uses: actions/cache@v2
+      - uses: actions/cache@v2.1.4
         with:
           path: |
             ~/.cargo/registry
@@ -34,123 +34,10 @@ jobs:
         run: cargo build --release --all-features
       - name: rename output
         run: mv target/release/boop-gtk ./boop-gtk.linux.amd64
-      - uses: actions/upload-artifact@v2.2.1
+      - uses: actions/upload-artifact@v2.2.2
         with:
           name: boop-gtk.linux.amd64
           path: ./boop-gtk.linux.amd64
-
-  release-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          submodules: "recursive"
-      - name: Install rust
-        uses: hecrj/setup-rust-action@v1
-        with:
-          rust-version: 1.46.0
-      # cache cargo
-      - uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      ################# Dependencies #################
-      - name: Windows dependencies (update msys)
-        if: runner.os == 'windows'
-        run: C:\msys64\usr\bin\bash.exe -lc "pacman -Syu --noconfirm"
-      - name: Windows dependencies (msys remove cmake)
-        if: runner.os == 'windows'
-        run: C:\msys64\usr\bin\bash.exe -lc "pacman -Rs --noconfirm mingw-w64-x86_64-cmake"
-      - name: Windows dependencies (msys)
-        if: runner.os == 'windows'
-        run: C:\msys64\usr\bin\bash.exe -lc "pacman -Syy --noconfirm mingw-w64-x86_64-pkg-config mingw-w64-x86_64-adwaita-icon-theme"
-      - name: Windows dependencies (add msys to path)
-        if: runner.os == 'windows'
-        run: echo "C:\msys64\mingw64\bin" >> $GITHUB_PATH
-      - name: Windows dependencies (cache gvsbuild)
-        uses: actions/cache@v2
-        id: cache
-        with:
-          path: release\**
-          key: ${{ runner.os }}-gvsbuild--${{ hashFiles('submodules/gvsbuild/**') }}
-      - name: Windows dependencies (move gvsbuild files)
-        if: runner.os == 'windows' && steps.cache.outputs.cache-hit == 'true'
-        run: xcopy /e /i release C:\gtk-build\gtk\x64\release
-        shell: cmd
-      - name: Windows dependencies (copy gvsbuild)
-        if: runner.os == 'windows' && steps.cache.outputs.cache-hit != 'true'
-        run: xcopy /e /i submodules\gvsbuild C:\gtk-build\github\gvsbuild
-      - name: Windows dependencies (remove git)
-        run: rmdir "C:\Program Files\Git\usr\bin" /s /q # remove git's bin, there are conflicting cygwin dll's
-        shell: cmd
-      - name: Windows dependencies (gtk)
-        if: runner.os == 'windows' && steps.cache.outputs.cache-hit != 'true'
-        run: python .\build.py build -p=x64 --vs-ver=16 --msys-dir=C:\msys64 -k --enable-gi --py-wheel --py-egg gtk3 gdk-pixbuf gtksourceview3 librsvg hicolor-icon-theme
-        working-directory: C:\gtk-build\github\gvsbuild
-      - name: Windows dependencies (add gvsbuild bin directory to path)
-        run: echo "C:\gtk-build\gtk\x64\release\bin" >> $GITHUB_PATH
-      ################# Dependencies #################
-      # install cargo wix
-      - name: install cargo-wix
-        run: cargo install cargo-wix
-      # build installer
-      - name: build
-        run: cargo wix -v --nocapture -o boop-gtk.windows.msi
-        env:
-          GTKSOURCEVIEW_3.0_NO_PKG_CONFIG: 1
-          GTK_LIB_DIR: C:\msys64\mingw64\bin
-          PKG_CONFIG_ALLOW_CROSS: 1
-          PKG_CONFIG: C:\msys64\mingw64\bin\pkg-config.exe
-          PKG_CONFIG_PATH: C:\gtk-build\gtk\x64\release\lib\pkgconfig
-          GLIB_COMPILE_RESOURCES: C:\gtk-build\gtk\x64\release\bin\glib-compile-resources.exe
-          SYSTEM_DEPS_GTKSOURCEVIEW_3.0_LIB: gtksourceview-3.0
-      # upload
-      - uses: actions/upload-artifact@v2.2.1
-        with:
-          name: boop-gtk.windows.msi
-          path: ./boop-gtk.windows.msi
-      ################# Windows workarounds #################
-      - name: Windows dependencies (make release folder)
-        run: mkdir release
-        shell: cmd
-        if: runner.os == 'windows' && steps.cache.outputs.cache-hit != 'true'
-      - name: Windows dependencies (move release files)
-        run: xcopy /e /i C:\gtk-build\gtk\x64\release %cd%\release
-        shell: cmd
-        if: runner.os == 'windows' && steps.cache.outputs.cache-hit != 'true'
-    ################# Windows workarounds #################
-
-  release-macosx:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          submodules: "recursive"
-      - name: Install rust
-        uses: hecrj/setup-rust-action@v1
-        with:
-          rust-version: 1.46.0
-      # cache cargo
-      - uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: GTK development librarys
-        run: brew install gtk+3 gtksourceview3 pkg-config
-      - name: build
-        run: cargo build --release --all-features
-      - name: rename output
-        run: mv target/release/boop-gtk ./boop-gtk.macos
-      - uses: actions/upload-artifact@v2.2.1
-        with:
-          name: boop-gtk.macos
-          path: ./boop-gtk.macos
 
   release-snap:
     runs-on: ubuntu-latest
@@ -169,7 +56,7 @@ jobs:
           release: stable
       - name: rename output
         run: mv ${{ steps.snapcraft.outputs.snap }} ./boop-gtk.snap
-      - uses: actions/upload-artifact@v2.2.1
+      - uses: actions/upload-artifact@v2.2.2
         with:
           name: boop-gtk.snap
           path: ./boop-gtk.snap
@@ -191,14 +78,14 @@ jobs:
         with:
           bundle: "boop-gtk.flatpak"
           manifest-path: "flatpak/fyi.zoey.Boop-GTK.json"
-      - uses: actions/upload-artifact@v2.2.1
+      - uses: actions/upload-artifact@v2.2.2
         with:
           name: boop-gtk.flatpak
           path: ./boop-gtk.flatpak
 
   release-cargo:
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request'
+    
     steps:
       - uses: actions/checkout@v2
         with:
@@ -208,7 +95,7 @@ jobs:
         with:
           rust-version: 1.46.0
       # cache cargo
-      - uses: actions/cache@v2
+      - uses: actions/cache@v2.1.4
         with:
           path: |
             ~/.cargo/registry
@@ -218,9 +105,15 @@ jobs:
       - name: GTK development librarys
         run: sudo apt-get update -y && sudo apt-get install -y libgtk-3-dev libgtksourceview-3.0-dev
       - name: cargo login
+        if: github.event_name != 'pull_request'
         run: cargo login ${{ secrets.CRATES }}
       - name: cargo publish
+        if: github.event_name != 'pull_request'
         run: cargo publish
+      - name: cargo publish (dry run)
+        if: github.event_name == 'pull_request'
+        run: cargo publish --dry-run
+      
 
   release:
     runs-on: ubuntu-latest
@@ -228,8 +121,6 @@ jobs:
     needs:
       [
         release-linux-amd64,
-        release-macosx,
-        release-windows,
         release-snap,
         release-flatpak,
       ]
@@ -241,19 +132,11 @@ jobs:
           path: ./
       - uses: actions/download-artifact@v2
         with:
-          name: boop-gtk.macos
-          path: ./
-      - uses: actions/download-artifact@v2
-        with:
           name: boop-gtk.snap
           path: ./
       - uses: actions/download-artifact@v2
         with:
           name: boop-gtk.flatpak
-          path: ./
-      - uses: actions/download-artifact@v2
-        with:
-          name: boop-gtk.windows.msi
           path: ./
       # create a release
       - name: Create Release
@@ -266,15 +149,13 @@ jobs:
           release_name: Release ${{ github.ref }}
           draft: true
           prerelease: false
-      - name: Debug LS
-        run: ls -al
       # upload
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./boop-gtk.linux.amd64
           asset_name: boop-gtk.linux.amd64
           asset_content_type: application/octet-stream
@@ -283,16 +164,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ./boop-gtk.macos
-          asset_name: boop-gtk.macos
-          asset_content_type: application/octet-stream
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./boop-gtk.snap
           asset_name: boop-gtk.snap
           asset_content_type: application/octet-stream
@@ -301,16 +173,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./boop-gtk.flatpak
           asset_name: boop-gtk.flatpak
-          asset_content_type: application/octet-stream
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ./boop-gtk.windows.msi
-          asset_name: boop-gtk.windows.msi
           asset_content_type: application/octet-stream

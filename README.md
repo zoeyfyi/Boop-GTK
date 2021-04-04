@@ -1,27 +1,38 @@
 <p align="center">
-  <a href="https://youtu.be/WXDTsJ4cqO4"><img src="screenshot.png"></a>
+  <a href="https://youtu.be/WXDTsJ4cqO4"><img src="docs/demo.apng"></a>
 </p>
 
 </br>
 
 <div align="center">
-  <img height="80px" src="header.png" >
+  <img width="128px" src="data/fyi.zoey.Boop-GTK.svg" >
 </div>
 
-<h2 align="center">A scriptable scratchpad for developers</h2>
-<p align="center">Port of <a href="https://github.com/IvanMathy"><b>@IvanMathy</b></a>'s <a href="https://github.com/IvanMathy/Boop">Boop</a> to GTK</p>
+<h1 align="center">Boop-GTK</h1>
+<h3 align="center">A scriptable scratchpad for developers. Port of <a href="https://github.com/IvanMathy"><b>@IvanMathy</b></a>'s <a href="https://github.com/IvanMathy/Boop">Boop</a> to GTK</h3>
+<p align="center"><i>Also checkout <a href="https://github.com/zoeyfyi/TeX-Match">TeX Match</a>: Find LaTeX symbols by sketching</i></p>
+
+
+<p align="center">
+  <a href="#what-is-boop-gtk">What is Boop-GTK?</a> • <a href="#features">Features</a> • <a href="#downloads">Downloads</a> • <a href="#screenshots">Screenshots</a> • <a href="#usage">Usage</a> • <a href="#additional-scripts">Additional Scripts</a> • <a href="#building">Building</a>
+</p>
+
+
+</br>
 
 ![Continuous integration](https://github.com/zoeyfyi/Boop-GTK/workflows/Continuous%20integration/badge.svg)
 ![Release](https://github.com/zoeyfyi/Boop-GTK/workflows/Release/badge.svg?branch=release)
 [![Crates.io](https://img.shields.io/crates/v/boop-gtk)](https://crates.io/crates/boop-gtk)
 [![boop-gtk](https://snapcraft.io//boop-gtk/badge.svg)](https://snapcraft.io/boop-gtk)
 [![Flathub](https://img.shields.io/flathub/v/fyi.zoey.Boop-GTK)](https://flathub.org/apps/details/fyi.zoey.Boop-GTK)
+![AUR version](https://img.shields.io/aur/version/boop-gtk?label=AUR%20boop-gtk)
+![AUR version](https://img.shields.io/aur/version/boop-gtk-bin?label=AUR%20boop-gtk-bin)
 
 ### What is Boop-GTK?
 
 [Boop](https://github.com/IvanMathy) is a simple editor that allows you to execute scripts on the buffer. The idea is that you don’t have to paste potentially secret information into shady websites to do some simple transforms, like format json and decoding query strings.
 
-Boop-GTK is a port of Boop to GTK, so users on Linux and Windows can Boop it!
+Boop-GTK is a port of Boop to GTK, so users on Linux can Boop it!
 
 ### Features
 
@@ -29,26 +40,24 @@ Boop-GTK is a port of Boop to GTK, so users on Linux and Windows can Boop it!
 - 100% script compatibility with [Boop](https://github.com/IvanMathy/Boop)
 - Completely crossplatform!
 
+### Downloads
+
+| Platform | Format | Link | 
+| -------- | ------ | ---- | 
+| Linux | Binary | [boop-gtk.linux.amd64](https://github.com/zoeyfyi/Boop-GTK/releases/latest/download/boop-gtk.linux.amd64) | 
+| | Flatpak | [boop-gtk.flatpak](https://github.com/zoeyfyi/Boop-GTK/releases/latest/download/boop-gtk.flatpak) | 
+| | Snap | [boop-gtk.snap](https://github.com/zoeyfyi/Boop-GTK/releases/latest/download/boop-gtk.snap) | 
+| | AUR | [`boop-gtk`](https://aur.archlinux.org/packages/boop-gtk/) (thanks to qcasey) </br> [`boop-gtk-bin`](https://aur.archlinux.org/packages/boop-gtk-bin/) </br>  [`boop-gtk-extra-scripts`](https://aur.archlinux.org/packages/boop-gtk-extra-scripts/) | 
+| | Snap Store | [![Get it from the Snap Store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/boop-gtk) | 
+| | Flathub | [<img width='190' alt='Download on Flathub' src='https://flathub.org/assets/badges/flathub-badge-en.png'>](https://flathub.org/apps/details/fyi.zoey.Boop-GTK) | 
+
+If you are looking for a Windows version check out [Woop](https://github.com/felixse/Woop) by @felixse. For MacOS check out [Boop](https://github.com/IvanMathy/Boop) by @IvanMathy, the project from which this is based.
+
 ### Screenshots
 
-| Linux | Windows |
-| :---: | :---: |
-| ![linux](screenshot.png) | ![windows](windows-screenshot.png) |
+![linux screenshot](screenshot.png)
 
 There is also a quick demo on [youtube](https://youtu.be/WXDTsJ4cqO4).
-
-### Get Boop-GTK
-
-| Platform | Format | Link |
-| -------- | ------ | ---- |
-| Linux | Binary | <a href="https://github.com/zoeyfyi/Boop-GTK/releases/latest/download/boop-gtk.linux.amd64">boop-gtk.linux.amd64</a> |
-| | Flatpak | <a href="https://github.com/zoeyfyi/Boop-GTK/releases/latest/download/boop-gtk.flatpak">boop-gtk.flatpak</a> |
-|  | Snap | <a href="https://github.com/zoeyfyi/Boop-GTK/releases/latest/download/boop-gtk.snap">boop-gtk.snap</a> |
-|  | AUR | <a href="https://aur.archlinux.org/packages/boop-gtk/"><code>boop-gtk</code></a> (thanks to qcasey), <a href="https://aur.archlinux.org/packages/boop-gtk-bin/"><code>boop-gtk-bin</code></a> (thanks to hvksmr1996) |
-|  | Snap Store | <a href="https://snapcraft.io/boop-gtk"><img src="https://snapcraft.io/static/images/badges/en/snap-store-black.svg" alt="Get it from the Snap Store"></a> |
-|  | Flathub | <a href="https://flathub.org/apps/details/fyi.zoey.Boop-GTK"><img width='190' alt='Download on Flathub' src='https://flathub.org/assets/badges/flathub-badge-en.png'></a> |
-| Windows | Installer | <a href="https://github.com/zoeyfyi/Boop-GTK/releases/latest/download/boop-gtk.windows.msi">boop-gtk.windows.msi</a> |
-| MacOS | Binary | You should really use <a href="https://github.com/IvanMathy/Boop">Boop</a>, but if you <i>really</i> want to: <a href="https://github.com/zoeyfyi/Boop-GTK/releases/latest/download/boop-gtk.macos">boop-gtk.macos</a> |
 
 ### Usage
 
@@ -63,26 +72,26 @@ Boop-GTK is easy to use: open it, paste some text, run some scripts, optionally 
 
 ### Additional Scripts
 
-More scripts can be found in the [Boop repo](https://github.com/IvanMathy/Boop/tree/main/Scripts).
+More scripts can be found in the [Boop repo](https://github.com/IvanMathy/Boop/tree/main/Scripts). These scripts can also be found in the <a href="https://aur.archlinux.org/packages/boop-gtk-extra-scripts/"><code>boop-gtk-extra-scripts</code></a> package on the AUR.
 
 ### Building
 
-#### Linux
+#### Binary
 
 ```shell
 sudo apt-get install -y libgtk-3-dev libgtksourceview-3.0-dev
 cargo build
 ```
 
-#### Linux Snap
+#### Snap
 
 ```shell
 sudo apt-get install snap snapcraft
 snapcraft snap
-sudo snap install boop-gtk_1.6.0_amd64.snap
+sudo snap install boop-gtk_1.7.0_amd64.snap
 ```
 
-#### Linux Flatpak
+#### Flatpak
 
 ```shell
 sudo add-apt-repository ppa:alexlarsson/flatpak 
@@ -97,27 +106,3 @@ flatpak-builder --repo=repo build-dir flatpak/fyi.zoey.Boop-GTK.json
 flatpak build-bundle ./repo boop-gtk.flatpak fyi.zoey.Boop-GTK
 ```
 
-#### MacOS
-
-```shell
-brew install gtk+3 gtksourceview3
-cargo build
-```
-
-#### Windows
-
-I don't really understand why sourceview isn't picked up automatically by system-deps but [if you are curious](https://github.com/gdesmott/system-deps/issues/10).
-
-```powershell
-git clone https://github.com/wingtk/gvsbuild.git C:\gtk-build\github\gvsbuild
-cd C:\gtk-build\github\gvsbuild; python .\build.py build -p=x64 --vs-ver=16 --msys-dir=C:\msys64 -k --enable-gi --py-wheel --py-egg gtk3 gdk-pixbuf gtksourceview3
-${Env:GTKSOURCEVIEW_3.0_NO_PKG_CONFIG}=1; ${Env:SYSTEM_DEPS_GTKSOURCEVIEW_3.0_LIB}="gtksourceview-3.0"; cargo build
-```
-
-#### Windows Installer
-
-```powershell
-# follow build steps above, then:
-cargo install cargo-wix 
-${Env:GTKSOURCEVIEW_3.0_NO_PKG_CONFIG}=1; ${Env:SYSTEM_DEPS_GTKSOURCEVIEW_3.0_LIB}="gtksourceview-3.0"; cargo wix -v
-```
