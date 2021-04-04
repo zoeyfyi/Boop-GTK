@@ -211,7 +211,7 @@ impl Script {
             .wrap_err("Receive channel is empty and disconnected")?;
 
         if let ExecutorJob::Responce(status) = result {
-            return status.map_err(|err| eyre::Report::from(err));
+            return status.map_err(eyre::Report::from);
         }
 
         Err(eyre!(

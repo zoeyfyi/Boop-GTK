@@ -183,7 +183,7 @@ impl ExecutorError {
         }
     }
 
-    pub fn to_notification_string(self) -> String {
+    pub fn into_notification_string(self) -> String {
         match self {
             ExecutorError::SourceExceedsMaxLength => {
                 String::from(r#"<span foreground="red">ERROR:</span> Script exceeds max length"#)
@@ -467,7 +467,7 @@ impl Executor {
             let status_slot = self
                 .isolate
                 .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
-                .ok_or(eyre!("Failed to get mutable access to status slot"))?;
+                .ok_or_else(|| eyre!("Failed to get mutable access to status slot"))?;
 
             let status = status_slot.borrow();
 

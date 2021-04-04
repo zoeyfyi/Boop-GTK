@@ -1,30 +1,33 @@
 use crate::{
-    command_pallete::CommandPalleteDialog,
+    config::Config,
     executor::{self},
     script::Script,
     scriptmap::ScriptMap,
+    ui::command_pallete::CommandPalleteDialog,
+    ui::{preferences_dialog::PreferencesDialog, shortcuts_window::ShortcutsWindow},
+    util::SourceViewExt,
     util::StringExt,
+    XDG_DIRS,
 };
 use eyre::{Context, Result};
 use gdk_pixbuf::prelude::*;
 use gladis::Gladis;
 use glib::SourceId;
-use gtk::{prelude::*, Label, Revealer, ShortcutsWindow};
-use sourceview::prelude::*;
+use gtk::{prelude::*, Label, Revealer};
+use sourceview::{prelude::*, Language};
 
 use executor::{ExecutorError, TextReplacement};
-use gtk::{AboutDialog, ApplicationWindow, Button, ModelButton};
-use std::{
-    path::Path,
-    sync::{Arc, RwLock},
-};
+use gtk::{ApplicationWindow, Button, ModelButton};
+use std::sync::{Arc, RwLock};
+
+use super::about_dialog::AboutDialog;
 
 pub const NOTIFICATION_LONG_DELAY: u32 = 5000;
 
 #[derive(Gladis, Clone, Shrinkwrap)]
 pub struct AppWidgets {
     #[shrinkwrap(main_field)]
-    window: ApplicationWindow,
+    pub window: ApplicationWindow,
 
     header_button: Button,
     source_view: sourceview::View,
@@ -35,53 +38,45 @@ pub struct AppWidgets {
 
     re_execute_last_script_button: ModelButton,
     reset_scripts_button: ModelButton,
+    preferences_button: ModelButton,
     config_directory_button: ModelButton,
     more_scripts_button: ModelButton,
-    about_button: ModelButton,
     shortcuts_button: ModelButton,
-
-    about_dialog: AboutDialog,
+    about_button: ModelButton,
 }
 
 #[derive(Clone, Shrinkwrap)]
 pub struct App {
     #[shrinkwrap(main_field)]
-    widgets: AppWidgets,
+    pub widgets: AppWidgets,
+    preferences_dialog: PreferencesDialog,
+    about_dialog: AboutDialog,
+
     scripts: Arc<RwLock<ScriptMap>>,
     notification_source_id: Arc<RwLock<Option<SourceId>>>,
     last_script_executed: Arc<RwLock<Option<String>>>,
+    config: Arc<RwLock<Config>>,
 }
 
 impl App {
-    pub(crate) fn new(config_dir: &Path, scripts: Arc<RwLock<ScriptMap>>) -> Result<Self> {
-        let widgets = AppWidgets::from_resource("/fyi/zoey/Boop-GTK/boop-gtk.glade")
-            .wrap_err("Failed to load boop-gtk.glade")?;
-
+    pub(crate) fn new(
+        boop_language: Language,
+        scripts: Arc<RwLock<ScriptMap>>,
+        config: Arc<RwLock<Config>>,
+    ) -> Result<Self> {
         let app = App {
-            widgets,
+            widgets: AppWidgets::from_resource("/fyi/zoey/Boop-GTK/boop-gtk.glade")
+                .wrap_err("Failed to load boop-gtk.glade")?,
+            preferences_dialog: PreferencesDialog::new(config.clone())?,
+            about_dialog: AboutDialog::new(scripts.clone())?,
             scripts,
             notification_source_id: Arc::new(RwLock::new(None)),
             last_script_executed: Arc::new(RwLock::new(None)),
+            config,
         };
 
-        app.widgets
-            .about_dialog
-            .set_version(Some(env!("CARGO_PKG_VERSION")));
-
-        for (_, script) in app
-            .scripts
-            .read()
-            .expect("Scripts lock is poisoned")
-            .0
-            .iter()
-        {
-            if let Some(author) = &script.metadata.author {
-                app.about_dialog
-                    .add_credit_section(&format!("{} script", &script.metadata.name), &[author]);
-            }
-        }
-
-        app.setup_syntax_highlighting(config_dir)?;
+        app.configure(boop_language)?;
+        app.update_state_from_config()?;
 
         // close notification on dismiss
         {
@@ -115,9 +110,33 @@ impl App {
             });
         }
 
+        // open preferences dialog
+        {
+            let preference_dialog = app.preferences_dialog.clone();
+            app.preferences_button.connect_clicked(move |_| {
+                let responce = preference_dialog.run();
+                if responce == gtk::ResponseType::DeleteEvent
+                    || responce == gtk::ResponseType::Cancel
+                {
+                    preference_dialog.hide();
+                }
+            });
+        }
+
+        {
+            let source_view: sourceview::View = app.source_view.clone();
+            app.preferences_dialog
+                .connect_config_style_scheme_notify(move |scheme| {
+                    source_view
+                        .get_sourceview_buffer()
+                        .expect("Failed to get sourceview buffer")
+                        .set_style_scheme(scheme.as_ref())
+                });
+        }
+
         // launch config directory in default file manager
         {
-            let config_dir_str = config_dir.display().to_string();
+            let config_dir_str = XDG_DIRS.get_config_home().to_string_lossy().to_string();
             let app_ = app.clone();
             app.config_directory_button.connect_clicked(move |_| {
                 if let Err(open_err) = open::that(config_dir_str.clone()) {
@@ -158,8 +177,11 @@ impl App {
 
         {
             let app_ = app.clone();
-            app.shortcuts_button
-                .connect_clicked(move |_| app_.open_shortcuts_window());
+            app.shortcuts_button.connect_clicked(move |_| {
+                let shortcuts_window = ShortcutsWindow::new();
+                shortcuts_window.set_transient_for(Some(&app_.window));
+                shortcuts_window.show_all();
+            });
         }
 
         {
@@ -173,102 +195,34 @@ impl App {
         Ok(app)
     }
 
-    fn new_shortcuts_window(window: &gtk::ApplicationWindow) -> ShortcutsWindow {
-        let shortcut_window = gtk::ShortcutsWindowBuilder::new()
-            .transient_for(window)
-            .build();
+    fn configure(&self, boop_language: Language) -> Result<()> {
+        self.preferences_dialog
+            .set_transient_for(Some(&self.window));
 
-        let section = gtk::ShortcutsSectionBuilder::new().visible(true).build();
+        // update source_view syntax highlighting
+        let buffer = self.source_view.get_sourceview_buffer()?;
+        buffer.set_highlight_syntax(true);
+        buffer.set_language(Some(&boop_language));
 
-        {
-            let group = gtk::ShortcutsGroupBuilder::new()
-                .title("Test")
-                .visible(true)
-                .build();
+        Ok(())
+    }
 
-            group.add(
-                &gtk::ShortcutsShortcutBuilder::new()
-                    .action_name("app.command_pallete")
-                    .visible(true)
-                    .build(),
-            );
-            group.add(
-                &gtk::ShortcutsShortcutBuilder::new()
-                    .action_name("app.re_execute_script")
-                    .visible(true)
-                    .build(),
-            );
-            group.add(
-                &gtk::ShortcutsShortcutBuilder::new()
-                    .action_name("app.quit")
-                    .visible(true)
-                    .build(),
-            );
-        }
+    fn update_state_from_config(&self) -> Result<()> {
+        let config = self
+            .config
+            .read()
+            .map_err(|e| eyre!("Config lock poisoned: {}", e))?;
 
-        // genral group
-        {
-            let group = gtk::ShortcutsGroupBuilder::new()
-                .title("General")
-                .visible(true)
-                .build();
+        // update source_view style scheme
+        let scheme_id = &config.editor.colour_scheme_id;
+        let scheme = sourceview::StyleSchemeManager::get_default()
+            .ok_or_else(|| eyre!("Failed to get default style scheme manager"))?
+            .get_scheme(scheme_id);
+        self.source_view
+            .get_sourceview_buffer()?
+            .set_style_scheme(scheme.as_ref());
 
-            let shortcuts = [
-                ("Open Command Pallette", "<Primary><Shift>P"),
-                ("Quit", "<Primary>Q"),
-            ];
-
-            for (title, accelerator) in &shortcuts {
-                group.add(
-                    &gtk::ShortcutsShortcutBuilder::new()
-                        .title(title)
-                        .accelerator(accelerator)
-                        .visible(true)
-                        .build(),
-                );
-            }
-
-            section.add(&group);
-        }
-
-        // editor group
-        {
-            let group = gtk::ShortcutsGroupBuilder::new()
-                .title("Editor")
-                .visible(true)
-                .build();
-
-            let shortcuts = [
-                ("Undo", "<Primary>Z"),
-                ("Redo", "<Primary><Shift>Z"),
-                ("Move line up", "<Alt>Up"),
-                ("Move line down", "<Alt>Down"),
-                ("Move cursor backwards one word", "<Primary>Left"),
-                ("Move cursor forward one word", "<Primary>Right"),
-                ("Move cursor to beginning of previous line", "<Primary>Up"),
-                ("Move cursor to end of next line", "<Primary>Down"),
-                ("Move cursor to beginning of line", "<Primary>Page_Up"),
-                ("Move cursor to end of line", "<Primary>Page_Down"),
-                ("Move cursor to beginning of document", "<Primary>Home"),
-                ("Move cursor to end of document", "<Primary>End"),
-            ];
-
-            for (title, accelerator) in &shortcuts {
-                group.add(
-                    &gtk::ShortcutsShortcutBuilder::new()
-                        .title(title)
-                        .accelerator(accelerator)
-                        .visible(true)
-                        .build(),
-                );
-            }
-
-            section.add(&group);
-        }
-
-        shortcut_window.add(&section);
-
-        shortcut_window
+        Ok(())
     }
 
     fn post_notification(&self, text: &str, delay: u32) {
@@ -311,54 +265,6 @@ impl App {
         );
     }
 
-    fn setup_syntax_highlighting(&self, config_dir: &Path) -> Result<()> {
-        let language_manager = sourceview::LanguageManager::get_default()
-            .ok_or(eyre!("Failed to get language manager"))?;
-
-        // add config_dir to language manager's search path
-        let dirs = language_manager.get_search_path();
-        let mut dirs: Vec<&str> = dirs.iter().map(|s| s.as_ref()).collect();
-        let config_dir_path = config_dir.to_string_lossy().to_string();
-        dirs.push(&config_dir_path);
-        language_manager.set_search_path(&dirs);
-
-        info!("language manager search directorys: {}", dirs.join(":"));
-
-        let boop_language = language_manager.get_language("boop");
-        if boop_language.is_none() {
-            self.post_notification(
-                r#"<span foreground="red">ERROR:</span> failed to load language file"#,
-                NOTIFICATION_LONG_DELAY,
-            );
-        }
-
-        // set language
-        let buffer: sourceview::Buffer = self
-            .source_view
-            .get_buffer()
-            .ok_or(eyre!("Failed to get buffer"))?
-            .downcast::<sourceview::Buffer>()
-            .map_err(|_| eyre!("Failed to downcast TextBuffer to sourceview Buffer"))?;
-        buffer.set_highlight_syntax(true);
-        buffer.set_language(boop_language.as_ref());
-
-        Ok(())
-    }
-
-    // fn push_error_(status_bar: gtk::Statusbar, context_id: u32, error: impl std::fmt::Display) {
-    //     status_bar.push(context_id, &format!("ERROR: {}", error));
-    // }
-
-    // pub fn push_error(&self, error: impl std::fmt::Display) {
-    //     App::push_error_(self.status_bar.clone(), self.context_id, error);
-    // }
-
-    pub fn open_shortcuts_window(&self) {
-        let window = self.window.clone();
-        let shortcuts_window = App::new_shortcuts_window(&window);
-        shortcuts_window.show_all();
-    }
-
     pub fn run_command_pallete(&self) -> Result<()> {
         let dialog = CommandPalleteDialog::new(&self.window, self.scripts.clone())?;
         dialog.show_all();
@@ -366,7 +272,7 @@ impl App {
         if let gtk::ResponseType::Accept = dialog.run() {
             let selected: &str = dialog
                 .get_selected()
-                .ok_or(eyre!("Command pallete dialog didn't return a selection"))?;
+                .ok_or_else(|| eyre!("Command pallete dialog didn't return a selection"))?;
 
             *self.last_script_executed.write().unwrap() = Some(String::from(selected));
             self.execute_script(selected)?;
@@ -392,18 +298,18 @@ impl App {
         let script: &mut Script = script_map
             .0
             .get_mut(script_key)
-            .ok_or(eyre!("Script not in map"))?;
+            .ok_or_else(|| eyre!("Script not in map"))?;
 
         info!("executing {}", script.metadata.name);
 
         let buffer = &self
             .source_view
             .get_buffer()
-            .ok_or(eyre!("Failed to get buffer"))?;
+            .ok_or_else(|| eyre!("Failed to get buffer"))?;
 
         let buffer_text = buffer
             .get_text(&buffer.get_start_iter(), &buffer.get_end_iter(), false)
-            .ok_or(eyre!("Failed to get buffer text"))?;
+            .ok_or_else(|| eyre!("Failed to get buffer text"))?;
 
         let selection_text = buffer
             .get_selection_bounds()
@@ -435,7 +341,7 @@ impl App {
 
                 error!("Exception: {:?}", executor_err);
                 self.post_notification_error(
-                    &executor_err.to_notification_string(),
+                    &executor_err.into_notification_string(),
                     NOTIFICATION_LONG_DELAY,
                 );
             }
@@ -448,7 +354,7 @@ impl App {
         let buffer = &self
             .source_view
             .get_buffer()
-            .ok_or(eyre!("Failed to get buffer"))?;
+            .ok_or_else(|| eyre!("Failed to get buffer"))?;
 
         match replacement {
             TextReplacement::Full(text) => {
