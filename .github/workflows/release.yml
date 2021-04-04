@@ -85,7 +85,7 @@ jobs:
 
   release-cargo:
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request'
+    
     steps:
       - uses: actions/checkout@v2
         with:
@@ -105,9 +105,15 @@ jobs:
       - name: GTK development librarys
         run: sudo apt-get update -y && sudo apt-get install -y libgtk-3-dev libgtksourceview-3.0-dev
       - name: cargo login
+        if: github.event_name != 'pull_request'
         run: cargo login ${{ secrets.CRATES }}
       - name: cargo publish
+        if: github.event_name != 'pull_request'
         run: cargo publish
+      - name: cargo publish (dry run)
+        if: github.event_name == 'pull_request'
+        run: cargo publish --dry-run
+      
 
   release:
     runs-on: ubuntu-latest

@@ -17,6 +17,15 @@
   <url type="homepage">https://boop-gtk.zoey.fyi/</url>
   <content_rating type="oars-1.0" />
   <releases>
+    <release version="1.7.0" date="2020-04-04">
+      <description>
+        <ul>
+          <li>Dropped windows support</li>
+          <li>Added shortcuts windows</li>
+          <li>Added a preferences window with the ability to configure the sourceview theme</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.6.0" date="2020-12-30">
       <description>
         <ul>
