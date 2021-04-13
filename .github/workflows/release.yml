@@ -21,7 +21,7 @@ jobs:
         with:
           rust-version: 1.46.0
       # cache cargo
-      - uses: actions/cache@v2.1.4
+      - uses: actions/cache@v2.1.5
         with:
           path: |
             ~/.cargo/registry
@@ -95,7 +95,7 @@ jobs:
         with:
           rust-version: 1.46.0
       # cache cargo
-      - uses: actions/cache@v2.1.4
+      - uses: actions/cache@v2.1.5
         with:
           path: |
             ~/.cargo/registry
