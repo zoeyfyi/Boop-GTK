@@ -22,7 +22,7 @@ jobs:
       uses: hecrj/setup-rust-action@v1
       with:
         components: clippy, rustfmt
-        rust-version: 1.46.0
+        rust-version: 1.51.0
     - name: Cache cargo
       uses: actions/cache@v2.1.5
       with:
