@@ -63,7 +63,7 @@ jobs:
       - name: Dependency (Python TOML)
         run: sudo dnf install -y python3-toml
       - name: Generate sources
-        run: bash flatpak/gen-sources.sh
+        run: bash gen-sources.sh
       - uses: bilelmoussaoui/flatpak-github-actions@v2
         with:
           manifest-path: "flatpak/fyi.zoey.Boop-GTK.json"
