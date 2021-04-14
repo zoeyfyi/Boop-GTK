@@ -22,9 +22,9 @@ jobs:
       uses: hecrj/setup-rust-action@v1
       with:
         components: clippy, rustfmt
-        rust-version: 1.46.0
+        rust-version: 1.51.0
     - name: Cache cargo
-      uses: actions/cache@v2.1.4
+      uses: actions/cache@v2.1.5
       with:
         path: |
           ~/.cargo/registry
@@ -63,7 +63,7 @@ jobs:
       - name: Dependency (Python TOML)
         run: sudo dnf install -y python3-toml
       - name: Generate sources
-        run: bash flatpak/gen-sources.sh
+        run: bash gen-sources.sh
       - uses: bilelmoussaoui/flatpak-github-actions@v2
         with:
           manifest-path: "flatpak/fyi.zoey.Boop-GTK.json"
