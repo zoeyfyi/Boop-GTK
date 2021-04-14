@@ -7,3 +7,6 @@
 [submodule "submodules/svg-stroke-to-path"]
 	path = submodules/svg-stroke-to-path
 	url = https://github.com/leifgehrmann/svg-stroke-to-path.git
+[submodule "submodules/fyi.zoey.Boop-GTK"]
+	path = submodules/fyi.zoey.Boop-GTK
+	url = https://github.com/flathub/fyi.zoey.Boop-GTK.git
