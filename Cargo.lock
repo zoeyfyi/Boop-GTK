@@ -132,7 +132,7 @@ dependencies = [
 
 [[package]]
 name = "boop-gtk"
-version = "1.7.0"
+version = "1.7.1"
 dependencies = [
  "color-eyre",
  "config",
