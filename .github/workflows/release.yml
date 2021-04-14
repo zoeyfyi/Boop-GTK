@@ -93,7 +93,7 @@ jobs:
       - name: Install rust
         uses: hecrj/setup-rust-action@v1
         with:
-          rust-version: 1.46.0
+          rust-version: 1.51.0
       # cache cargo
       - uses: actions/cache@v2.1.5
         with:
