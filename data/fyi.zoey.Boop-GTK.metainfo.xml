@@ -17,6 +17,13 @@
   <url type="homepage">https://boop-gtk.zoey.fyi/</url>
   <content_rating type="oars-1.0" />
   <releases>
+    <release version="1.7.1" date="2020-04-14">
+      <description>
+        <ul>
+          <li>Updated V8 to fix flatpak issue</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.7.0" date="2020-04-04">
       <description>
         <ul>

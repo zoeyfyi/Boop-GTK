@@ -19,7 +19,7 @@ jobs:
       - name: Install rust
         uses: hecrj/setup-rust-action@v1
         with:
-          rust-version: 1.46.0
+          rust-version: 1.51.0
       # cache cargo
       - uses: actions/cache@v2.1.5
         with:
@@ -73,7 +73,7 @@ jobs:
       - name: Dependency (Python TOML)
         run: sudo dnf install -y python3-toml
       - name: Generate sources
-        run: bash flatpak/gen-sources.sh
+        run: bash gen-sources.sh
       - uses: bilelmoussaoui/flatpak-github-actions@v2
         with:
           bundle: "boop-gtk.flatpak"
@@ -93,7 +93,7 @@ jobs:
       - name: Install rust
         uses: hecrj/setup-rust-action@v1
         with:
-          rust-version: 1.46.0
+          rust-version: 1.51.0
       # cache cargo
       - uses: actions/cache@v2.1.5
         with:
