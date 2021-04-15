@@ -163,16 +163,16 @@ fn main() -> Result<()> {
 }
 
 fn register_actions(application: &Application, app: &App) {
-    // opening command pallete action
+    // opening command palette action
     // TODO: move to app
     {
         let app = app.clone();
-        let command_pallete_action = gio::SimpleAction::new("command_pallete", None);
-        application.add_action(&command_pallete_action);
-        application.set_accels_for_action("app.command_pallete", &["<Primary><Shift>P"]);
-        command_pallete_action.connect_activate(move |_, _| {
-            app.run_command_pallete()
-                .expect("Failed to run command pallete")
+        let command_palette_action = gio::SimpleAction::new("command_palette", None);
+        application.add_action(&command_palette_action);
+        application.set_accels_for_action("app.command_palette", &["<Primary><Shift>P"]);
+        command_palette_action.connect_activate(move |_, _| {
+            app.run_command_palette()
+                .expect("Failed to run command palette")
         });
     }
 

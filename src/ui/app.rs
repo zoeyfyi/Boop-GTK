@@ -3,7 +3,7 @@ use crate::{
     executor::{self},
     script::Script,
     scriptmap::ScriptMap,
-    ui::command_pallete::CommandPalleteDialog,
+    ui::command_palette::CommandPaletteDialog,
     ui::{preferences_dialog::PreferencesDialog, shortcuts_window::ShortcutsWindow},
     util::SourceViewExt,
     util::StringExt,
@@ -187,8 +187,8 @@ impl App {
         {
             let app_ = app.clone();
             app.header_button.connect_clicked(move |_| {
-                app_.run_command_pallete()
-                    .expect("Failed to run command pallete")
+                app_.run_command_palette()
+                    .expect("Failed to run command palette")
             });
         }
 
@@ -265,14 +265,14 @@ impl App {
         );
     }
 
-    pub fn run_command_pallete(&self) -> Result<()> {
-        let dialog = CommandPalleteDialog::new(&self.window, self.scripts.clone())?;
+    pub fn run_command_palette(&self) -> Result<()> {
+        let dialog = CommandPaletteDialog::new(&self.window, self.scripts.clone())?;
         dialog.show_all();
 
         if let gtk::ResponseType::Accept = dialog.run() {
             let selected: &str = dialog
                 .get_selected()
-                .ok_or_else(|| eyre!("Command pallete dialog didn't return a selection"))?;
+                .ok_or_else(|| eyre!("Command palette dialog didn't return a selection"))?;
 
             *self.last_script_executed.write().unwrap() = Some(String::from(selected));
             self.execute_script(selected)?;
