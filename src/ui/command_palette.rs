@@ -44,7 +44,7 @@ const ICON_COLUMN_WIDTH: i32 = ICON_COLUMN_PADDING + 32 + ICON_COLUMN_PADDING; /
 const TEXT_COLUMN_WIDTH: i32 = DIALOG_WIDTH - ICON_COLUMN_WIDTH;
 
 #[derive(Shrinkwrap, Gladis)]
-pub struct CommandPalleteDialogWidgets {
+pub struct CommandPaletteDialogWidgets {
     #[shrinkwrap(main_field)]
     dialog: Dialog,
     dialog_tree_view: TreeView,
@@ -52,27 +52,27 @@ pub struct CommandPalleteDialogWidgets {
 }
 
 #[derive(Shrinkwrap)]
-pub struct CommandPalleteDialog {
+pub struct CommandPaletteDialog {
     #[shrinkwrap(main_field)]
-    widgets: CommandPalleteDialogWidgets,
+    widgets: CommandPaletteDialogWidgets,
 
     scripts: Arc<RwLock<ScriptMap>>,
     selected_script: Rc<OnceCell<String>>,
 }
 
-impl CommandPalleteDialog {
+impl CommandPaletteDialog {
     pub(crate) fn new<P: IsA<Window>>(window: &P, scripts: Arc<RwLock<ScriptMap>>) -> Result<Self> {
         let widgets =
-            CommandPalleteDialogWidgets::from_resource("/fyi/zoey/Boop-GTK/command-pallete.glade")
-                .wrap_err("Failed to load command-pallete.glade")?;
+            CommandPaletteDialogWidgets::from_resource("/fyi/zoey/Boop-GTK/command-palette.glade")
+                .wrap_err("Failed to load command-palette.glade")?;
 
-        let command_pallete_dialog = CommandPalleteDialog {
+        let command_palette_dialog = CommandPaletteDialog {
             widgets,
             scripts: scripts.clone(),
             selected_script: Rc::new(OnceCell::new()),
         };
 
-        command_pallete_dialog.set_transient_for(Some(window));
+        command_palette_dialog.set_transient_for(Some(window));
 
         // create list store
         {
@@ -96,7 +96,7 @@ impl CommandPalleteDialog {
                 column.pack_start(&renderer, false);
                 column.add_attribute(&renderer, "icon-name", ICON_COLUMN as i32);
 
-                command_pallete_dialog
+                command_palette_dialog
                     .dialog_tree_view
                     .append_column(&column);
             }
@@ -113,7 +113,7 @@ impl CommandPalleteDialog {
                 column.set_max_width(TEXT_COLUMN_WIDTH);
                 column.add_attribute(&renderer, "markup", TEXT_COLUMN as i32);
 
-                command_pallete_dialog
+                command_palette_dialog
                     .dialog_tree_view
                     .append_column(&column);
             }
@@ -127,7 +127,7 @@ impl CommandPalleteDialog {
                     column.pack_start(&renderer, false);
                     column.add_attribute(&renderer, "markup", *c as i32);
 
-                    command_pallete_dialog
+                    command_palette_dialog
                         .dialog_tree_view
                         .append_column(&column);
                 }
@@ -155,20 +155,20 @@ impl CommandPalleteDialog {
                 store.set(&store.append(), &COLUMNS, &values);
             }
 
-            command_pallete_dialog
+            command_palette_dialog
                 .dialog_tree_view
                 .set_model(Some(&filtered_store));
         }
 
         // select first row
-        command_pallete_dialog.dialog_tree_view.set_cursor(
+        command_palette_dialog.dialog_tree_view.set_cursor(
             &TreePath::new_first(),
             gtk::NONE_TREE_VIEW_COLUMN,
             false,
         );
 
-        command_pallete_dialog.register_handlers();
-        Ok(command_pallete_dialog)
+        command_palette_dialog.register_handlers();
+        Ok(command_palette_dialog)
     }
 
     pub(crate) fn get_selected(&self) -> Option<&String> {
@@ -182,7 +182,7 @@ impl CommandPalleteDialog {
             let selected = self.selected_script.clone();
 
             self.dialog.connect_key_press_event(move |_, k| {
-                CommandPalleteDialog::on_key_press(k, &lb, &dialog, &selected)
+                CommandPaletteDialog::on_key_press(k, &lb, &dialog, &selected)
                     .expect("On key press handler failed")
             });
         }
@@ -191,7 +191,7 @@ impl CommandPalleteDialog {
             let lb = self.dialog_tree_view.clone();
             let scripts = self.scripts.clone();
             self.search_bar.connect_changed(move |s| {
-                CommandPalleteDialog::on_changed(s, &lb, scripts.clone())
+                CommandPaletteDialog::on_changed(s, &lb, scripts.clone())
                     .expect("On change handler failed")
             });
         }
@@ -201,7 +201,7 @@ impl CommandPalleteDialog {
             let selected = self.selected_script.clone();
             self.dialog_tree_view
                 .connect_row_activated(move |tv, _, _| {
-                    CommandPalleteDialog::on_click(tv, &dialog, &selected)
+                    CommandPaletteDialog::on_click(tv, &dialog, &selected)
                         .expect("On click handler failed")
                 });
         }
@@ -244,7 +244,7 @@ impl CommandPalleteDialog {
 
             return Ok(Inhibit(true));
         } else if key == keys::constants::Return {
-            CommandPalleteDialog::on_click(dialog_tree_view, dialog, selected)?;
+            CommandPaletteDialog::on_click(dialog_tree_view, dialog, selected)?;
         } else if key == keys::constants::Escape {
             dialog.close();
         }
