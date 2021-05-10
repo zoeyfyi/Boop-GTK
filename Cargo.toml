@@ -37,7 +37,7 @@ gladis = "0.4.1"
 gladis_proc_macro = "0.4.1"
 shrinkwraprs = "0.3.0"
 # V8
-rusty_v8 = "0.22.1"
+rusty_v8 = "0.22.2"
 # JSON
 serde = { version = "1.0", features = ["derive"] }
 serde_jsonrc = "0.1"
