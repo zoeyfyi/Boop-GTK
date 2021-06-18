@@ -243,7 +243,7 @@ impl CommandPaletteDialog {
             }
 
             return Ok(Inhibit(true));
-        } else if key == keys::constants::Return {
+        } else if key == keys::constants::Return || key == keys::constants::KP_Enter {
             CommandPaletteDialog::on_click(dialog_tree_view, dialog, selected)?;
         } else if key == keys::constants::Escape {
             dialog.close();
