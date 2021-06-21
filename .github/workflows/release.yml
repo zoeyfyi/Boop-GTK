@@ -47,7 +47,7 @@ jobs:
           submodules: "recursive"
       - uses: snapcore/action-build@v1
         id: snapcraft
-      - uses: snapcore/action-publish@v1
+      - uses: snapcore/action-publish@v1.0.2
         if: github.event_name != 'pull_request'
         continue-on-error: true # don't fail if a manual review is required (etc)
         with:
