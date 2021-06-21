@@ -24,7 +24,7 @@ jobs:
         components: clippy, rustfmt
         rust-version: 1.51.0
     - name: Cache cargo
-      uses: actions/cache@v2.1.5
+      uses: actions/cache@v2.1.6
       with:
         path: |
           ~/.cargo/registry
@@ -64,7 +64,7 @@ jobs:
         run: sudo dnf install -y python3-toml
       - name: Generate sources
         run: bash gen-sources.sh
-      - uses: bilelmoussaoui/flatpak-github-actions@v2
+      - uses: bilelmoussaoui/flatpak-github-actions@v3
         with:
           manifest-path: "flatpak/fyi.zoey.Boop-GTK.json"
 
