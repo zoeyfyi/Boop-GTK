@@ -74,7 +74,7 @@ jobs:
         run: sudo dnf install -y python3-toml
       - name: Generate sources
         run: bash gen-sources.sh
-      - uses: bilelmoussaoui/flatpak-github-actions@v2
+      - uses: bilelmoussaoui/flatpak-github-actions@v3
         with:
           bundle: "boop-gtk.flatpak"
           manifest-path: "flatpak/fyi.zoey.Boop-GTK.json"
