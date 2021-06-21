@@ -10,8 +10,21 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  bors:
+    name: ci
+    if: ${{ success() }}
+    needs:
+      - rust
+      - flatpak
+      - snap
+      - metadata
+    runs-on: ubuntu-latest
+    steps:
+      - name: CI succeeded
+        run: exit 0
+
   ci:
-    name: check, test, fmt, clippy
+    name: rust
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
