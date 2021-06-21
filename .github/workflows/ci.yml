@@ -2,9 +2,9 @@ name: Continuous integration
 
 on:
   push:
-    branches: [ trunk ]
+    branches: [trunk, staging, trying]
   pull_request:
-    branches: [ trunk ]
+    branches: [trunk]
 
 env:
   CARGO_TERM_COLOR: always
@@ -14,36 +14,37 @@ jobs:
     name: ci
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-      with:
-        submodules: 'recursive'
-    - name: Install rust
-      uses: hecrj/setup-rust-action@v1
-      with:
-        components: clippy, rustfmt
-        rust-version: 1.51.0
-    - name: Cache cargo
-      uses: actions/cache@v2.1.6
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-    - name: Dependencies
-      run: sudo apt-get update -y && sudo apt-get install -y libgtk-3-dev libgtksourceview-3.0-dev
-    - name: Check
-      run: cargo check
-    - name: Test
-      run: cargo test -- --nocapture
-    - name: Fmt
-      run: cargo fmt --all -- --check
-    - name: Clippy
-      run: cargo clippy -- -D warnings
-  
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: "recursive"
+      - name: Install rust
+        uses: hecrj/setup-rust-action@v1
+        with:
+          components: clippy, rustfmt
+          rust-version: 1.51.0
+      - name: Cache cargo
+        uses: actions/cache@v2.1.6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Dependencies
+        run: sudo apt-get update -y && sudo apt-get install -y libgtk-3-dev libgtksourceview-3.0-dev
+      - name: Check
+        run: cargo check
+      - name: Test
+        run: cargo test -- --nocapture
+      - name: Fmt
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy -- -D warnings
+
   snap:
     name: snap
+    if: ${{ (github.ref == 'refs/heads/trying') || (github.ref == 'refs/heads/staging') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -52,6 +53,7 @@ jobs:
       - uses: snapcore/action-build@v1
 
   flatpak:
+    if: ${{ (github.ref == 'refs/heads/trying') || (github.ref == 'refs/heads/staging') }}
     runs-on: ubuntu-latest
     container:
       image: docker.io/bilelmoussaoui/flatpak-github-actions
@@ -81,7 +83,7 @@ jobs:
 
   bors:
     name: bors
-    if: ${{ success() }}
+    if: ${{ success() && ((github.ref == 'refs/heads/trying') || (github.ref == 'refs/heads/staging')) }}
     needs:
       - ci
       - flatpak
