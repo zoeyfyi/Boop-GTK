@@ -11,7 +11,7 @@ env:
 
 jobs:
   ci:
-    name: rust
+    name: ci
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
@@ -83,7 +83,7 @@ jobs:
     name: ci
     if: ${{ success() }}
     needs:
-      - rust
+      - ci
       - flatpak
       - snap
       - metadata
