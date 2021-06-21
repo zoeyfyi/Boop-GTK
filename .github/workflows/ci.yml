@@ -80,7 +80,7 @@ jobs:
         run: desktop-file-validate data/fyi.zoey.Boop-GTK.desktop
 
   bors:
-    name: ci
+    name: bors
     if: ${{ success() }}
     needs:
       - ci
