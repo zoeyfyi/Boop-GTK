@@ -10,19 +10,6 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  bors:
-    name: ci
-    if: ${{ success() }}
-    needs:
-      - rust
-      - flatpak
-      - snap
-      - metadata
-    runs-on: ubuntu-latest
-    steps:
-      - name: CI succeeded
-        run: exit 0
-
   ci:
     name: rust
     runs-on: ubuntu-latest
@@ -91,3 +78,16 @@ jobs:
         run: appstream-util validate-relax data/fyi.zoey.Boop-GTK.metainfo.xml
       - name: Validate data/fyi.zoey.Boop-GTK.desktop
         run: desktop-file-validate data/fyi.zoey.Boop-GTK.desktop
+
+  bors:
+    name: ci
+    if: ${{ success() }}
+    needs:
+      - rust
+      - flatpak
+      - snap
+      - metadata
+    runs-on: ubuntu-latest
+    steps:
+      - name: CI succeeded
+        run: exit 0
