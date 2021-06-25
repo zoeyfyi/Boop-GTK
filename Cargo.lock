@@ -1241,9 +1241,9 @@ checksum = "6e3bad0ee36814ca07d7968269dd4b7ec89ec2da10c4bb613928d3077083c232"
 
 [[package]]
 name = "rusty_v8"
-version = "0.22.1"
+version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e39f106a3e39e8d18bc7dcbd4d59ece79cd27f888c6d82e0c93aa56d4708fdd"
+checksum = "5463232950a37ad7337422f362252ac4ea6db897fc0cb63c8acf0cb4e643898a"
 dependencies = [
  "bitflags",
  "fslock",
