@@ -48,7 +48,7 @@ env_logger = "0.8.3"
 # Fuzzy search
 fuse-rust = "0.2.0"
 # File system
-open = "1.6.0"
+open = "1.7.0"
 xdg = "2.2.0"
 notify = "5.0.0-pre.6"
 config = "0.9"
@@ -59,7 +59,7 @@ rust-embed = { version = "5.9.0", features = ["debug-embed"] }
 dirty2 = "0.1.0"
 eyre = "0.6.5"
 color-eyre = "0.5.11"
-crossbeam = "0.8.0"
+crossbeam = "0.8.1"
 fs_extra = "1.2.0"
 
 [dependencies.gtk]
