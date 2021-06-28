@@ -50,7 +50,7 @@ fuse-rust = "0.2.0"
 # File system
 open = "1.7.0"
 xdg = "2.2.0"
-notify = "5.0.0-pre.6"
+notify = "5.0.0-pre.10"
 config = "0.9"
 # Misc utils
 lazy_static = "1.4.0"
