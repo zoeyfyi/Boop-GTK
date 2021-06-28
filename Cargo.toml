@@ -44,7 +44,7 @@ serde_jsonrc = "0.1"
 toml = "0.5"
 # Logging
 log = "0.4.14"
-env_logger = "0.8.3"
+env_logger = "0.8.4"
 # Fuzzy search
 fuse-rust = "0.2.0"
 # File system
