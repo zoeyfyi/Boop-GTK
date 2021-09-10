@@ -1,217 +1,214 @@
 #![forbid(unsafe_code)]
 
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate shrinkwraprs;
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate eyre;
-extern crate fs_extra;
-
-mod config;
-mod executor;
-mod script;
-mod scriptmap;
-mod ui;
-mod util;
-
-use scriptmap::ScriptMap;
-use sourceview::{Language, LanguageManagerExt};
-use ui::{
-    app::{App, NOTIFICATION_LONG_DELAY},
-    shortcuts_window::ShortcutsWindow,
+use eyre::Result;
+use gtk::{
+    gio::{prelude::*, Menu, MenuItem, SimpleAction},
+    prelude::*,
+    Align, Application, ApplicationWindow, Box, Button, Dialog, HeaderBar, Label, MenuButton,
+    Overlay, PopoverMenu, Revealer, ScrolledWindow, SearchEntry, TextBuffer, TreeView,
 };
 
-use crate::config::Config;
-use eyre::{Context, Result};
-use fs::File;
-use gio::prelude::*;
-use gtk::{prelude::*, Application, Window};
-
-use std::{
-    fs,
-    io::prelude::*,
-    path::PathBuf,
-    sync::{Arc, RwLock},
-    thread,
-};
-
-lazy_static! {
-    static ref XDG_DIRS: xdg::BaseDirectories = match xdg::BaseDirectories::with_prefix("boop-gtk")
-    {
-        Ok(dirs) => dirs,
-        Err(err) => panic!("Unable to find XDG directorys: {}", err),
-    };
-}
-
-// extract language file, ideally we would use GResource for this but sourceview doesn't support that
-// returns true if the language file already existed, false otherwise
-fn extract_language_file() -> Result<()> {
-    let lang_file_path = XDG_DIRS
-        .place_config_file("boop.lang")
-        .wrap_err("Failed to construct language file path")?;
-
-    let mut lang_file = File::create(&lang_file_path).wrap_err("Failed to create language file")?;
-
-    lang_file
-        .write_all(include_bytes!("../boop.lang"))
-        .wrap_err("Failed to write default language file")?;
-
-    Ok(())
-}
+const APP_ID: &str = "fyi.zoey.Boop-GTK";
+const APP_NAME: &str = "Boop";
 
 fn main() -> Result<()> {
     color_eyre::install()?;
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    let (config, config_file_created) = Config::load()?;
-    let config = Arc::new(RwLock::new(config));
+    let app = Application::builder().application_id(APP_ID).build();
+    app.connect_activate(on_activate);
+    app.run();
 
-    extract_language_file()?;
-
-    // create user scripts directory
-    let scripts_dir: PathBuf = XDG_DIRS.get_config_home().join("scripts");
-    fs::create_dir_all(&scripts_dir).wrap_err_with(|| {
-        format!(
-            "Failed to create scripts directory in config: {}",
-            scripts_dir.display()
-        )
-    })?;
-
-    let (scripts_map, load_script_error) = ScriptMap::new();
-    let scripts = Arc::new(RwLock::new(scripts_map));
-
-    // watch scripts folder for changes
-    {
-        let scripts = scripts.clone();
-        thread::spawn(move || {
-            ScriptMap::watch(scripts);
-        });
-    }
-
-    // needed on windows
-    sourceview::View::static_type();
-
-    glib::set_application_name("Boop-GTK");
-
-    let application = Application::new(Some("fyi.zoey.Boop-GTK"), Default::default())
-        .wrap_err("Failed to initialize GTK application")?;
-
-    application.connect_activate(move |application| {
-        // resources.gresources is created by build.rs
-        // it includes all the files in the resources directory
-        let resource_bytes =
-            include_bytes!(concat!(env!("OUT_DIR"), "/resources/resources.gresource"));
-        let resource_data = glib::Bytes::from(&resource_bytes[..]);
-        gio::resources_register(&gio::Resource::from_data(&resource_data).unwrap());
-
-        // add embedeed icons to theme
-        let icon_theme = gtk::IconTheme::get_default().expect("Failed to get default icon theme");
-        icon_theme.add_resource_path("/fyi/zoey/Boop-GTK/icons");
-
-        Window::set_default_icon_name("fyi.zoey.Boop-GTK");
-
-        // must be fetched _before_ widgets are proccessed since the language managers search path must
-        // be set immediantly after creation:
-        // https://developer.gnome.org/gtksourceview/stable/GtkSourceLanguageManager.html#gtk-source-language-manager-set-search-path
-        let boop_language = || -> Result<Language> {
-            let language_manager = sourceview::LanguageManager::get_default()
-                .ok_or_else(|| eyre!("Failed to get language manager"))?;
-
-            // add config_dir to language manager's search path
-            let dirs = language_manager.get_search_path();
-            let mut dirs: Vec<&str> = dirs.iter().map(|s| s.as_ref()).collect();
-            let config_dir_path = XDG_DIRS.get_config_home().to_string_lossy().to_string();
-            dirs.push(&config_dir_path);
-            language_manager.set_search_path(&dirs);
-
-            info!("language manager search directorys: {}", dirs.join(":"));
-
-            language_manager
-                .get_language("boop")
-                .ok_or_else(|| eyre!("'boop' language not found in language manager"))
-        }()
-        .expect("Failed to load boop language");
-
-        let app = App::new(boop_language, scripts.clone(), config.clone())
-            .expect("Failed to construct App");
-        app.set_application(Some(application));
-        app.show_all();
-
-        register_actions(&application, &app);
-
-        if config_file_created
-            || config
-                .read()
-                .expect("Config lock is poisoned")
-                .show_shortcuts_on_open
-        {
-            let shortcuts_window = ShortcutsWindow::new();
-            shortcuts_window.set_transient_for(Some(&app.window));
-            shortcuts_window.show_all();
-        }
-
-        if let Some(error) = &load_script_error {
-            app.post_notification_error(&error.to_string(), NOTIFICATION_LONG_DELAY);
-        }
-    });
-
-    application.run(&[]);
     Ok(())
 }
 
-fn register_actions(application: &Application, app: &App) {
-    // opening command palette action
-    // TODO: move to app
-    {
-        let app = app.clone();
-        let command_palette_action = gio::SimpleAction::new("command_palette", None);
-        application.add_action(&command_palette_action);
-        application.set_accels_for_action("app.command_palette", &["<Primary><Shift>P"]);
-        command_palette_action.connect_activate(move |_, _| {
-            app.run_command_palette()
-                .expect("Failed to run command palette")
-        });
-    }
-
-    // re-execute script action
-    {
-        let app = app.clone();
-        let reexecute_script_action = gio::SimpleAction::new("re_execute_script", None);
-        application.add_action(&reexecute_script_action);
-        application.set_accels_for_action("app.re_execute_script", &["<Primary><Shift>B"]);
-        reexecute_script_action
-            .connect_activate(move |_, _| app.re_execute().expect("Failed to re-execute script"));
-    }
-
-    // quit action
-    {
-        let quit_action = gio::SimpleAction::new("quit", None);
-        application.add_action(&quit_action);
-        application.set_accels_for_action("app.quit", &["<Primary>Q"]);
-        let application = application.clone();
-        quit_action.connect_activate(move |_, _| application.quit());
-    }
+fn on_activate(app: &Application) {
+    let window = build_ui(app);
+    register_actions(app, &window);
+    window.show();
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use directories::ProjectDirs;
+fn build_ui(app: &Application) -> ApplicationWindow {
+    let command_palette_button = Button::builder().label("Open Command Palette...").build();
+    let script_actions_menu = Menu::new();
+    script_actions_menu.append_item(&MenuItem::new(
+        Some("Re-execute Last Script"),
+        Some("app.re_execute_last_script"),
+    ));
+    script_actions_menu.append_item(&MenuItem::new(
+        Some("Reset Scripts"),
+        Some("app.reset_scripts"),
+    ));
 
-    lazy_static! {
-        static ref PROJECT_DIRS: directories::ProjectDirs =
-            ProjectDirs::from("fyi", "zoey", "boop-gtk")
-                .expect("Unable to find a configuration location for your platform");
-    }
+    let navigation_actions_menu = Menu::new();
+    navigation_actions_menu.append_item(&MenuItem::new(
+        Some("Preferences..."),
+        Some("app.open_preferences"),
+    ));
+    navigation_actions_menu.append_item(&MenuItem::new(
+        Some("Open Config Directory"),
+        Some("app.open_config_dir"),
+    ));
+    navigation_actions_menu.append_item(&MenuItem::new(
+        Some("Get More Scripts"),
+        Some("app.open_more_scripts"),
+    ));
+    navigation_actions_menu.append_item(&MenuItem::new(
+        Some("Shortcuts"),
+        Some("app.open_shortcuts"),
+    ));
+    navigation_actions_menu.append_item(&MenuItem::new(Some("About"), Some("app.open_about")));
 
-    #[test]
-    fn test_project_dirs_dependency_change() {
-        assert_eq!(
-            PROJECT_DIRS.config_dir().to_path_buf(),
-            XDG_DIRS.get_config_home()
-        );
-    }
+    let aux_actions_menu = Menu::new();
+    aux_actions_menu.append_item(&MenuItem::new(Some("Quit"), Some("app.quit")));
+
+    let main_menu = Menu::new();
+    main_menu.append_section(None, &script_actions_menu);
+    main_menu.append_section(None, &navigation_actions_menu);
+    main_menu.append_section(None, &aux_actions_menu);
+    
+    let main_popover_menu = PopoverMenu::from_model(Some(&main_menu));
+    let main_menu_button = MenuButton::builder()
+        .popover(&main_popover_menu)
+        .icon_name("open-menu-symbolic")
+        .build();
+    let header_bar = HeaderBar::builder()
+        .title_widget(&command_palette_button)
+        .build();
+    header_bar.pack_end(&main_menu_button);
+    let notification_label = Label::builder()
+        .label("Notification text")
+        .wrap(true)
+        .build();
+    let notification_button = Button::builder()
+        .icon_name("window-close-symbolic")
+        .has_frame(false)
+        .build();
+    let notification_box = Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .hexpand(false)
+        .receives_default(true)
+        .css_classes(vec!["app-notification".to_string()])
+        .build();
+    notification_box.append(&notification_label);
+    notification_box.append(&notification_button);
+    let revealer = Revealer::builder()
+        .child(&notification_box)
+        .reveal_child(true)
+        .valign(Align::Start)
+        .halign(Align::Center)
+        .build();
+    let source = sourceview5::View::builder()
+        .show_line_numbers(true)
+        .show_line_marks(true)
+        .tab_width(4)
+        .indent_on_tab(true)
+        .monospace(true)
+        .build();
+    let scrolled_window = ScrolledWindow::builder().child(&source).build();
+    let overlay = Overlay::builder().child(&scrolled_window).build();
+    overlay.add_overlay(&revealer);
+    let window = ApplicationWindow::builder()
+        .application(app)
+        .title(APP_NAME)
+        .default_width(600)
+        .default_height(400)
+        .child(&overlay)
+        .build();
+    window.set_titlebar(Some(&header_bar));
+    window
+}
+
+fn build_command_palette_ui(window: &ApplicationWindow) -> Dialog {
+    let search_bar = SearchEntry::builder().hexpand(true).build();
+
+    let header_bar = HeaderBar::builder()
+        .title_widget(&search_bar)
+        .show_title_buttons(false)
+        .build();
+
+    let results_tree_view = TreeView::builder().build();
+
+    let dialog = Dialog::builder()
+        .child(&results_tree_view)
+        .transient_for(window)
+        .resizable(false)
+        .modal(true)
+        .default_width(300)
+        .default_height(300)
+        .title("test")
+        .use_header_bar(1)
+        .decorated(true)
+        .destroy_with_parent(true)
+        .build();
+    dialog.set_titlebar(Some(&header_bar));
+    // let header_bar = dialog.header_bar();
+    // header_bar.set_title_widget(Some(&search_bar));
+
+    // dialog.set_header_bar(Some(&header_bar));
+
+    dialog
+}
+
+fn register_actions(app: &Application, window: &ApplicationWindow) {
+    let re_execute_last_script_action = SimpleAction::new("re_execute_last_script", None);
+    re_execute_last_script_action.connect_activate(move |_, _| {
+        println!("Re-execute last script");
+    });
+    app.add_action(&re_execute_last_script_action);
+    app.set_accels_for_action("app.re_execute_last_script", &["<Primary><Shift>B"]);
+
+    let reset_scripts_action = SimpleAction::new("reset_scripts", None);
+    reset_scripts_action.connect_activate(move |_, _| {
+        println!("Reset scripts");
+    });
+    app.add_action(&reset_scripts_action);
+
+    let open_preferences_action = SimpleAction::new("open_preferences", None);
+    open_preferences_action.connect_activate(move |_, _| {
+        println!("Open preferences");
+    });
+    app.add_action(&open_preferences_action);
+
+    let open_config_dir_action = SimpleAction::new("open_config_dir", None);
+    open_config_dir_action.connect_activate(move |_, _| {
+        println!("Open config dir");
+    });
+    app.add_action(&open_config_dir_action);
+
+    let open_more_scripts_action = SimpleAction::new("open_more_scripts", None);
+    open_more_scripts_action.connect_activate(move |_, _| {
+        println!("Open more scripts");
+    });
+    app.add_action(&open_more_scripts_action);
+
+    let open_shortcuts_action = SimpleAction::new("open_shortcuts", None);
+    open_shortcuts_action.connect_activate(move |_, _| {
+        println!("Open shortcuts");
+    });
+    app.add_action(&open_shortcuts_action);
+
+    let open_about_action = SimpleAction::new("open_about", None);
+    open_about_action.connect_activate(move |_, _| {
+        println!("Open about");
+    });
+    app.add_action(&open_about_action);
+
+    let window_ = window.clone();
+    let open_command_pallete_action = SimpleAction::new("open_command_palette", None);
+    open_command_pallete_action.connect_activate(move |_, _| {
+        println!("Open command palette");
+        let dialog = build_command_palette_ui(&window_);
+        dialog.show();
+    });
+    app.add_action(&open_command_pallete_action);
+    app.set_accels_for_action("app.open_command_palette", &["<Primary><Shift>P"]);
+
+    let app_ = app.clone();
+    let quit_action = SimpleAction::new("quit", None);
+    quit_action.connect_activate(move |_, _| {
+        app_.quit();
+    });
+    app.add_action(&quit_action);
+    app.set_accels_for_action("app.quit", &["<Primary>q"]);
 }

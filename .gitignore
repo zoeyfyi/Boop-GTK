@@ -15,3 +15,4 @@ resources/resources.xml
 *.flatpak
 /boop-gtk.windows
 boop-gtk.windows.msi
+_src
