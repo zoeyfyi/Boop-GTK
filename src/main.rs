@@ -1,11 +1,11 @@
 #![forbid(unsafe_code)]
 
-use eyre::{Context, Result};
+use eyre::Result;
 use gtk::{
     gio::{prelude::*, Menu, MenuItem, SimpleAction},
     prelude::*,
-    Align, Application, ApplicationWindow, Box, Button, HeaderBar, Label, MenuButton, Overlay,
-    PopoverMenu, Revealer, ScrolledWindow,
+    Align, Application, ApplicationWindow, Box, Button, Dialog, HeaderBar, Label, MenuButton,
+    Overlay, PopoverMenu, Revealer, ScrolledWindow, SearchEntry, TextBuffer, TreeView,
 };
 
 const APP_ID: &str = "fyi.zoey.Boop-GTK";
@@ -23,11 +23,12 @@ fn main() -> Result<()> {
 }
 
 fn on_activate(app: &Application) {
-    build_ui(app);
-    register_actions(app);
+    let window = build_ui(app);
+    register_actions(app, &window);
+    window.show();
 }
 
-fn build_ui(app: &Application) {
+fn build_ui(app: &Application) -> ApplicationWindow {
     let command_palette_button = Button::builder().label("Open Command Palette...").build();
     let script_actions_menu = Menu::new();
     script_actions_menu.append_item(&MenuItem::new(
@@ -108,10 +109,41 @@ fn build_ui(app: &Application) {
         .child(&overlay)
         .build();
     window.set_titlebar(Some(&header_bar));
-    window.show();
+    window
 }
 
-fn register_actions(app: &Application) {
+fn build_command_palette_ui(window: &ApplicationWindow) -> Dialog {
+    let search_bar = SearchEntry::builder().hexpand(true).build();
+
+    let header_bar = HeaderBar::builder()
+        .title_widget(&search_bar)
+        .show_title_buttons(false)
+        .build();
+
+    let results_tree_view = TreeView::builder().build();
+
+    let dialog = Dialog::builder()
+        .child(&results_tree_view)
+        .transient_for(window)
+        .resizable(false)
+        .modal(true)
+        .default_width(300)
+        .default_height(300)
+        .title("test")
+        .use_header_bar(1)
+        .decorated(true)
+        .destroy_with_parent(true)
+        .build();
+    dialog.set_titlebar(Some(&header_bar));
+    // let header_bar = dialog.header_bar();
+    // header_bar.set_title_widget(Some(&search_bar));
+
+    // dialog.set_header_bar(Some(&header_bar));
+
+    dialog
+}
+
+fn register_actions(app: &Application, window: &ApplicationWindow) {
     let re_execute_last_script_action = SimpleAction::new("re_execute_last_script", None);
     re_execute_last_script_action.connect_activate(move |_, _| {
         println!("Re-execute last script");
@@ -155,9 +187,12 @@ fn register_actions(app: &Application) {
     });
     app.add_action(&open_about_action);
 
+    let window_ = window.clone();
     let open_command_pallete_action = SimpleAction::new("open_command_palette", None);
     open_command_pallete_action.connect_activate(move |_, _| {
         println!("Open command palette");
+        let dialog = build_command_palette_ui(&window_);
+        dialog.show();
     });
     app.add_action(&open_command_pallete_action);
     app.set_accels_for_action("app.open_command_palette", &["<Primary><Shift>P"]);
