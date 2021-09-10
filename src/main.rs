@@ -39,6 +39,7 @@ fn build_ui(app: &Application) -> ApplicationWindow {
         Some("Reset Scripts"),
         Some("app.reset_scripts"),
     ));
+
     let navigation_actions_menu = Menu::new();
     navigation_actions_menu.append_item(&MenuItem::new(
         Some("Preferences..."),
@@ -57,9 +58,15 @@ fn build_ui(app: &Application) -> ApplicationWindow {
         Some("app.open_shortcuts"),
     ));
     navigation_actions_menu.append_item(&MenuItem::new(Some("About"), Some("app.open_about")));
+
+    let aux_actions_menu = Menu::new();
+    aux_actions_menu.append_item(&MenuItem::new(Some("Quit"), Some("app.quit")));
+
     let main_menu = Menu::new();
     main_menu.append_section(None, &script_actions_menu);
     main_menu.append_section(None, &navigation_actions_menu);
+    main_menu.append_section(None, &aux_actions_menu);
+    
     let main_popover_menu = PopoverMenu::from_model(Some(&main_menu));
     let main_menu_button = MenuButton::builder()
         .popover(&main_popover_menu)
