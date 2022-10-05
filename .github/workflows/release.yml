@@ -13,7 +13,7 @@ jobs:
   release-linux-amd64:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.1.0
         with:
           submodules: "recursive"
       - name: Install rust
@@ -42,7 +42,7 @@ jobs:
   release-snap:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.1.0
         with:
           submodules: "recursive"
       - uses: snapcore/action-build@v1
@@ -67,7 +67,7 @@ jobs:
       image: docker.io/bilelmoussaoui/flatpak-github-actions
       options: --privileged
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.1.0
         with:
           submodules: "recursive"
       - name: Dependency (Python TOML)
@@ -87,7 +87,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.1.0
         with:
           submodules: "recursive"
       - name: Install rust

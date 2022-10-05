@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3.1.0
         with:
           submodules: "recursive"
       - name: Install rust
@@ -47,7 +47,7 @@ jobs:
     if: ${{ (github.ref == 'refs/heads/trying') || (github.ref == 'refs/heads/staging') }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.1.0
         with:
           submodules: "recursive"
       - uses: snapcore/action-build@v1
@@ -59,7 +59,7 @@ jobs:
       image: docker.io/bilelmoussaoui/flatpak-github-actions
       options: --privileged
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.1.0
         with:
           submodules: "recursive"
       - name: Dependency (Python TOML)
@@ -73,7 +73,7 @@ jobs:
   metadata:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.1.0
       - name: Dependencies
         run: sudo apt-get install -y appstream-util desktop-file-utils
       - name: Validate data/fyi.zoey.Boop-GTK.metainfo.xml
