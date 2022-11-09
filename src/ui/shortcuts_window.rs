@@ -7,7 +7,7 @@ pub struct ShortcutsWindow {
 }
 
 const GENERAL_SHORTCUTS: [(&str, &str); 3] = [
-    ("Open Command Pallette", "<Primary><Shift>P"),
+    ("Open Command Palette", "<Primary><Shift>P"),
     ("Quit", "<Primary>Q"),
     ("Re-execute Last Script", "<Primary><Shift>B"),
 ];

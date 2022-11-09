@@ -42,7 +42,7 @@ lazy_static! {
     static ref XDG_DIRS: xdg::BaseDirectories = match xdg::BaseDirectories::with_prefix("boop-gtk")
     {
         Ok(dirs) => dirs,
-        Err(err) => panic!("Unable to find XDG directorys: {}", err),
+        Err(err) => panic!("Unable to find XDG directories: {}", err),
     };
 }
 
@@ -113,8 +113,8 @@ fn main() -> Result<()> {
 
         Window::set_default_icon_name("fyi.zoey.Boop-GTK");
 
-        // must be fetched _before_ widgets are proccessed since the language managers search path must
-        // be set immediantly after creation:
+        // must be fetched _before_ widgets are processed since the language managers search path must
+        // be set immediately after creation:
         // https://developer.gnome.org/gtksourceview/stable/GtkSourceLanguageManager.html#gtk-source-language-manager-set-search-path
         let boop_language = || -> Result<Language> {
             let language_manager = sourceview::LanguageManager::get_default()
@@ -127,7 +127,7 @@ fn main() -> Result<()> {
             dirs.push(&config_dir_path);
             language_manager.set_search_path(&dirs);
 
-            info!("language manager search directorys: {}", dirs.join(":"));
+            info!("language manager search directories: {}", dirs.join(":"));
 
             language_manager
                 .get_language("boop")
