@@ -226,7 +226,7 @@ impl Executor {
             (v8::Global::new(scope, context), main_function)
         };
 
-        // set status slot, stores execution infomation
+        // set status slot, stores execution information
         let status_slot: Rc<RefCell<ExecutionStatus>> =
             Rc::new(RefCell::new(ExecutionStatus::default()));
         isolate.set_slot(status_slot);
@@ -300,7 +300,7 @@ impl Executor {
             .wrap_err("failed to created require function")?;
         global.set(scope, require_key.into(), require_val.into());
 
-        // complile and run script
+        // compile and run script
         let code = v8::String::new(scope, source).ok_or(ExecutorError::SourceExceedsMaxLength)?;
 
         let tc_scope = &mut v8::TryCatch::new(scope);
@@ -689,7 +689,7 @@ impl Executor {
 
         rv.set(
             v8::String::new(scope, &text)
-                .expect("faield to create JS string from text")
+                .expect("failed to create JS string from text")
                 .into(),
         );
     }
@@ -709,7 +709,7 @@ impl Executor {
 
         let slot = scope
             .get_slot_mut::<Rc<RefCell<ExecutionStatus>>>()
-            .expect("faield to get mutable access status slot");
+            .expect("failed to get mutable access status slot");
 
         let mut slot = slot.borrow_mut();
 
@@ -861,7 +861,7 @@ mod tests {
     fn test_error_require_internal_script() {
         init();
         let source = r#"function main() {
-            let foo = require("@boop/non-existant");
+            let foo = require("@boop/non-existent");
         }"#;
 
         assert_eq!(
@@ -872,11 +872,11 @@ mod tests {
                 .downcast::<ExecutorError>()
                 .unwrap(),
             ExecutorError::Execute(JSException {
-                exception_str: "Error: No internal script with path \"@boop/non-existant.js\""
+                exception_str: "Error: No internal script with path \"@boop/non-existent.js\""
                     .to_string(),
                 resource_name: Some("undefined".to_string()),
                 source_line: Some(
-                    "            let foo = require(\"@boop/non-existant\");".to_string()
+                    "            let foo = require(\"@boop/non-existent\");".to_string()
                 ),
                 line_number: Some(2),
                 columns: Some((22, 23))

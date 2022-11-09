@@ -6,7 +6,7 @@
   <name>Boop-GTK</name>
   <summary>Port of IvanMathy's Boop to GTK, a scriptable scratchpad for developers.</summary>
   <description>
-    <p>Paste text, transform it (with user extendible javascipt), move on. Stop pasting sensitive infomation into sketchy sites to format JSON, compute a hash, etc.</p>
+    <p>Paste text, transform it (with user extendible javascript), move on. Stop pasting sensitive information into sketchy sites to format JSON, compute a hash, etc.</p>
   </description>
   <screenshots>
     <screenshot type="default">
@@ -53,7 +53,7 @@
       <description>
         <ul>
           <li>Search now looks at the description and tags on scripts</li>
-          <li>Errors and infomation are now notifications removing the need for the status bar</li>
+          <li>Errors and information are now notifications removing the need for the status bar</li>
           <li>Added version number to the about dialog</li>
         </ul>
       </description>
@@ -110,7 +110,7 @@
     <release version="0.2.1" date="2020-07-28">
       <description>
         <ul>
-          <li>Fix JWT decoder script (for more infomation, see the release notes of Boop 1.2.1).</li>
+          <li>Fix JWT decoder script (for more information, see the release notes of Boop 1.2.1).</li>
           <li>Remove unsafe Rust sections</li>
         </ul>
       </description>
@@ -118,7 +118,7 @@
     <release version="0.2.0" date="2020-07-20">
       <description>
         <ul>
-          <li>Compatability with Boop 1.2.0 scripts (`state.insert(..)` and `require(..)`).</li>
+          <li>Compatibility with Boop 1.2.0 scripts (`state.insert(..)` and `require(..)`).</li>
           <li>Custom icons for scripts from Boop.</li>
         </ul>
       </description>
@@ -128,7 +128,7 @@
         <ul>
           <li>Windows build available</li>
           <li>Application menu with links to config directory and website to get more scripts.</li>
-          <li>Scripts now retain the enviroment they where executed in to match Boop</li>
+          <li>Scripts now retain the environment they where executed in to match Boop</li>
         </ul>
       </description>
     </release>

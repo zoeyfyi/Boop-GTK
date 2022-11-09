@@ -114,9 +114,9 @@ impl App {
         {
             let preference_dialog = app.preferences_dialog.clone();
             app.preferences_button.connect_clicked(move |_| {
-                let responce = preference_dialog.run();
-                if responce == gtk::ResponseType::DeleteEvent
-                    || responce == gtk::ResponseType::Cancel
+                let response = preference_dialog.run();
+                if response == gtk::ResponseType::DeleteEvent
+                    || response == gtk::ResponseType::Cancel
                 {
                     preference_dialog.hide();
                 }
@@ -166,9 +166,9 @@ impl App {
         {
             let about_dialog: AboutDialog = app.about_dialog.clone();
             app.about_button.connect_clicked(move |_| {
-                let responce = about_dialog.run();
-                if responce == gtk::ResponseType::DeleteEvent
-                    || responce == gtk::ResponseType::Cancel
+                let response = about_dialog.run();
+                if response == gtk::ResponseType::DeleteEvent
+                    || response == gtk::ResponseType::Cancel
                 {
                     about_dialog.hide();
                 }

@@ -14,7 +14,7 @@ pub struct Script {
 #[derive(Debug)]
 enum ExecutorJob {
     Request((String, Option<String>)),
-    Responce(Result<ExecutionStatus, ExecutorError>),
+    Response(Result<ExecutionStatus, ExecutorError>),
     Kill,
 }
 
@@ -140,8 +140,8 @@ impl Script {
                                     Err(err) => {
                                         warn!("failed to create executor");
                                         let executor_err = err.downcast::<ExecutorError>().unwrap(); // anything else is unrecoverable
-                                        t_sender.send(ExecutorJob::Responce(Err(executor_err)))
-                                            .wrap_err("Failed to send error responce")
+                                        t_sender.send(ExecutorJob::Response(Err(executor_err)))
+                                            .wrap_err("Failed to send error response")
                                             .unwrap();
                                         None
                                     }
@@ -157,11 +157,11 @@ impl Script {
                                 let result = executor
                                     .execute(&full_text, selection.as_deref())
                                     .map_err(|err| err.downcast::<ExecutorError>().unwrap());
-                                t_sender.send(ExecutorJob::Responce(result)).unwrap(); // blocks until send
+                                t_sender.send(ExecutorJob::Response(result)).unwrap(); // blocks until send
                             }
                         }
-                        ExecutorJob::Responce(_) => {
-                            warn!("executor thread received a responce on channel");
+                        ExecutorJob::Response(_) => {
+                            warn!("executor thread received a response on channel");
                         }
                         ExecutorJob::Kill => {
                             info!("killing thread for {}", t_name);
@@ -210,12 +210,12 @@ impl Script {
             .recv()
             .wrap_err("Receive channel is empty and disconnected")?;
 
-        if let ExecutorJob::Responce(status) = result {
+        if let ExecutorJob::Response(status) = result {
             return status.map_err(eyre::Report::from);
         }
 
         Err(eyre!(
-            "Expected a responce on channel, but got a request: {:?}",
+            "Expected a response on channel, but got a request: {:?}",
             result
         ))
     }

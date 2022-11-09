@@ -53,7 +53,7 @@ impl Config {
 
         let config = settings
             .try_into()
-            .wrap_err("Failed to covert settings into Config")?;
+            .wrap_err("Failed to convert settings into Config")?;
 
         Ok((config, config_file_created)) // TODO: handle results
     }
