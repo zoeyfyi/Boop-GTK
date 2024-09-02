@@ -65,7 +65,7 @@ fn main() {
 
     let mut cmd = Command::new(if let Ok(path) = env::var("GLIB_COMPILE_RESOURCES") {
         path
-    } else if cfg!(target_os = "window") {
+    } else if cfg!(target_os = "windows") {
         "glib-compile-resources.exe".to_owned()
     } else {
         "glib-compile-resources".to_owned()
